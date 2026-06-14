@@ -114,6 +114,8 @@ export interface Conversation {
 export type SourceType = 'from_notes' | 'inference' | 'suggestion' | 'uncertain';
 
 export interface Citation {
+  reference_type?: 'memo' | 'memory' | 'principle';
+  reference_id?: string;
   memo_id: string;
   memo_title: string | null;
   memo_date: string;
@@ -121,6 +123,7 @@ export interface Citation {
   relevance_score: number;
   retrieval_reason?: string;
   matched_terms?: string[];
+  evidence_memo_ids?: string[];
 }
 
 export interface ChatMessage {
@@ -354,4 +357,128 @@ export interface NavItem {
   icon: string;
   href: string;
   badge?: number;
+}
+
+// ============================================================
+// 林间世界 — 游戏模式类型定义
+// ============================================================
+
+export type GameSeason = 'spring' | 'summer' | 'autumn' | 'winter';
+export type CompanionType = 'none' | 'human_local' | 'llm';
+export type DialogueMode = 'listen' | 'ask' | 'organize' | 'silent';
+
+export type WorldObjectType =
+  | 'memory_plant'
+  | 'letter'
+  | 'lamp'
+  | 'bench'
+  | 'sign'
+  | 'bottle'
+  | 'windchime'
+  | 'frame'
+  | 'empty_pot';
+
+export interface GameWorldSettings {
+  muted: boolean;
+  reducedMotion: boolean;
+}
+
+export interface GameWorld {
+  id: string;
+  ownerUserId: string;
+  displayName: string;
+  createdAt: string;
+  lastVisitedAt: string;
+  season: GameSeason;
+  playerX: number;
+  playerY: number;
+  settings: GameWorldSettings;
+}
+
+export interface WorldObject {
+  id: string;
+  worldId: string;
+  type: WorldObjectType;
+  x: number;
+  y: number;
+  layer: number;
+  sourceMemoIds: string[];
+  sourceSessionId?: string;
+  userConfirmed: boolean;
+  hidden: boolean;
+  annotation?: string; // 用户今日注释，与 Memo 原文分离
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface CompanionSession {
+  id: string;
+  worldId: string;
+  companionType: CompanionType;
+  dialogueMode: DialogueMode;
+  authorizedMemoIds: string[];
+  startedAt: string;
+  endedAt?: string;
+}
+
+export interface SharedMemoryDraft {
+  id: string;
+  sessionId: string;
+  memoId?: string;
+  playerOneText?: string;
+  playerTwoText?: string;
+  jointText?: string;
+  saveDecision: 'pending' | 'separate' | 'joint' | 'discard';
+}
+
+export type CompanionResponseIntent =
+  | 'reflect'
+  | 'ask'
+  | 'summarize'
+  | 'stay_silent'
+  | 'offer_action';
+
+export interface CompanionResponse {
+  text: string;
+  intent: CompanionResponseIntent;
+  sourceMemoIds: string[];
+  isInference: boolean;
+  suggestedActions?: Array<'continue' | 'pause' | 'place_object' | 'open_memo'>;
+}
+
+// 地图区域标识
+export type MapLocation =
+  | 'cabin'       // 亮灯木屋
+  | 'garden'      // 记忆花园
+  | 'fireside'    // 篝火地
+  | 'pond'        // 静水池塘
+  | 'workshop'    // 共居工坊
+  | 'forest'      // 记忆林
+  | 'hillside';   // 山坡/远望台（P1）
+
+// 游戏状态机
+export type GamePhase =
+  | 'portal'        // 传送门过场
+  | 'character_select'  // 角色 & 模式选择
+  | 'explore'       // 自由探索
+  | 'memo_encounter' // Memo 阅读弹层
+  | 'fireside_chat'  // 篝火对话
+  | 'co_write'      // 共同书写
+  | 'settings';     // 游戏内设置
+
+export interface PlayerCharacter {
+  id: string;
+  displayName: string;
+  colorSkin: string;  // CSS 颜色，用于 SVG 角色
+  colorHair: string;
+  colorOutfit: string;
+}
+
+// 玩家状态
+export interface PlayerState {
+  x: number;
+  y: number;
+  direction: 'up' | 'down' | 'left' | 'right';
+  moving: boolean;
+  character: PlayerCharacter;
 }
