@@ -53,7 +53,6 @@ export default function MemoEncounter({
   const dateStr = `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日`;
 
   // 原文与 plain_text 的差异（来源区分）
-  const hasRawContent = memo.raw_content && memo.raw_content !== memo.plain_text;
   const displayOriginal = memo.raw_content || memo.plain_text;
 
   // AI 字段

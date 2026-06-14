@@ -18,7 +18,8 @@ const POND_PROMPTS = [
 export default function PondPanel({ onClose }: PondPanelProps) {
   const [note, setNote] = useState('');
   const [saved, setSaved] = useState(false);
-  const prompt = POND_PROMPTS[Math.floor(Math.random() * POND_PROMPTS.length)];
+  // useState 初始函数只在首次渲染调用，避免每次渲染都调用 Math.random()
+  const [prompt] = useState(() => POND_PROMPTS[Math.floor(Math.random() * POND_PROMPTS.length)]);
 
   const handleSave = () => {
     if (!note.trim()) return;

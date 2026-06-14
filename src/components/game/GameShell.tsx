@@ -42,7 +42,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [playerX, setPlayerX] = useState(345);
   const [playerY, setPlayerY] = useState(245);
   const [playerChar, setPlayerChar] = useState(getDefaultCharacter());
-  const [secondPlayerChar, setSecondPlayerChar] = useState(getCharacterById('drifter'));
+  const [secondPlayerChar] = useState(getCharacterById('drifter'));
 
   // ---- 同行者 ----
   const [companionType, setCompanionType] = useState<CompanionType>('none');
@@ -378,13 +378,37 @@ export default function GameShell({ onExit }: GameShellProps) {
         </>
       )}
 
-      {/* 加载中 */}
+      {/* 加载骨架：首次进入时完全覆盖 Canvas，防止坐标闪烁 */}
       {isLoading && phase !== 'portal' && (
-        <div className="absolute inset-0 flex items-center justify-center z-20 bg-[var(--game-sky-day)]/60 pointer-events-none">
-          <div className="text-center">
-            <div className="text-3xl mb-3 animate-pulse-soft">🌲</div>
-            <p className="text-[var(--game-ink)] text-sm">世界正在苏醒……</p>
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center z-50"
+          style={{
+            background: 'linear-gradient(160deg, #071b1d 0%, #0d2a2e 60%, #071b1d 100%)',
+            pointerEvents: 'none',
+          }}
+        >
+          {/* 像素风树林骨架 */}
+          <div className="flex gap-4 mb-8 opacity-30" aria-hidden="true">
+            {[32, 48, 40, 56, 36].map((h, i) => (
+              <div
+                key={i}
+                className="animate-pulse"
+                style={{
+                  width: 12,
+                  height: h,
+                  background: 'var(--game-green-mid)',
+                  borderRadius: '3px 3px 0 0',
+                  animationDelay: `${i * 0.15}s`,
+                }}
+              />
+            ))}
           </div>
+          <div className="text-3xl mb-4" style={{ filter: 'drop-shadow(0 0 12px rgba(255,210,128,0.6))' }}>
+            🌲
+          </div>
+          <p className="text-sm" style={{ color: 'var(--game-warm-light)', opacity: 0.6 }}>
+            世界正在苏醒……
+          </p>
         </div>
       )}
     </div>

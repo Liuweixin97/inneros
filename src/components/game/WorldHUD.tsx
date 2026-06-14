@@ -14,12 +14,6 @@ interface WorldHUDProps {
   onExit: () => void;
 }
 
-const COMPANION_LABELS: Record<CompanionType, string> = {
-  none: '自由漫游',
-  human_local: '与身边的人同行',
-  llm: '同行者在附近',
-};
-
 export default function WorldHUD({
   companionType,
   playerX,
@@ -27,18 +21,48 @@ export default function WorldHUD({
   onOpenSettings,
   onExit,
 }: WorldHUDProps) {
-  const location = getRegion(getPlayerLocation(playerX, playerY) ?? 'cabin');
+  const locationId = getPlayerLocation(playerX, playerY);
+  const region = locationId ? getRegion(locationId) : null;
 
   return (
     <div className="game-hud">
+      {/* 左上：区域标识 */}
       <div className="game-hud-identity">
-        <span className="game-hud-mark"><Trees size={18} strokeWidth={1.7} /></span>
+        <span className="game-hud-mark">
+          {region ? (
+            <span style={{ fontSize: 18, lineHeight: 1 }}>{region.icon}</span>
+          ) : (
+            <Trees size={18} strokeWidth={1.7} />
+          )}
+        </span>
         <span>
-          <strong>{location?.name ?? '林间世界'}</strong>
-          <small>{COMPANION_LABELS[companionType]}</small>
+          <strong style={{ color: region?.color ?? 'var(--game-warm-light)' }}>
+            {region?.name ?? '林间世界'}
+          </strong>
+          <small>{region?.subtitle ?? '独自漫游'}</small>
         </span>
       </div>
 
+      {/* AI 伴侣徽章（仅 llm 模式显示） */}
+      {companionType === 'llm' && (
+        <div
+          className="absolute top-4 left-1/2 -translate-x-1/2"
+          style={{
+            background: 'rgba(255,155,61,0.18)',
+            border: '1px solid rgba(255,155,61,0.4)',
+            borderRadius: 20,
+            padding: '3px 12px',
+            fontSize: 11,
+            color: '#FF9B3D',
+            backdropFilter: 'blur(6px)',
+            pointerEvents: 'none',
+          }}
+        >
+          ✦ AI 同行者陪在附近
+        </div>
+      )}
+
+      {/* 右上：操作按钮 */}
       <div className="game-hud-actions">
         <button type="button" onClick={onOpenSettings} aria-label="打开游戏设置">
           <Settings size={17} strokeWidth={1.7} />
@@ -49,9 +73,11 @@ export default function WorldHUD({
         </button>
       </div>
 
+      {/* 底部操控说明（桌面端） */}
       <div className="game-control-legend">
         <span><kbd>WASD</kbd> 移动</span>
         <span><kbd>E</kbd> 互动</span>
+        <span><kbd>Esc</kbd> 设置</span>
       </div>
     </div>
   );
