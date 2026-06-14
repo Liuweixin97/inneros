@@ -9,8 +9,27 @@ interface MemoEncounterProps {
   authorizedMemoIds: string[];
   onAuthorize: (id: string) => void;
   onSaveAnnotation: (annotation: string) => Promise<boolean>;
+  onHide?: () => void;
   onClose: () => void;
   onOpenFireside: () => void;
+}
+
+/** 来源徽章 */
+function SourceBadge({ type }: { type: 'original' | 'user' | 'ai' }) {
+  const map = {
+    original: { label: '原始记录', color: '#8B6340', bg: 'rgba(139,99,64,0.12)' },
+    user:     { label: '今日补充', color: '#4A7C2F', bg: 'rgba(74,124,47,0.12)' },
+    ai:       { label: 'AI 推测',  color: '#9B59B6', bg: 'rgba(155,89,182,0.12)' },
+  };
+  const { label, color, bg } = map[type];
+  return (
+    <span
+      className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+      style={{ color, background: bg, border: `1px solid ${color}40` }}
+    >
+      {label}
+    </span>
+  );
 }
 
 export default function MemoEncounter({
@@ -19,18 +38,26 @@ export default function MemoEncounter({
   authorizedMemoIds,
   onAuthorize,
   onSaveAnnotation,
+  onHide,
   onClose,
   onOpenFireside,
 }: MemoEncounterProps) {
   const [annotation, setAnnotation] = useState(worldObject?.annotation ?? '');
   const [showAnnotationInput, setShowAnnotationInput] = useState(false);
   const [annotationSaved, setAnnotationSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [showAI, setShowAI] = useState(false);
 
   const isAuthorized = authorizedMemoIds.includes(memo.id);
   const date = new Date(memo.created_at);
   const dateStr = `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日`;
 
-  const [saveError, setSaveError] = useState('');
+  // 原文与 plain_text 的差异（来源区分）
+  const hasRawContent = memo.raw_content && memo.raw_content !== memo.plain_text;
+  const displayOriginal = memo.raw_content || memo.plain_text;
+
+  // AI 字段
+  const hasAI = memo.ai_title || memo.ai_summary || (memo.ai_emotions && memo.ai_emotions.length > 0);
 
   const handleSaveAnnotation = async () => {
     if (!annotation.trim()) return;
@@ -62,63 +89,117 @@ export default function MemoEncounter({
       >
         <div className="memo-parchment rounded-lg overflow-hidden">
           {/* 顶部装饰条 */}
-          <div
-            className="h-2"
-            style={{ background: 'linear-gradient(90deg, #C4A882, #E8D9B5, #C4A882)' }}
-          />
+          <div className="h-2" style={{ background: 'linear-gradient(90deg, #C4A882, #E8D9B5, #C4A882)' }} />
 
           <div className="p-6">
-            {/* 日期 + 标题行 */}
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-[11px] tracking-widest uppercase" style={{ color: '#8B6340' }}>
-                  {dateStr}
-                </p>
-                {memo.ai_title && (
-                  <h3 className="text-[15px] font-medium mt-1" style={{ color: '#3B2E2A' }}>
-                    {memo.ai_title}
-                  </h3>
+            {/* 日期 + 关闭 */}
+            <div className="flex items-start justify-between mb-3">
+              <p className="text-[11px] tracking-widest uppercase" style={{ color: '#8B6340' }}>
+                {dateStr}
+              </p>
+              <div className="flex items-center gap-2">
+                {onHide && (
+                  <button
+                    onClick={onHide}
+                    className="text-[11px] opacity-40 hover:opacity-70 transition-opacity"
+                    style={{ color: '#6B3F1A' }}
+                    title="在世界中隐藏这段记录"
+                  >
+                    隐藏
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="text-[18px] leading-none opacity-40 hover:opacity-70 transition-opacity"
+                  style={{ color: '#3B2E2A' }}
+                  aria-label="关闭"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* ── 原始记录 ── */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <SourceBadge type="original" />
+                {memo.original_tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {memo.original_tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-[10px] px-1.5 py-0.5 rounded-full"
+                        style={{ background: 'rgba(139,99,64,0.08)', border: '1px solid rgba(139,99,64,0.2)', color: '#8B6340' }}
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
-              <button
-                onClick={onClose}
-                className="text-[18px] leading-none opacity-40 hover:opacity-70 transition-opacity"
-                style={{ color: '#3B2E2A' }}
-                aria-label="关闭"
+              <div
+                className="text-[14px] leading-[1.9] max-h-48 overflow-y-auto"
+                style={{ color: '#3B2E2A', fontFamily: 'var(--font-sans)' }}
               >
-                ✕
-              </button>
+                <p className="whitespace-pre-wrap">{displayOriginal}</p>
+              </div>
             </div>
 
-            {/* Memo 正文（只读） */}
-            <div
-              className="text-[14px] leading-[1.9] mb-5 max-h-60 overflow-y-auto"
-              style={{ color: '#3B2E2A', fontFamily: 'var(--font-sans)' }}
-            >
-              <p className="whitespace-pre-wrap">{memo.plain_text}</p>
-            </div>
-
-            {/* 标签 */}
-            {memo.original_tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {memo.original_tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-[11px] px-2 py-0.5 rounded-full"
-                    style={{
-                      background: 'rgba(139,99,64,0.1)',
-                      border: '1px solid rgba(139,99,64,0.25)',
-                      color: '#8B6340',
-                    }}
-                  >
-                    #{tag}
+            {/* ── 今日补充（用户 annotation） ── */}
+            {worldObject?.annotation && !showAnnotationInput && (
+              <div className="mb-4 pt-3" style={{ borderTop: '1px dashed rgba(74,124,47,0.3)' }}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <SourceBadge type="user" />
+                  <span className="text-[10px] opacity-50" style={{ color: '#4A7C2F' }}>
+                    {worldObject.annotation !== annotation ? '已更新' : ''}
                   </span>
-                ))}
+                </div>
+                <p className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: '#3B2E2A' }}>
+                  {worldObject.annotation}
+                </p>
+                <button
+                  onClick={() => setShowAnnotationInput(true)}
+                  className="text-[11px] underline underline-offset-2 opacity-40 hover:opacity-70 mt-1 transition-opacity"
+                  style={{ color: '#6B3F1A' }}
+                >
+                  修改
+                </button>
               </div>
             )}
 
-            {/* 今日注释（与原文分离） */}
-            {!showAnnotationInput && !annotationSaved && (
+            {/* ── AI 推测（可展开） ── */}
+            {hasAI && (
+              <div className="mb-4 pt-3" style={{ borderTop: '1px dashed rgba(155,89,182,0.25)' }}>
+                <button
+                  onClick={() => setShowAI((v) => !v)}
+                  className="flex items-center gap-2 w-full text-left"
+                >
+                  <SourceBadge type="ai" />
+                  <span className="text-[11px] opacity-50 ml-auto" style={{ color: '#9B59B6' }}>
+                    {showAI ? '收起' : '查看'}
+                  </span>
+                </button>
+                {showAI && (
+                  <div className="mt-2 text-[12px] leading-relaxed" style={{ color: '#5D3E6A' }}>
+                    {memo.ai_title && (
+                      <p className="mb-1"><strong>标题：</strong>{memo.ai_title}</p>
+                    )}
+                    {memo.ai_summary && (
+                      <p className="mb-1"><strong>摘要：</strong>{memo.ai_summary}</p>
+                    )}
+                    {memo.ai_emotions && memo.ai_emotions.length > 0 && (
+                      <p><strong>情绪：</strong>{memo.ai_emotions.join('、')}</p>
+                    )}
+                    <p className="text-[10px] mt-2 opacity-60">
+                      以上内容由 AI 生成，是对原文的推测，不代表事实。
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── 留今天的话 ── */}
+            {!worldObject?.annotation && !showAnnotationInput && !annotationSaved && (
               <button
                 onClick={() => setShowAnnotationInput(true)}
                 className="text-[12px] underline underline-offset-2 opacity-50 hover:opacity-80 transition-opacity"
@@ -153,10 +234,7 @@ export default function MemoEncounter({
                   <button
                     onClick={handleSaveAnnotation}
                     className="text-[12px] px-3 py-1 rounded"
-                    style={{
-                      background: 'var(--game-green-mid)',
-                      color: 'white',
-                    }}
+                    style={{ background: 'var(--game-green-mid)', color: 'white' }}
                   >
                     留下
                   </button>
@@ -229,10 +307,7 @@ export default function MemoEncounter({
           </div>
 
           {/* 底部装饰条 */}
-          <div
-            className="h-1"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(139,99,64,0.3), transparent)' }}
-          />
+          <div className="h-1" style={{ background: 'linear-gradient(90deg, transparent, rgba(139,99,64,0.3), transparent)' }} />
         </div>
       </div>
     </>

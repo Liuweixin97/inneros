@@ -464,6 +464,7 @@ export type GamePhase =
   | 'memo_encounter' // Memo 阅读弹层
   | 'fireside_chat'  // 篝火对话
   | 'co_write'      // 共同书写
+  | 'pond'          // 静水池塘
   | 'settings';     // 游戏内设置
 
 export interface PlayerCharacter {

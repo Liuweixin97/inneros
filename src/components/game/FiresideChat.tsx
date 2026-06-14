@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { Pause, Send, X } from 'lucide-react';
-import type { DialogueMode, GameWorld, Memo } from '@/types';
+import type { CompanionType, DialogueMode, GameWorld, Memo } from '@/types';
 import {
   sendCompanionMessage,
   type CompanionMessage,
@@ -15,6 +15,8 @@ interface FiresideChatProps {
   dialogueMode: DialogueMode;
   onDialogueModeChange: (mode: DialogueMode) => void;
   onAuthorizeMemos: (ids: string[]) => void;
+  companionType: CompanionType;
+  onCompanionTypeChange: (t: CompanionType) => void;
   onClose: () => void;
 }
 
@@ -32,6 +34,8 @@ export default function FiresideChat({
   dialogueMode,
   onDialogueModeChange,
   onAuthorizeMemos,
+  companionType,
+  onCompanionTypeChange,
   onClose,
 }: FiresideChatProps) {
   const [messages, setMessages] = useState<CompanionMessage[]>([]);
@@ -109,9 +113,29 @@ export default function FiresideChat({
             <p className="game-kicker">篝火地 · 一起说</p>
             <h2>同行者坐在火光的另一边</h2>
           </div>
-          <button type="button" className="game-icon-button" onClick={close} aria-label="离开篝火">
-            <X size={17} />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* 邀请 / 结束 AI 同行者 */}
+            <button
+              type="button"
+              className="game-hud-btn text-[11px] px-2 py-1"
+              style={{
+                background: companionType === 'llm'
+                  ? 'rgba(255,155,61,0.2)'
+                  : 'rgba(255,243,196,0.08)',
+                borderColor: companionType === 'llm'
+                  ? 'rgba(255,155,61,0.5)'
+                  : 'rgba(255,243,196,0.15)',
+                color: companionType === 'llm' ? '#FF9B3D' : 'var(--game-hud-muted)',
+              }}
+              onClick={() => onCompanionTypeChange(companionType === 'llm' ? 'none' : 'llm')}
+              title={companionType === 'llm' ? '结束 AI 同行，独自漫游' : '邀请 AI 同行者'}
+            >
+              {companionType === 'llm' ? '✦ AI 同行中' : '+ 邀请同行'}
+            </button>
+            <button type="button" className="game-icon-button" onClick={close} aria-label="离开篝火">
+              <X size={17} />
+            </button>
+          </div>
         </header>
 
         <div className="fireside-modes" aria-label="选择对话方式">

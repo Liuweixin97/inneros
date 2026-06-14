@@ -17,11 +17,12 @@ interface PixelWorldCanvasProps {
   onOpenMemo: (memoId: string, objectId: string) => void;
   onEnterFireside: () => void;
   onEnterCoWrite: () => void;
+  onEnterPond: () => void;
   onCanvasFailure: () => void;
 }
 
 type Direction = 'down' | 'left' | 'right' | 'up';
-type NearbyAction = 'fireside' | 'workshop' | null;
+type NearbyAction = 'fireside' | 'workshop' | 'pond' | null;
 
 const SPEED = 3;
 const INTERACT_RADIUS = 42;
@@ -62,6 +63,7 @@ export default function PixelWorldCanvas({
   onOpenMemo,
   onEnterFireside,
   onEnterCoWrite,
+  onEnterPond,
   onCanvasFailure,
 }: PixelWorldCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -123,7 +125,8 @@ export default function PixelWorldCanvas({
     }
     if (action === 'fireside') onEnterFireside();
     if (action === 'workshop') onEnterCoWrite();
-  }, [onEnterCoWrite, onEnterFireside, onOpenMemo]);
+    if (action === 'pond') onEnterPond();
+  }, [onEnterCoWrite, onEnterFireside, onEnterPond, onOpenMemo]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -259,7 +262,9 @@ export default function PixelWorldCanvas({
       ? '坐下来，和同行者谈谈'
       : nearbyAction === 'workshop'
         ? '进入共写小屋'
-        : '';
+        : nearbyAction === 'pond'
+          ? '到池边坐一会儿'
+          : '';
 
   return (
     <div ref={containerRef} className="game-world-stage">
@@ -379,6 +384,7 @@ function findNearbyAction(
   const nearWorkshop = Math.hypot(665 - x, 335 - y) < 58;
   const secondNearWorkshop = Math.hypot(665 - secondX, 335 - secondY) < 70;
   if (nearWorkshop && (companionType !== 'human_local' || secondNearWorkshop)) return 'workshop';
+  if (Math.hypot(195 - x, 285 - y) < 52) return 'pond';
   return null;
 }
 

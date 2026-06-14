@@ -14,13 +14,13 @@ import { mapMemosToWorldObjects } from '@/lib/game/memo-mapper';
 import { getDefaultCharacter, getCharacterById } from '@/lib/game/sprite';
 import { isWalkable } from '@/lib/game/collisions';
 import GamePortal from './GamePortal';
-import CharacterSelect from './CharacterSelect';
 import PixelWorldCanvas from './PixelWorldCanvas';
 import WorldHUD from './WorldHUD';
 import GameSettings from './GameSettings';
 import MemoEncounter from './MemoEncounter';
 import FiresideChat from './FiresideChat';
 import CoWritePanel from './CoWritePanel';
+import PondPanel from './PondPanel';
 
 interface GameShellProps {
   onExit: () => void;
@@ -55,6 +55,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [firesideChatOpen, setFiresideChatOpen] = useState(false);
   const [coWriteOpen, setCoWriteOpen] = useState(false);
+  const [pondOpen, setPondOpen] = useState(false);
 
   // ---- 减少动态模式 ----
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -166,12 +167,19 @@ export default function GameShell({ onExit }: GameShellProps) {
     setPhase('co_write');
   }, []);
 
+  // 进入池塘
+  const handleEnterPond = useCallback(() => {
+    setPondOpen(true);
+    setPhase('pond');
+  }, []);
+
   // 关闭所有弹层，回到探索
   const handleCloseAll = useCallback(() => {
     setActiveMemo(null);
     setActiveObject(null);
     setFiresideChatOpen(false);
     setCoWriteOpen(false);
+    setPondOpen(false);
     setPhase('explore');
   }, []);
 
@@ -256,7 +264,7 @@ export default function GameShell({ onExit }: GameShellProps) {
       )}
 
       {/* 主地图 */}
-      {(phase === 'explore' || phase === 'memo_encounter' || phase === 'fireside_chat' || phase === 'co_write') && (
+      {(phase === 'explore' || phase === 'memo_encounter' || phase === 'fireside_chat' || phase === 'co_write' || phase === 'pond') && (
         <>
           {loadError || canvasFailed ? (
             <GameFallbackView
@@ -282,6 +290,7 @@ export default function GameShell({ onExit }: GameShellProps) {
                 onOpenMemo={handleOpenMemo}
                 onEnterFireside={handleEnterFireside}
                 onEnterCoWrite={handleEnterCoWrite}
+                onEnterPond={handleEnterPond}
                 onCanvasFailure={() => setCanvasFailed(true)}
               />
 
@@ -305,6 +314,12 @@ export default function GameShell({ onExit }: GameShellProps) {
               authorizedMemoIds={authorizedMemoIds}
               onAuthorize={(id) => handleAuthorizeMemos([...authorizedMemoIds, id])}
               onSaveAnnotation={handleSaveAnnotation}
+              onHide={activeObject ? () => {
+                setObjects((current) => current.map((o) =>
+                  o.id === activeObject.id ? { ...o, hidden: true } : o
+                ));
+                handleCloseAll();
+              } : undefined}
               onClose={handleCloseAll}
               onOpenFireside={() => {
                 setActiveMemo(null);
@@ -323,6 +338,8 @@ export default function GameShell({ onExit }: GameShellProps) {
                 dialogueMode={dialogueMode}
                 onDialogueModeChange={setDialogueMode}
                 onAuthorizeMemos={handleAuthorizeMemos}
+                companionType={companionType}
+                onCompanionTypeChange={setCompanionType}
                 onClose={handleCloseAll}
               />
             ) : null
@@ -337,6 +354,11 @@ export default function GameShell({ onExit }: GameShellProps) {
               onClose={handleCloseAll}
               onObjectPlaced={handleObjectPlaced}
             />
+          )}
+
+          {/* 池塘面板 */}
+          {phase === 'pond' && pondOpen && (
+            <PondPanel onClose={handleCloseAll} />
           )}
 
           {/* 游戏设置 */}
