@@ -10,8 +10,14 @@ interface MarkdownContentProps {
     memo_id: string;
     memo_title?: string | null;
     memo_date?: string;
+    reference_type?: 'memo' | 'memory' | 'principle';
+    reference_id?: string;
   }>;
   onMemoReference?: (memoId: string) => void;
+  onKnowledgeReference?: (
+    type: 'memo' | 'memory' | 'principle',
+    id: string,
+  ) => void;
 }
 
 function decodeHtmlEntities(value: string): string {
@@ -44,37 +50,67 @@ export default function MarkdownContent({
   className = '',
   memoReferences = [],
   onMemoReference,
+  onKnowledgeReference,
 }: MarkdownContentProps) {
   const normalizedContent = /<\/?(?:p|div|strong|b|em|i|u|ul|ol|li|br)\b/i.test(content)
     ? htmlToMarkdown(content)
     : content;
-  const references = new Map(memoReferences.map((reference) => [
-    reference.memo_id,
-    reference.memo_title || '未命名记录',
-  ]));
+  const referenceEntries = memoReferences.map((reference) => {
+    const type = reference.reference_type || 'memo';
+    const id = reference.reference_id || reference.memo_id;
+    return {
+      key: `${type}:${id}`,
+      title: reference.memo_title || '未命名来源',
+    };
+  });
+  const references = new Map(referenceEntries.map(({ key, title }) => [key, title]));
   const contentWithReferences = normalizedContent.replace(
-    /\[\[memo:([a-zA-Z0-9-]+)\]\]/g,
-    (_, memoId: string) => `[${references.get(memoId) || '相关记录'}](memo:${memoId})`,
+    /\[\[(memo|memory|principle):([a-zA-Z0-9-]+)\]\]/g,
+    (_, type: 'memo' | 'memory' | 'principle', id: string) => {
+      const requestedKey = `${type}:${id}`;
+      const prefixMatches = id.length >= 6
+        ? referenceEntries.filter(({ key }) => key.startsWith(requestedKey))
+        : [];
+      const resolvedKey = references.has(requestedKey)
+        ? requestedKey
+        : prefixMatches.length === 1 ? prefixMatches[0].key : null;
+      if (!resolvedKey) return '';
+      const resolvedId = resolvedKey.slice(resolvedKey.indexOf(':') + 1);
+      return `[${references.get(resolvedKey)}](inneros-ref:${type}:${resolvedId})`;
+    },
   );
+  const displayContent = onKnowledgeReference || onMemoReference || memoReferences.length > 0
+    ? contentWithReferences.replace(
+      /\[\[(?!(?:memo|memory|principle):)[a-zA-Z_][a-zA-Z0-9_-]*(?::[a-zA-Z0-9-]+)?\]\]/g,
+      '',
+    )
+    : contentWithReferences;
 
   return (
     <div className={`markdown-content ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         urlTransform={(url) => {
-          if (url.startsWith('memo:')) return url;
+          if (url.startsWith('inneros-ref:')) return url;
           return /^(https?:\/\/|mailto:|\/|#)/i.test(url) ? url : '';
         }}
         components={{
           a: ({ href = '', children }) => {
-            if (href.startsWith('memo:')) {
-              const memoId = href.slice(5);
+            if (href.startsWith('inneros-ref:')) {
+              const [, type, id] = href.split(':') as [
+                string,
+                'memo' | 'memory' | 'principle',
+                string,
+              ];
               return (
                 <button
                   type="button"
-                  className="memo-reference"
-                  onClick={() => onMemoReference?.(memoId)}
-                  title={references.get(memoId)}
+                  className={`memo-reference memo-reference--${type}`}
+                  onClick={() => {
+                    onKnowledgeReference?.(type, id);
+                    if (type === 'memo') onMemoReference?.(id);
+                  }}
+                  title={references.get(`${type}:${id}`)}
                 >
                   {children}
                 </button>
@@ -97,7 +133,7 @@ export default function MarkdownContent({
           ),
         }}
       >
-        {contentWithReferences}
+        {displayContent}
       </ReactMarkdown>
     </div>
   );

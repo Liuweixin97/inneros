@@ -22,7 +22,7 @@ import type {
   RankedMemoSearchResult,
 } from '@/lib/db/memos';
 
-type RetrievalSource = 'query' | 'memory' | 'vector' | 'state' | 'focused';
+type RetrievalSource = 'query' | 'memory' | 'vector' | 'state' | 'focused' | 'recent_baseline';
 type RetrievalIntent =
   | 'fact'
   | 'person'
@@ -129,11 +129,13 @@ export function buildCitations(results: RetrievedMemo[]): Citation[] {
         ? `当前状态证据${matchedTerms.length > 0 ? `：${matchedTerms.slice(0, 2).join('、')}` : ''}`
       : source === 'memory'
         ? `长期记忆证据${matchedTerms.length > 0 ? `：${matchedTerms.slice(0, 3).join('、')}` : ''}`
-        : source === 'vector'
-          ? '语义相关记录'
-        : matchedTerms.length > 0
-          ? `命中：${matchedTerms.slice(0, 3).join('、')}`
-          : '与当前问题相关',
+      : source === 'vector'
+        ? '语义相关记录'
+      : source === 'recent_baseline'
+        ? '近期状态背景'
+      : matchedTerms.length > 0
+        ? `命中：${matchedTerms.slice(0, 3).join('、')}`
+        : '与当前问题相关',
   }));
 }
 
@@ -807,9 +809,14 @@ export async function searchRelevantMemos(
 /**
  * 从 memories 库中提取 active 状态的用户记忆，生成个性锚点文本。
  * 优先选取 belief / preference / pattern / goal / state 类型，最多 8 条。
- * 压缩为 ≤ 500 字符，始终存在于 System Prompt 中（不占 memo 上下文配额）。
+ * 保留真实 memory ID，始终存在于 System Prompt 中（不占 memo 上下文配额）。
  */
-async function buildPersonaAnchor(): Promise<string> {
+interface ContextReferenceResult {
+  text: string;
+  citations: Citation[];
+}
+
+async function buildPersonaAnchor(): Promise<ContextReferenceResult> {
   try {
     const { getMemories } = await import('@/lib/db/memories');
     const { memories } = getMemories({ status: 'active', limit: 40 });
@@ -819,21 +826,60 @@ async function buildPersonaAnchor(): Promise<string> {
       .filter((m) => PERSONA_TYPES.has(m.type))
       .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
       .slice(0, 8);
-    if (sorted.length === 0) return '';
+    if (sorted.length === 0) return { text: '', citations: [] };
     const lines = sorted.map((m) => {
       const typeLabel: Record<string, string> = {
         belief: '信念', preference: '偏好', pattern: '规律', state: '当前状态',
         goal: '目标', constraint: '约束',
       };
       const label = typeLabel[m.type] ?? m.type;
-      return `[${label}] ${m.title}：${m.summary}`;
+      return `ID: ${m.id} | [${label}] ${m.title}：${m.summary}`;
     });
     const raw = lines.join('\n');
-    // 压缩至 500 字符
-    return raw.length > 500 ? raw.slice(0, 497) + '…' : raw;
+    return {
+      text: raw,
+      citations: sorted.map((memory) => ({
+        reference_type: 'memory',
+        reference_id: memory.id,
+        memo_id: memory.id,
+        memo_title: memory.title,
+        memo_date: memory.last_confirmed_at,
+        relevant_snippet: memory.summary,
+        relevance_score: memory.confidence,
+        retrieval_reason: '长期记忆 / 个性锚点',
+      })),
+    };
   } catch (err) {
     console.warn('[RAG] buildPersonaAnchor 失败:', err);
-    return '';
+    return { text: '', citations: [] };
+  }
+}
+
+async function buildPrinciplesContext(): Promise<ContextReferenceResult> {
+  try {
+    const { getInsights } = await import('@/lib/db/insights');
+    const principles = getInsights().filter((insight) => insight.saved_as_principle);
+    return {
+      text: principles
+        .map((principle) => `ID: ${principle.id} | 【${principle.title}】：${principle.content}`)
+        .join('\n'),
+      citations: principles.map((principle) => ({
+        reference_type: 'principle',
+        reference_id: principle.id,
+        memo_id: principle.id,
+        memo_title: principle.title,
+        memo_date: principle.created_at,
+        relevant_snippet: principle.content,
+        relevance_score: principle.confidence === 'high'
+          ? 1
+          : principle.confidence === 'medium' ? 0.7 : 0.4,
+        retrieval_reason: '用户保存的准则',
+        evidence_memo_ids: principle.evidence_memo_ids,
+      })),
+    };
+  } catch (err) {
+    console.error('[RAG] 准则注入失败:', err);
+    return { text: '', citations: [] };
   }
 }
 
@@ -844,10 +890,15 @@ async function buildPersonaAnchor(): Promise<string> {
  * 仅返回标题 + 一句摘要 + 日期，不含全文（控制 token 成本）。
  * 已在主检索中出现的 memo 会被过滤，避免重复。
  */
+interface RecentBaselineResult {
+  text: string;
+  memos: Memo[];
+}
+
 async function getRecentBaselineMemos(
   alreadyRetrievedIds: Set<string>,
   limit = 5,
-): Promise<string> {
+): Promise<RecentBaselineResult> {
   try {
     const { getMemos } = await import('@/lib/db/memos');
     const cutoff = new Date(Date.now() - 14 * 86_400_000).toISOString();
@@ -859,18 +910,21 @@ async function getRecentBaselineMemos(
     const recent = memos
       .filter((m) => m.privacy_level === 'normal' && !alreadyRetrievedIds.has(m.id))
       .slice(0, limit);
-    if (recent.length === 0) return '';
+    if (recent.length === 0) return { text: '', memos: [] };
     const lines = recent.map((m) => {
       const date = new Date(m.created_at).toLocaleDateString('zh-CN', {
         month: '2-digit', day: '2-digit',
       });
       const summary = m.ai_summary || m.plain_text.slice(0, 60);
-      return `[${date}] ${m.ai_title || '无标题'}：${summary}`;
+      return `ID: ${m.id} | [${date}] ${m.ai_title || '无标题'}：${summary}`;
     });
-    return lines.join('\n');
+    return {
+      text: lines.join('\n'),
+      memos: recent,
+    };
   } catch (err) {
     console.warn('[RAG] getRecentBaselineMemos 失败:', err);
-    return '';
+    return { text: '', memos: [] };
   }
 }
 
@@ -991,11 +1045,32 @@ export async function generateRAGResponse(
   // 6. Layer 3b: 扩展召回（命中 < 5 条时激活，threshold=5 为激进模式）
   const expandedSearchPromise = expandSearchIfLowCoverage(retrievedIds, 5, retrievedMemos.length);
 
-  const [personaAnchor, recentBaseline, expandedSearch] = await Promise.all([
+  const principlesPromise = buildPrinciplesContext();
+
+  const [personaAnchorResult, recentBaselineResult, expandedSearch, principlesResult] = await Promise.all([
     personaAnchorPromise,
     recentBaselinePromise,
     expandedSearchPromise,
+    principlesPromise,
   ]);
+
+  const personaAnchor = personaAnchorResult.text;
+  const recentBaseline = recentBaselineResult.text;
+  const recentBaselineMemos = recentBaselineResult.memos;
+
+  // Append recent baseline memos to citations list so they are not sanitized
+  // and the client can look up their titles.
+  if (recentBaselineMemos && recentBaselineMemos.length > 0) {
+    const recentRetrieved = recentBaselineMemos.map((m) => ({
+      memo: m,
+      score: 50,
+      matchedTerms: [] as string[],
+      source: 'recent_baseline' as const,
+      contextSnippet: m.ai_summary || m.plain_text.slice(0, 180),
+    }));
+    citations.push(...buildCitations(recentRetrieved));
+  }
+  citations.push(...personaAnchorResult.citations, ...principlesResult.citations);
 
   // 7. 合并主上下文和扩展召回
   const fullMainContext = expandedSearch
@@ -1003,18 +1078,7 @@ export async function generateRAGResponse(
     : mainContext;
 
   // 8. 准则张力提示（镜子模式：指出用户行为与准则的张力，而非评判）
-  let principlesTension = '';
-  try {
-    const { getInsights } = await import('@/lib/db/insights');
-    const activePrinciples = getInsights().filter((i) => i.saved_as_principle);
-    if (activePrinciples.length > 0) {
-      principlesTension = activePrinciples
-        .map((p, idx) => `${idx + 1}. 【${p.title}】：${p.content}`)
-        .join('\n');
-    }
-  } catch (err) {
-    console.error('[RAG] 准则注入失败:', err);
-  }
+  const principlesTension = principlesResult.text;
 
   // 9. 组装系统提示词（三层上下文版本）
   const modePrompt = getModePrompt(mode);

@@ -4,7 +4,7 @@
 
 import { NextRequest } from 'next/server';
 import { generateRAGResponse } from '@/lib/ai/rag';
-import { sanitizeMemoReferences } from '@/lib/ai/memo-references';
+import { normalizeKnowledgeReferences } from '@/lib/ai/memo-references';
 import type { ConversationMode } from '@/types';
 
 interface ChatRequestBody {
@@ -128,13 +128,22 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          fullContent = sanitizeMemoReferences(
+          const normalizedReferences = normalizeKnowledgeReferences(
             fullContent,
-            citations.map((citation) => citation.memo_id),
+            citations.map((citation) => (
+              `${citation.reference_type || 'memo'}:${citation.reference_id || citation.memo_id}`
+            )),
           );
+          fullContent = normalizedReferences.content;
+          const finalCitations = citations.filter((citation) => (
+            normalizedReferences.referencedKeys.includes(
+              `${citation.reference_type || 'memo'}:${citation.reference_id || citation.memo_id}`,
+            )
+          ));
           sendEvent({
             type: 'replace',
             content: fullContent,
+            citations: finalCitations,
           });
 
           // 3. Save assistant message to DB
@@ -145,8 +154,8 @@ export async function POST(request: NextRequest) {
               role: 'assistant',
               content: fullContent,
               reasoning_content: fullReasoning,
-              citations: citations,
-              source_type: citations.length > 0 ? 'from_notes' : 'suggestion',
+              citations: finalCitations,
+              source_type: finalCitations.length > 0 ? 'from_notes' : 'suggestion',
             });
             assistantMessageId = savedMsg.id;
             const { summarizeConversation } = await import('@/lib/ai/conversation-summarizer');

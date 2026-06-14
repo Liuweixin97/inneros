@@ -11,8 +11,8 @@ import PixelWorldCanvas from './PixelWorldCanvas';
 import WorldHUD from './WorldHUD';
 import GameSettings from './GameSettings';
 import MemoEncounter from './MemoEncounter';
-import FiresideChat from './FiresideChat';
-import CoWritePanel from './CoWritePanel';
+// import FiresideChat from './FiresideChat';
+// import CoWritePanel from './CoWritePanel';
 
 interface GameShellProps {
   onExit: () => void;
@@ -234,31 +234,40 @@ export default function GameShell({ onExit }: GameShellProps) {
 
           {/* 篝火对话 */}
           {phase === 'fireside_chat' && firesideChatOpen && (
-            <FiresideChat
-              companionType={companionType}
-              dialogueMode={dialogueMode}
-              authorizedMemoIds={authorizedMemoIds}
-              memos={memos}
-              onDialogueModeChange={setDialogueMode}
-              onAuthorizeMemos={handleAuthorizeMemos}
-              onClose={handleCloseAll}
-              onPlaceObject={(type, annotation) => {
-                // 放置物件（从对话结果生成）
-                console.log('[GameShell] place object from chat:', type, annotation);
-              }}
-            />
+            <div className="absolute inset-0 z-40 bg-[rgba(30,18,8,0.7)] backdrop-blur-sm flex items-center justify-center text-white font-mono">
+              <div className="text-center p-6 rounded-lg max-w-sm border-2 border-[#C4A882]" style={{ background: '#3B2E2A' }}>
+                <h3 className="text-lg font-bold mb-2" style={{ color: '#FF9B3D' }}>🔥 篝火对话（暂未实现）</h3>
+                <p className="text-xs opacity-80 mb-4 leading-relaxed">
+                  AI 同行者在此与你探讨记忆。此处可以切换倾听、询问与整理姿态。
+                </p>
+                <button
+                  onClick={handleCloseAll}
+                  className="px-4 py-2 rounded text-xs transition-colors"
+                  style={{ background: 'var(--game-green-mid)' }}
+                >
+                  返回世界
+                </button>
+              </div>
+            </div>
           )}
 
           {/* 共写面板 */}
           {phase === 'co_write' && coWriteOpen && (
-            <CoWritePanel
-              memos={memos}
-              authorizedMemoIds={authorizedMemoIds}
-              onClose={handleCloseAll}
-              onSaveDraft={(draft) => {
-                console.log('[GameShell] save draft:', draft);
-              }}
-            />
+            <div className="absolute inset-0 z-40 bg-[rgba(30,18,8,0.7)] backdrop-blur-sm flex items-center justify-center text-white font-mono">
+              <div className="text-center p-6 rounded-lg max-w-sm border-2 border-[#C4A882]" style={{ background: '#3B2E2A' }}>
+                <h3 className="text-lg font-bold mb-2" style={{ color: '#C4A882' }}>📝 共写面板（暂未实现）</h3>
+                <p className="text-xs opacity-80 mb-4 leading-relaxed">
+                  与同伴或 AI 轮流记叙今日感想，共同制作世界物件。
+                </p>
+                <button
+                  onClick={handleCloseAll}
+                  className="px-4 py-2 rounded text-xs transition-colors"
+                  style={{ background: 'var(--game-green-mid)' }}
+                >
+                  返回世界
+                </button>
+              </div>
+            </div>
           )}
 
           {/* 游戏设置 */}

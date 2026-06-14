@@ -26,15 +26,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const createdMemos = createMemosBatch(body.memos);
+    const { createdMemos, skippedCount } = createMemosBatch(body.memos);
     for (const memo of createdMemos) {
       enqueueMemoAnalysis(memo.id);
     }
-    after(() => drainAnalysisJobs(createdMemos.length * 2, 10));
+    if (createdMemos.length > 0) {
+      after(() => drainAnalysisJobs(createdMemos.length * 2, 10));
+    }
 
     return NextResponse.json({
       success: true,
       count: createdMemos.length,
+      skippedCount,
+      total: body.memos.length,
       memos: createdMemos,
     }, { status: 201 });
   } catch (error) {

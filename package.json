@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:flomo-import": "tsx --test src/lib/import/flomo-dedup.test.ts",
     "test:retrieval": "tsx scripts/evaluate-retrieval.ts",
     "worker:analysis": "node scripts/analysis-worker.mjs"
   },

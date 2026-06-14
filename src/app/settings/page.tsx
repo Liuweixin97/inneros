@@ -128,7 +128,11 @@ export default function SettingsPage() {
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0); // 0 to 100
   const [importStatusText, setImportStatusText] = useState('');
-  const [importStats, setImportStats] = useState<{ total: number; success: number } | null>(null);
+  const [importStats, setImportStats] = useState<{
+    total: number;
+    success: number;
+    skipped: number;
+  } | null>(null);
   const needsAnalysis = Boolean(aiStatus && (
     aiStatus.analysis.memos_done < aiStatus.analysis.memos_total
     || aiStatus.analysis.memos_memory_processed < aiStatus.analysis.memos_done
@@ -310,6 +314,8 @@ export default function SettingsPage() {
 
         const totalMemos = parsedMemos.length;
         let successCount = 0;
+        let skippedCount = 0;
+        let processedCount = 0;
         const chunkSize = 100;
 
         for (let i = 0; i < totalMemos; i += chunkSize) {
@@ -331,12 +337,22 @@ export default function SettingsPage() {
             throw new Error(`批次 ${currentBatchNum} 导入失败`);
           }
 
-          successCount += chunk.length;
-          setImportProgress(Math.round((successCount / totalMemos) * 100));
+          const result = (await response.json()) as {
+            count: number;
+            skippedCount: number;
+          };
+          successCount += result.count;
+          skippedCount += result.skippedCount;
+          processedCount += chunk.length;
+          setImportProgress(Math.round((processedCount / totalMemos) * 100));
         }
 
-        setImportStatusText('导入成功！正在更新统计数据...');
-        setImportStats({ total: totalMemos, success: successCount });
+        setImportStatusText('导入完成，正在更新统计数据...');
+        setImportStats({
+          total: totalMemos,
+          success: successCount,
+          skipped: skippedCount,
+        });
         await load(); // reload stats
       } catch (err) {
         console.error(err);
@@ -433,7 +449,7 @@ export default function SettingsPage() {
               <h2 className="font-semibold text-[var(--color-text-strong)]">从 Flomo 导入</h2>
             </div>
             <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-              支持导入从 Flomo 导出的 HTML 格式笔记文件。导入过程中会自动解析时间、标签（支持层级标签）以及 Markdown 样式排版。
+              支持导入从 Flomo 导出的 HTML 格式笔记文件。系统会自动解析时间、标签和 Markdown 排版，并识别已导入或文件内重复的笔记。
             </p>
             
             <div className="flex flex-col gap-4">
@@ -479,7 +495,7 @@ export default function SettingsPage() {
 
                   {importStats && (
                     <p className="mt-1.5 text-xs font-medium text-[var(--color-success-text)]">
-                      ✓ 成功导入 {importStats.success} 条笔记。
+                      共识别 {importStats.total} 条，新增 {importStats.success} 条，跳过重复 {importStats.skipped} 条。
                     </p>
                   )}
                 </div>

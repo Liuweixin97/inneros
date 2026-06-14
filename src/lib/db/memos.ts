@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Memo, MemoCreateInput, MemoFilters } from '@/types';
+import { createFlomoFingerprint } from '@/lib/import/flomo-dedup';
 import { getDb, MEMO_JSON_FIELDS, parseJsonFields, stringifyJsonFields } from './index';
 
 // ---- Internal helpers ----
@@ -172,33 +173,75 @@ export function createMemo(input: MemoCreateInput): Memo {
   return parseJsonFields(dbMemo, MEMO_JSON_FIELDS) as unknown as Memo;
 }
 
-export function createMemosBatch(inputs: MemoCreateInput[]): Memo[] {
+export interface CreateMemosBatchResult {
+  createdMemos: Memo[];
+  skippedCount: number;
+}
+
+export function createMemosBatch(inputs: MemoCreateInput[]): CreateMemosBatchResult {
   const db = getDb();
 
   const insertStmt = db.prepare(`
-    INSERT INTO memos (
-      id, raw_content, plain_text, created_at, updated_at, source, original_tags,
+    INSERT OR IGNORE INTO memos (
+      id, raw_content, plain_text, created_at, updated_at, source, import_fingerprint, original_tags,
       ai_title, ai_summary, ai_category, ai_topics, ai_emotions, ai_people,
       ai_projects, ai_actions, ai_key_questions, embedding, analysis_status, privacy_level
     ) VALUES (
-      @id, @raw_content, @plain_text, @created_at, @updated_at, @source, @original_tags,
+      @id, @raw_content, @plain_text, @created_at, @updated_at, @source, @import_fingerprint, @original_tags,
       @ai_title, @ai_summary, @ai_category, @ai_topics, @ai_emotions, @ai_people,
       @ai_projects, @ai_actions, @ai_key_questions, @embedding, @analysis_status, @privacy_level
     )
   `);
 
+  const existingFlomoRows = db.prepare(`
+    SELECT raw_content, created_at, import_fingerprint
+    FROM memos
+    WHERE source = 'flomo'
+  `).all() as Array<{
+    raw_content: string;
+    created_at: string;
+    import_fingerprint: string | null;
+  }>;
+  const knownFlomoFingerprints = new Set(existingFlomoRows.map((row) => (
+    row.import_fingerprint || createFlomoFingerprint(row.raw_content, row.created_at)
+  )));
+
   const runInsertBatch = db.transaction((memos: Record<string, unknown>[]) => {
+    const inserted: Record<string, unknown>[] = [];
+    let ignoredCount = 0;
     for (const memo of memos) {
-      insertStmt.run(memo);
+      const result = insertStmt.run(memo);
+      if (result.changes > 0) {
+        inserted.push(memo);
+      } else {
+        ignoredCount++;
+      }
     }
+    return { inserted, ignoredCount };
   });
 
-  const parsedMemos = inputs.map((input) => {
+  let skippedCount = 0;
+  const preparedMemos: Record<string, unknown>[] = [];
+
+  for (const input of inputs) {
     const id = uuidv4();
     const now = input.created_at || new Date().toISOString();
+    const source = input.source || 'flomo';
+    const importFingerprint = source === 'flomo'
+      ? createFlomoFingerprint(input.content, now)
+      : null;
+
+    if (importFingerprint && knownFlomoFingerprints.has(importFingerprint)) {
+      skippedCount++;
+      continue;
+    }
+    if (importFingerprint) {
+      knownFlomoFingerprints.add(importFingerprint);
+    }
+
     const contentTags = extractHashtags(input.content);
     const allTags = [...new Set([...(input.tags || []), ...contentTags])];
-    const plainText = generatePlainText(input.content, input.source || 'flomo');
+    const plainText = generatePlainText(input.content, source);
 
     const memo: Record<string, unknown> = {
       id,
@@ -206,7 +249,8 @@ export function createMemosBatch(inputs: MemoCreateInput[]): Memo[] {
       plain_text: plainText,
       created_at: now,
       updated_at: now,
-      source: input.source || 'flomo',
+      source,
+      import_fingerprint: importFingerprint,
       original_tags: allTags,
       ai_title: input.ai_title || null,
       ai_summary: null,
@@ -222,16 +266,16 @@ export function createMemosBatch(inputs: MemoCreateInput[]): Memo[] {
       privacy_level: 'normal',
     };
 
-    const dbMemo = stringifyJsonFields(memo, MEMO_JSON_FIELDS);
-    return {
-      dbMemo,
-      originalMemo: parseJsonFields(dbMemo, MEMO_JSON_FIELDS) as unknown as Memo,
-    };
-  });
+    preparedMemos.push(stringifyJsonFields(memo, MEMO_JSON_FIELDS));
+  }
 
-  runInsertBatch(parsedMemos.map((p) => p.dbMemo));
-
-  return parsedMemos.map((p) => p.originalMemo);
+  const { inserted: insertedMemos, ignoredCount } = runInsertBatch(preparedMemos);
+  return {
+    createdMemos: insertedMemos.map((memo) => (
+      parseJsonFields(memo, MEMO_JSON_FIELDS) as unknown as Memo
+    )),
+    skippedCount: skippedCount + ignoredCount,
+  };
 }
 
 

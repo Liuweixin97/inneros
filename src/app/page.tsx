@@ -12,14 +12,13 @@ import {
   List,
   Loader2,
   RefreshCw,
-  Send,
   Sparkles,
   Underline,
   X,
 } from 'lucide-react';
-import type { EmotionType, TodayDigest, TodayEmotionWeek } from '@/types';
+import type { TodayDigest, TodayEmotion } from '@/types';
 
-const TREND_COLORS = ['#27c89b', '#7c6ee6', '#f4ad55', '#e76f83'];
+const FEELING_COLORS = ['#27c89b', '#7c6ee6', '#f4ad55', '#e76f83'];
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -44,6 +43,10 @@ function relativeDate(dateString: string): string {
   if (days === 1) return '昨天';
   if (days < 7) return `${days} 天前`;
   return new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric' }).format(new Date(dateString));
+}
+
+function cleanAnchorTitle(value: string): string {
+  return value.replace(/^(当前)?(状态|目标)\s*[：:]\s*/u, '').trim();
 }
 
 export default function TodayPage() {
@@ -136,13 +139,16 @@ export default function TodayPage() {
 
   return (
     <div className="min-h-full animate-fade-in">
-      <div className="mx-auto max-w-[980px] px-5 py-7 md:px-8 md:py-10">
-        <header className="mb-8 flex items-end justify-between gap-4">
+      <div className="mx-auto max-w-[1060px] px-4 py-5 sm:px-5 md:px-8 md:py-8">
+        <header className="mb-6 flex items-end justify-between gap-4">
           <div>
             <p className="mb-1 text-[13px] text-[var(--color-text-muted)]">{formatDate()}</p>
             <h1 className="text-[28px] font-semibold tracking-tight text-[var(--color-text-strong)] md:text-[34px]">
               {getGreeting()}，炜鑫
             </h1>
+            <p className="mt-1.5 text-[13px] text-[var(--color-text-secondary)]">
+              先留下真实发生的，再看看最近的自己。
+            </p>
           </div>
           <button className="btn-ghost px-2 py-1.5 text-xs" type="button" onClick={() => loadDigest(true)} disabled={loading}>
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -158,14 +164,14 @@ export default function TodayPage() {
         )}
 
         {loading ? (
-          <div className="grid gap-4 md:grid-cols-[1.45fr_0.75fr]">
-            <div className="skeleton h-[330px] rounded-3xl" />
-            <div className="skeleton h-[330px] rounded-3xl" />
+          <div className="grid gap-4 lg:grid-cols-[1.45fr_0.75fr]">
+            <div className="skeleton h-[370px] rounded-[28px]" />
+            <div className="skeleton h-[370px] rounded-[28px]" />
           </div>
         ) : digest ? (
-          <main className="grid gap-4 md:grid-cols-[1.45fr_0.75fr]">
+          <main className="grid items-start gap-4 lg:grid-cols-[1.45fr_0.75fr]">
             <section
-              className="relative flex min-h-[400px] flex-col overflow-hidden rounded-3xl border p-6 text-white shadow-[var(--shadow-lg)] md:p-8"
+              className="relative flex min-h-[390px] flex-col overflow-hidden rounded-[28px] border p-6 text-white shadow-[var(--shadow-lg)] md:p-8"
               style={{
                 backgroundColor: '#111827',
                 borderColor: 'rgba(255,255,255,0.08)',
@@ -174,14 +180,14 @@ export default function TodayPage() {
               <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-[var(--color-primary)] opacity-10 blur-3xl" />
               <div className="relative flex items-center gap-2 text-[12px] font-medium text-white/60">
                 <Sparkles className="h-4 w-4 text-[var(--color-primary)]" />
-                最近的你
+                从最近 30 天的记录里看见
               </div>
 
               {primaryFocus ? (
-                <div className="relative flex flex-1 flex-col justify-between pt-8">
+                <div className="relative flex flex-1 flex-col justify-between pt-7">
                   <div>
-                    <p className="text-sm text-white/50">反复回到</p>
-                    <h2 className="mt-2 max-w-[620px] text-[30px] font-medium leading-[1.35] tracking-tight md:text-[38px]">
+                    <p className="text-sm text-white/45">你反复回到</p>
+                    <h2 className="mt-2 max-w-[620px] text-[32px] font-medium leading-[1.25] tracking-tight md:text-[42px]">
                       {primaryFocus.name}
                     </h2>
                     <Link
@@ -193,25 +199,36 @@ export default function TodayPage() {
                     </Link>
                   </div>
                   {(stateAnchor?.state || stateAnchor?.goal) && (
-                    <div className="mt-6 flex gap-3">
+                    <div className="mt-7">
+                      <p className="mb-3 text-[10px] font-medium tracking-wide text-white/35">
+                        此刻的线索
+                      </p>
+                      <div className={`grid gap-4 ${
+                        stateAnchor.state && stateAnchor.goal
+                          ? 'sm:grid-cols-2 sm:gap-8'
+                          : ''
+                      }`}>
                       {stateAnchor.state && (
-                        <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-sm">
-                          <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-white/35">当前状态</p>
-                          <p className="line-clamp-1 text-[12px] font-medium leading-snug text-white/85">{stateAnchor.state.title}</p>
-                          <p className="mt-0.5 line-clamp-2 text-[10px] leading-normal text-white/45">{stateAnchor.state.summary}</p>
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-white/40">你正处在</p>
+                          <p className="mt-1 line-clamp-2 text-[13px] font-medium leading-5 text-white/85">
+                            {cleanAnchorTitle(stateAnchor.state.title)}
+                          </p>
                         </div>
                       )}
                       {stateAnchor.goal && (
-                        <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-sm">
-                          <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-white/35">当前目标</p>
-                          <p className="line-clamp-1 text-[12px] font-medium leading-snug text-white/85">{stateAnchor.goal.title}</p>
-                          <p className="mt-0.5 line-clamp-2 text-[10px] leading-normal text-white/45">{stateAnchor.goal.summary}</p>
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-white/40">你想靠近</p>
+                          <p className="mt-1 line-clamp-2 text-[13px] font-medium leading-5 text-white/85">
+                            {cleanAnchorTitle(stateAnchor.goal.title)}
+                          </p>
                         </div>
                       )}
+                      </div>
                     </div>
                   )}
-                  <div className="mt-8 border-t border-white/10 pt-5">
-                    <p className="mb-2 text-[11px] text-white/40">值得继续问自己</p>
+                  <div className="mt-7 border-t border-white/10 pt-5">
+                    <p className="mb-2 text-[11px] text-white/40">这件事还值得继续问</p>
                     {primaryQuestion ? (
                       <div>
                         <Link
@@ -248,73 +265,80 @@ export default function TodayPage() {
               )}
             </section>
 
-            <aside className="flex min-h-[360px] flex-col gap-4">
-              <section className="card flex-1 p-5">
-                <div className="mb-4 flex items-center gap-2 text-[12px] font-medium text-[var(--color-text-muted)]">
-                  <Activity className="h-4 w-4 text-[var(--color-primary-dark)]" />
-                  情绪走向
+            <aside className="flex flex-col gap-4">
+              <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] p-5 shadow-[var(--shadow-sm)]">
+                <div className="mb-3 flex items-center gap-2 text-[12px] font-medium text-[var(--color-text-muted)]">
+                  <Check className="h-4 w-4 text-[var(--color-primary-dark)]" />
+                  今天只往前一步
                 </div>
-                {dominantEmotion && digest.emotion.weekly_trend.length > 0 ? (
+                {primaryAction ? (
                   <div>
-                    <div className="mb-4 flex items-baseline gap-2">
-                      <h2 className="text-[20px] font-semibold text-[var(--color-text-strong)]">
-                        {dominantEmotion.emotion}
-                      </h2>
-                      <span className="text-[11px] text-[var(--color-text-muted)]">
-                        近 {digest.emotion.period_days} 天最多
+                    <Link href={`/chat?prompt=${encodeURIComponent(`请基于我的历史记录，继续推演这个下一步：${primaryAction.text}`)}`} className="group block">
+                      <p key={primaryAction.key} className="animate-fade-in text-[16px] font-medium leading-7 text-[var(--color-text-strong)]">{primaryAction.text}</p>
+                      <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-[var(--color-primary-dark)]">
+                        继续推演这一步
+                        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                       </span>
+                    </Link>
+                    <CarouselDots count={digest.actions.length} active={actionIndex} onChange={setActionIndex} />
+                  </div>
+                ) : (
+                  <Link href="/chat?prompt=%E8%AF%B7%E7%BB%BC%E5%90%88%E6%88%91%E6%9C%80%E8%BF%91%E7%9A%84%E8%AE%B0%E5%BD%95%EF%BC%8C%E5%85%88%E5%88%A4%E6%96%AD%E6%88%91%E7%9C%9F%E6%AD%A3%E6%83%B3%E6%8E%A8%E8%BF%9B%E7%9A%84%E6%98%AF%E4%BB%80%E4%B9%88%E3%80%81%E5%8D%A1%E5%9C%A8%E5%93%AA%E9%87%8C%E3%80%81%E6%9C%89%E4%BB%80%E4%B9%88%E7%8E%B0%E5%AE%9E%E7%BA%A6%E6%9D%9F%EF%BC%8C%E5%86%8D%E7%BB%99%E6%88%91%E4%B8%80%E4%B8%AA%E6%9C%80%E5%80%BC%E5%BE%97%E5%81%9A%E7%9A%84%E4%B8%8B%E4%B8%80%E6%AD%A5%E3%80%82%E5%A6%82%E6%9E%9C%E4%BF%A1%E6%81%AF%E4%B8%8D%E8%B6%B3%EF%BC%8C%E5%85%88%E9%97%AE%E6%88%91%E4%B8%80%E4%B8%AA%E5%85%B3%E9%94%AE%E9%97%AE%E9%A2%98%E3%80%82" className="inline-flex items-center gap-1 text-[13px] text-[var(--color-primary-dark)]">
+                    从最近的记录里想一步 <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                )}
+              </section>
+
+              <section className="rounded-2xl border border-[var(--color-border-light)] bg-[var(--color-bg-card)] p-5">
+                <div className="mb-3 flex items-center gap-2 text-[12px] font-medium text-[var(--color-text-muted)]">
+                  <Activity className="h-4 w-4 text-[var(--color-primary-dark)]" />
+                  近两周的感受线索
+                </div>
+                {dominantEmotion ? (
+                  <div>
+                    <div>
+                      <h2 className="text-[20px] font-semibold leading-snug text-[var(--color-text-strong)]">
+                        「{dominantEmotion.emotion}」出现得最多
+                      </h2>
+                      <p className="mt-1.5 text-[11px] leading-5 text-[var(--color-text-muted)]">
+                        来自近 {digest.emotion.period_days} 天 {digest.emotion.sample_size} 条写下感受的记录
+                      </p>
                     </div>
 
-                    <EmotionTrendChart
-                      weeks={digest.emotion.weekly_trend}
-                      topEmotions={digest.emotion.distribution.slice(0, 4).map((item) => item.emotion)}
-                    />
+                    <FeelingComposition emotion={digest.emotion} />
 
-                    <Link href={`/records?emotion=${encodeURIComponent(dominantEmotion.emotion)}`} className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-[var(--color-primary-dark)]">
-                      看看这些记录 <ChevronRight className="h-3.5 w-3.5" />
+                    <Link href={`/records?emotion=${encodeURIComponent(dominantEmotion.emotion)}`} className="mt-5 inline-flex items-center gap-1 text-xs font-medium text-[var(--color-primary-dark)]">
+                      回看相关记录 <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
                 ) : (
                   <p className="text-sm leading-6 text-[var(--color-text-muted)]">最近的记录里还没有明显的感受线索。</p>
                 )}
               </section>
-
-              <section className="rounded-2xl border border-[var(--color-border-light)] bg-[var(--color-bg-card)] p-4">
-                <div className="mb-2 flex items-center gap-2 text-[11px] text-[var(--color-text-muted)]">
-                  <Check className="h-3.5 w-3.5" />
-                  如果今天想往前一步
-                </div>
-                {primaryAction ? (
-                  <div>
-                    <Link href={`/chat?prompt=${encodeURIComponent(`请基于我的历史记录，继续推演这个下一步：${primaryAction.text}`)}`} className="group flex items-end justify-between gap-3">
-                      <p key={primaryAction.key} className="line-clamp-3 animate-fade-in text-[13px] font-medium leading-5 text-[var(--color-text-strong)]">{primaryAction.text}</p>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary-dark)]" />
-                    </Link>
-                    <CarouselDots count={digest.actions.length} active={actionIndex} onChange={setActionIndex} />
-                  </div>
-                ) : (
-                  <Link href="/chat?prompt=%E8%AF%B7%E7%BB%BC%E5%90%88%E6%88%91%E6%9C%80%E8%BF%91%E7%9A%84%E8%AE%B0%E5%BD%95%EF%BC%8C%E5%85%88%E5%88%A4%E6%96%AD%E6%88%91%E7%9C%9F%E6%AD%A3%E6%83%B3%E6%8E%A8%E8%BF%9B%E7%9A%84%E6%98%AF%E4%BB%80%E4%B9%88%E3%80%81%E5%8D%A1%E5%9C%A8%E5%93%AA%E9%87%8C%E3%80%81%E6%9C%89%E4%BB%80%E4%B9%88%E7%8E%B0%E5%AE%9E%E7%BA%A6%E6%9D%9F%EF%BC%8C%E5%86%8D%E7%BB%99%E6%88%91%E4%B8%80%E4%B8%AA%E6%9C%80%E5%80%BC%E5%BE%97%E5%81%9A%E7%9A%84%E4%B8%8B%E4%B8%80%E6%AD%A5%E3%80%82%E5%A6%82%E6%9E%9C%E4%BF%A1%E6%81%AF%E4%B8%8D%E8%B6%B3%EF%BC%8C%E5%85%88%E9%97%AE%E6%88%91%E4%B8%80%E4%B8%AA%E5%85%B3%E9%94%AE%E9%97%AE%E9%A2%98%E3%80%82" className="inline-flex items-center gap-1 text-[12px] text-[var(--color-primary-dark)]">
-                    从最近的记录里想一步 <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                )}
-              </section>
             </aside>
           </main>
         ) : null}
 
-        <section className="mt-4 rounded-2xl border border-[var(--color-border-light)] bg-[var(--color-bg-card)] p-4 shadow-[var(--shadow-sm)]">
-          <div className="flex items-start gap-3">
-            <Sparkles className="mt-1.5 h-4 w-4 shrink-0 text-[var(--color-primary-dark)]" />
-            <div className="min-w-0 flex-1">
-              {composerFocused && (
-                <div className="mb-2 flex items-center gap-1 border-b border-[var(--color-border-light)] pb-2">
-                  <FormatButton label="加粗" onClick={() => applyFormat('bold')}><Bold className="h-3.5 w-3.5" /></FormatButton>
-                  <FormatButton label="斜体" onClick={() => applyFormat('italic')}><Italic className="h-3.5 w-3.5" /></FormatButton>
-                  <FormatButton label="下划线" onClick={() => applyFormat('underline')}><Underline className="h-3.5 w-3.5" /></FormatButton>
-                  <FormatButton label="列表" onClick={() => applyFormat('insertUnorderedList')}><List className="h-3.5 w-3.5" /></FormatButton>
-                </div>
-              )}
-              <div
+        <section className={`mt-5 border-t border-[var(--color-border)] pt-5 transition-colors ${
+          composerFocused ? 'border-[var(--color-primary)]' : ''
+        }`}>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-medium text-[var(--color-primary-dark)]">记下此刻</p>
+              <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">不用整理，先写真实发生的事和感受</p>
+            </div>
+            <span className="hidden text-[10px] text-[var(--color-text-muted)] sm:inline">⌘ / Ctrl + Enter 保存</span>
+          </div>
+          {composerFocused && (
+            <div className="mb-2 flex items-center gap-1">
+              <FormatButton label="加粗" onClick={() => applyFormat('bold')}><Bold className="h-3.5 w-3.5" /></FormatButton>
+              <FormatButton label="斜体" onClick={() => applyFormat('italic')}><Italic className="h-3.5 w-3.5" /></FormatButton>
+              <FormatButton label="下划线" onClick={() => applyFormat('underline')}><Underline className="h-3.5 w-3.5" /></FormatButton>
+              <FormatButton label="列表" onClick={() => applyFormat('insertUnorderedList')}><List className="h-3.5 w-3.5" /></FormatButton>
+            </div>
+          )}
+          <div className="flex items-end gap-3">
+            <div
               ref={editorRef}
               contentEditable
               suppressContentEditableWarning
@@ -330,21 +354,20 @@ export default function TodayPage() {
                   saveMemo();
                 }
               }}
-              className={`w-full bg-transparent text-sm leading-6 text-[var(--color-text-primary)] outline-none transition-[min-height] duration-200 empty:before:pointer-events-none empty:before:text-[var(--color-text-muted)] empty:before:content-[attr(data-placeholder)] [&_b]:font-semibold [&_i]:italic [&_li]:ml-5 [&_li]:list-disc [&_u]:underline ${
-                composerFocused ? 'min-h-[96px]' : 'min-h-[28px]'
+              className={`min-w-0 flex-1 bg-transparent text-[16px] leading-7 text-[var(--color-text-primary)] outline-none transition-[min-height] duration-200 empty:before:pointer-events-none empty:before:text-[var(--color-text-muted)] empty:before:content-[attr(data-placeholder)] [&_b]:font-semibold [&_i]:italic [&_li]:ml-5 [&_li]:list-disc [&_u]:underline ${
+                composerFocused ? 'min-h-[92px]' : 'min-h-[32px]'
               }`}
             />
-            </div>
             <div className="flex shrink-0 items-center gap-2">
               {saved && <span className="text-xs text-[var(--color-primary-dark)]">已保存</span>}
               <button
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-primary)] text-white shadow-sm transition hover:brightness-105 disabled:bg-[var(--color-border)] disabled:text-[var(--color-text-muted)]"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-text-strong)] text-[var(--color-bg-card)] transition hover:opacity-85 disabled:bg-[var(--color-bg-secondary)] disabled:text-[var(--color-text-muted)]"
                 type="button"
                 disabled={!content.trim() || saving}
                 onClick={saveMemo}
-                aria-label="发送记录"
+                aria-label="保存记录"
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -354,101 +377,38 @@ export default function TodayPage() {
   );
 }
 
-function EmotionTrendChart({
-  weeks,
-  topEmotions,
-}: {
-  weeks: TodayEmotionWeek[];
-  topEmotions: EmotionType[];
-}) {
-  const width = 100;
-  const height = 60;
-  const paddingTop = 6;
-  const paddingBottom = 16;
-  const chartHeight = height - paddingTop - paddingBottom;
-  const globalMax = Math.max(
-    1,
-    ...topEmotions.flatMap((emotion) => weeks.map((week) => week.counts[emotion] ?? 0)),
-  );
-  const toX = (weekIndex: number) => (
-    weeks.length <= 1 ? width / 2 : weekIndex / (weeks.length - 1) * width
-  );
-  const toY = (count: number) => paddingTop + chartHeight - count / globalMax * chartHeight;
-  const buildPoints = (emotion: EmotionType) => weeks
-    .map((week, index) => `${toX(index).toFixed(1)},${toY(week.counts[emotion] ?? 0).toFixed(1)}`)
-    .join(' ');
-
+function FeelingComposition({ emotion }: { emotion: TodayEmotion }) {
+  const items = emotion.distribution.filter((item) => item.count > 0).slice(0, 4);
   return (
-    <div>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full overflow-visible text-[var(--color-text-muted)]"
-        style={{ height: '80px' }}
-        role="img"
-        aria-label="过去六周情绪趋势折线图"
-      >
-        <line
-          x1="0"
-          y1={paddingTop + chartHeight}
-          x2={width}
-          y2={paddingTop + chartHeight}
-          stroke="currentColor"
-          strokeWidth="0.3"
-          opacity="0.15"
-        />
-        {weeks.map((week, index) => (
-          <text
-            key={week.week_start}
-            x={toX(index)}
-            y={height - 2}
-            textAnchor="middle"
-            fontSize="4"
-            fill="currentColor"
-            opacity="0.55"
-          >
-            {week.week_label}
-          </text>
-        ))}
-        {topEmotions.map((emotion, colorIndex) => {
-          if (!weeks.some((week) => (week.counts[emotion] ?? 0) > 0)) return null;
+    <div className="mt-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        {items.map((item, index) => {
+          const currentRate = emotion.sample_size > 0 ? item.count / emotion.sample_size : 0;
+          const previousRate = emotion.previous_sample_size > 0
+            ? item.previous_count / emotion.previous_sample_size
+            : null;
+          const delta = previousRate === null ? null : Math.round((currentRate - previousRate) * 100);
+          const comparison = delta === null
+            ? '本期出现'
+            : Math.abs(delta) < 5
+              ? '和前期相近'
+              : `较前期 ${delta > 0 ? '+' : '-'}${Math.abs(delta)} 个百分点`;
           return (
-            <polyline
-              key={emotion}
-              points={buildPoints(emotion)}
-              fill="none"
-              stroke={TREND_COLORS[colorIndex] ?? '#999'}
-              strokeWidth="1.2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              opacity="0.85"
-            />
-          );
-        })}
-        {topEmotions.flatMap((emotion, colorIndex) => weeks.map((week, index) => {
-          const count = week.counts[emotion] ?? 0;
-          if (count === 0) return null;
-          return (
-            <circle
-              key={`${emotion}-${week.week_start}`}
-              cx={toX(index)}
-              cy={toY(count)}
-              r="1.4"
-              fill={TREND_COLORS[colorIndex] ?? '#999'}
-              opacity="0.9"
-            />
-          );
-        }))}
-      </svg>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-        {topEmotions.map((emotion, colorIndex) => {
-          if (!weeks.some((week) => (week.counts[emotion] ?? 0) > 0)) return null;
-          return (
-            <div key={emotion} className="flex items-center gap-1">
-              <span
-                className="inline-block h-1.5 w-3 rounded-full"
-                style={{ backgroundColor: TREND_COLORS[colorIndex] ?? '#999' }}
-              />
-              <span className="text-[10px] text-[var(--color-text-muted)]">{emotion}</span>
+            <div key={item.emotion} className="min-w-0">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: FEELING_COLORS[index] }}
+                />
+                <span className="truncate text-[12px] font-medium text-[var(--color-text-secondary)]">
+                  {item.emotion}
+                </span>
+              </div>
+              <p className="mt-1 text-[15px] font-semibold leading-none text-[var(--color-text-strong)]">
+                {item.count}
+                <span className="ml-1 text-[10px] font-normal text-[var(--color-text-muted)]">条记录</span>
+              </p>
+              <p className="mt-1.5 truncate text-[9px] text-[var(--color-text-muted)]">{comparison}</p>
             </div>
           );
         })}

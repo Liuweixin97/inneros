@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
-import { Bot, Brain, ChevronDown, Clock3, Loader2, Plus, Send, Target, Trash2, Menu, MessageSquare, BookOpen, Search } from 'lucide-react';
-import type { ChatMessage, Conversation } from '@/types';
+import { Bot, Brain, ChevronDown, Clock3, Loader2, Plus, Send, Target, Trash2, Menu, MessageSquare, BookOpen, Search, X } from 'lucide-react';
+import type { ChatMessage, Citation, Conversation } from '@/types';
 import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useAppStore } from '@/lib/store/app';
 
@@ -53,6 +53,13 @@ function ReasoningDetails({
   const [open, setOpen] = useState(streaming);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Auto-expand when streaming starts
+  useEffect(() => {
+    if (streaming) {
+      setOpen(true);
+    }
+  }, [streaming]);
+
   useEffect(() => {
     if (!streaming || !open) return;
     const panel = contentRef.current;
@@ -60,25 +67,50 @@ function ReasoningDetails({
   }, [content, open, streaming]);
 
   return (
-    <details
-      className="group/reasoning border-b border-[var(--color-border-light)] text-xs text-[var(--color-text-secondary)]"
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 px-4 py-2 font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] [&::-webkit-details-marker]:hidden">
-        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[var(--color-primary-light)] text-[var(--color-primary-dark)]">
-          {streaming ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />}
-        </span>
-        <span>{streaming ? '正在梳理思路' : '查看思考过程'}</span>
-        <ChevronDown className="ml-auto h-3.5 w-3.5 transition-transform duration-200 group-open/reasoning:rotate-180" />
-      </summary>
+    <div className="border-b border-[var(--color-border-light)] bg-[var(--color-bg-page)]/30">
+      {/* Header Row */}
       <div
-        ref={contentRef}
-        className="max-h-36 overflow-y-auto whitespace-pre-wrap px-4 pb-3 pl-11 leading-6 text-[var(--color-text-muted)]"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex h-11 cursor-pointer items-center justify-between px-4 text-xs font-semibold text-[var(--color-text-secondary)] select-none hover:bg-[var(--color-bg-hover)]/30 transition-colors"
       >
-        {content}
+        <div className="flex items-center gap-2">
+          <div className={`flex h-5 w-5 items-center justify-center rounded-lg ${
+            streaming
+              ? 'bg-[var(--color-primary-light)] text-[var(--color-primary-dark)] animate-pulse'
+              : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]'
+          }`}>
+            {streaming ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Brain className="h-3.5 w-3.5" />
+            )}
+          </div>
+          <span className={streaming ? 'text-[var(--color-primary-dark)] font-medium animate-pulse' : 'font-medium'}>
+            {streaming ? '正在梳理思路...' : '深度思考过程'}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)] font-normal">
+          <span>{open ? '收起' : '展开'}</span>
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+        </div>
       </div>
-    </details>
+
+      {/* Content Area */}
+      {open && (
+        <div className="relative pl-[26px] pr-4 pb-4 animate-fade-in-up">
+          {/* Left vertical guideline */}
+          <div className="absolute left-[13px] top-0 bottom-3 w-[1.5px] bg-gradient-to-b from-[var(--color-primary)]/40 via-[var(--color-border-strong)]/30 to-[var(--color-border-light)] rounded" />
+
+          <div
+            ref={contentRef}
+            className="max-h-52 overflow-y-auto whitespace-pre-wrap text-[11px] leading-relaxed text-[var(--color-text-secondary)] font-mono scrollbar-thin pr-1"
+            style={{ fontFamily: 'var(--font-mono), monospace' }}
+          >
+            {content}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -89,9 +121,10 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [prefilledMemoId, setPrefilledMemoId] = useState('');
+  const [bannerPrompt, setBannerPrompt] = useState<string | null>(null);
+  const [bannerText, setBannerText] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const [thinkingEnabled, setThinkingEnabled] = useState(false);
-  const [recentBaselineDays, setRecentBaselineDays] = useState<number | null>(null);
 
   const messagePanelRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -109,19 +142,31 @@ export default function ChatPage() {
     };
   }, [loadConversations]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const prompt = params.get('prompt');
-    if (prompt) setInput(prompt);
-  }, []);
-
   const [prefilledInsightId, setPrefilledInsightId] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    
-    // Handle memo query param
+    const prompt = params.get('prompt');
     const memoId = params.get('memo');
+    const insightId = params.get('insight');
+
+    // 1. If we have prompt parameter
+    if (prompt) {
+      setBannerPrompt(prompt);
+      let text = prompt;
+      if (prompt.startsWith('我想继续想清楚这个问题：')) {
+        text = `追问：“${prompt.replace('我想继续想清楚这个问题：', '')}”`;
+      } else if (prompt.startsWith('请基于我的历史记录，继续推演这个下一步：')) {
+        text = `推演下一步：“${prompt.replace('请基于我的历史记录，继续推演这个下一步：', '')}”`;
+      } else if (prompt.includes('综合我最近的记录') && prompt.includes('卡在哪里')) {
+        text = `推演：“综合近期记录想一步”`;
+      } else {
+        text = `对话：“${prompt.slice(0, 30)}${prompt.length > 30 ? '...' : ''}”`;
+      }
+      setBannerText(text);
+    }
+
+    // 2. Handle memo query param (if no prompt, generate default memo prompt)
     if (memoId && memoId !== prefilledMemoId) {
       fetch(`/api/memos/${memoId}`)
         .then(async (response) => {
@@ -131,15 +176,16 @@ export default function ChatPage() {
         .then((memo) => {
           if (!memo) return;
           setPrefilledMemoId(memoId);
-          if (!params.get('prompt')) {
-            setInput(`请基于这条笔记帮我回看一下：${memo.ai_title || memo.plain_text.slice(0, 32)}`);
+          if (!prompt) {
+            const memoTitle = memo.ai_title || memo.plain_text.slice(0, 32);
+            setBannerPrompt(`请基于这条笔记帮我回看一下：${memoTitle}`);
+            setBannerText(`回看笔记：“${memoTitle}”`);
           }
         })
         .catch(() => undefined);
     }
 
-    // Handle insight query param
-    const insightId = params.get('insight');
+    // 3. Handle insight query param
     if (insightId && insightId !== prefilledInsightId) {
       fetch(`/api/insights/${insightId}`)
         .then(async (response) => {
@@ -149,7 +195,8 @@ export default function ChatPage() {
         .then((insight) => {
           if (!insight) return;
           setPrefilledInsightId(insightId);
-          setInput(`关于你帮我提炼的洞察【${insight.title}】，我想深入聊聊。你提到：“${insight.content}”。我们应该怎么理解或改善这一情况？`);
+          setBannerPrompt(`关于你帮我提炼的洞察【${insight.title}】，我想深入聊聊。你提到：“${insight.content}”。我们应该怎么理解或改善这一情况？`);
+          setBannerText(`探讨洞察：“${insight.title}”`);
         })
         .catch(() => undefined);
     }
@@ -165,6 +212,8 @@ export default function ChatPage() {
     const data = await response.json();
     setConversationId(id);
     setMessages(data.messages);
+    setBannerPrompt(null);
+    setBannerText(null);
   };
 
   const newConversation = () => {
@@ -175,6 +224,8 @@ export default function ChatPage() {
     setConversationId('');
     setMessages([]);
     setInput('');
+    setBannerPrompt(null);
+    setBannerText(null);
   };
 
   const deleteConversation = async (id: string) => {
@@ -202,7 +253,6 @@ export default function ChatPage() {
     const optimisticConversationId = conversationId || 'pending';
     setInput('');
     setLoading(true);
-    setRecentBaselineDays(null);
 
     const userMsg = nowMessage('user', text, optimisticConversationId);
     const assistantMsg = nowMessage('assistant', '', optimisticConversationId);
@@ -286,7 +336,11 @@ export default function ChatPage() {
               setMessages((current) =>
                 current.map((msg, index) =>
                   index === current.length - 1
-                    ? { ...msg, content: data.content }
+                    ? {
+                        ...msg,
+                        content: data.content,
+                        citations: data.citations ?? msg.citations,
+                      }
                     : msg
                 )
               );
@@ -294,10 +348,6 @@ export default function ChatPage() {
             if (data.type === 'done') {
               finalConversationId = data.conversation_id;
               setConversationId(data.conversation_id);
-              if (typeof data.recent_baseline_days === 'number') {
-                setRecentBaselineDays(data.recent_baseline_days);
-              }
-
               if (data.message_id) {
                 setMessages((current) =>
                   current.map((msg, index) =>
@@ -371,6 +421,50 @@ export default function ChatPage() {
     } catch (e) {
       console.error('Failed to load memo detail:', e);
     }
+  };
+
+  const handleKnowledgeReference = async (
+    type: 'memo' | 'memory' | 'principle',
+    id: string,
+  ) => {
+    if (type === 'memo') {
+      await handleCitationClick(id);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        type === 'memory' ? `/api/memories/${id}` : `/api/insights/${id}`,
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      const evidenceMemoIds = type === 'memory'
+        ? data.evidence?.map((item: { memo_id: string }) => item.memo_id)
+        : data.evidence_memo_ids;
+      const firstMemoId = evidenceMemoIds?.[0];
+      if (firstMemoId) {
+        await handleCitationClick(firstMemoId);
+      } else {
+        window.location.assign('/insights');
+      }
+    } catch (error) {
+      console.error('Failed to load knowledge reference:', error);
+    }
+  };
+
+  const citationType = (citation: Citation) => citation.reference_type || 'memo';
+  const citationLabel = (citation: Citation) => {
+    const type = citationType(citation);
+    if (type === 'memory') return '长期记忆';
+    if (type === 'principle') return '准则';
+    return '相关记录';
+  };
+
+  const openCitation = async (citation: Citation) => {
+    await handleKnowledgeReference(
+      citationType(citation),
+      citation.reference_id || citation.memo_id,
+    );
   };
 
   return (
@@ -572,7 +666,7 @@ export default function ChatPage() {
                                 <MarkdownContent
                                   content={message.content}
                                   memoReferences={message.citations}
-                                  onMemoReference={handleCitationClick}
+                                  onKnowledgeReference={handleKnowledgeReference}
                                 />
                               )}
                             </div>
@@ -583,7 +677,11 @@ export default function ChatPage() {
                       </div>
 
                       {/* Inline Citations - Horizontal scrollable block */}
-                      {message.role === 'assistant' && message.citations && message.citations.length > 0 && (
+                      {message.role === 'assistant'
+                        && message.citations
+                        && message.citations.length > 0
+                        && !(loading && messageIndex === messages.length - 1)
+                        && (
                         <div className="w-full pl-1 animate-fade-in-up overflow-hidden">
                           <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)] font-medium mb-1.5">
                             <BookOpen className="h-3 w-3 text-[var(--color-primary-dark)]" />
@@ -594,8 +692,8 @@ export default function ChatPage() {
                           <div className="flex overflow-x-auto gap-3 pb-2 w-full max-w-full scrollbar-thin scroll-smooth select-none">
                             {message.citations.map((citation, index) => (
                               <div
-                                key={`${citation.memo_id}-${index}`}
-                                onClick={() => handleCitationClick(citation.memo_id)}
+                                key={`${citationType(citation)}-${citation.reference_id || citation.memo_id}-${index}`}
+                                onClick={() => openCitation(citation)}
                                 className="
                                   w-64 shrink-0 rounded-xl border border-[var(--color-border-light)] bg-[var(--color-bg-card)] p-3
                                   cursor-pointer hover:border-[var(--color-primary)] hover:shadow-xs transition-all duration-200
@@ -605,11 +703,15 @@ export default function ChatPage() {
                                   <h5 className="min-w-0 truncate text-[12px] font-semibold text-[var(--color-text-strong)]">
                                     {citation.memo_title || '未命名记录'}
                                   </h5>
-                                  <span className="text-[9px] font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary-dark)] px-1.5 py-0.5 rounded-full">相关记录</span>
+                                  <span className="text-[9px] font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary-dark)] px-1.5 py-0.5 rounded-full">
+                                    {citationLabel(citation)}
+                                  </span>
                                 </div>
-                                <p className="mb-1 text-[10px] text-[var(--color-text-muted)]">
-                                  {new Date(citation.memo_date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })}
-                                </p>
+                                {citation.memo_date && (
+                                  <p className="mb-1 text-[10px] text-[var(--color-text-muted)]">
+                                    {new Date(citation.memo_date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                  </p>
+                                )}
                                 <p className="text-[11px] leading-normal text-[var(--color-text-secondary)] line-clamp-3">
                                   {citation.relevant_snippet}
                                 </p>
@@ -622,7 +724,7 @@ export default function ChatPage() {
                             ))}
                           </div>
                         </div>
-                      )}
+                        )}
                     </div>
                   </div>
                 </div>
@@ -633,13 +735,36 @@ export default function ChatPage() {
 
         {/* Footer Input */}
         <footer className="border-t border-[var(--color-border-light)] p-4 shrink-0 bg-[var(--color-bg-card)]">
-          {/* Context range indicator (Q2-B) */}
-          {recentBaselineDays !== null && !loading && (
-            <div className="mx-auto max-w-3xl mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-bg-secondary)] px-2.5 py-0.5 text-[10px] text-[var(--color-text-muted)] border border-[var(--color-border-light)]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                本次回答参考了最近 {recentBaselineDays} 天的状态
-              </span>
+          {bannerText && bannerPrompt && (
+            <div className="mx-auto max-w-3xl mb-3 flex items-center justify-between gap-3 rounded-xl bg-[var(--color-primary-light)]/40 backdrop-blur-xs px-4 py-2 text-xs text-[var(--color-primary-dark)] border border-[var(--color-primary)]/20 animate-fade-in-down shadow-xs">
+              <div className="flex items-center min-w-0">
+                <span className="font-semibold text-[var(--color-primary-dark)] truncate">
+                  {bannerText}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    send(bannerPrompt);
+                    setBannerPrompt(null);
+                    setBannerText(null);
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] font-semibold transition-all hover:scale-102"
+                >
+                  直接发送
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBannerPrompt(null);
+                    setBannerText(null);
+                  }}
+                  className="p-1 rounded-lg hover:bg-black/5 text-[var(--color-primary-dark)]/70 hover:text-[var(--color-primary-dark)] transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -665,18 +790,23 @@ export default function ChatPage() {
                 aria-label={thinkingEnabled ? '关闭深度思考' : '开启深度思考'}
                 onClick={() => setThinkingEnabled((enabled) => !enabled)}
                 disabled={loading}
-                className={`group relative flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-all ${
+                className={`group relative flex h-10 shrink-0 items-center gap-2 rounded-full px-4 text-xs font-semibold transition-all duration-300 ${
                   thinkingEnabled
-                    ? 'bg-[var(--color-primary-light)] text-[var(--color-primary-dark)] shadow-[inset_0_0_0_1px_var(--color-primary)]'
-                    : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-secondary)]'
+                    ? 'bg-gradient-to-r from-[var(--color-primary-light)] to-[var(--color-primary-subtle)] text-[var(--color-primary-dark)] border border-[var(--color-primary)] shadow-xs scale-[1.02]'
+                    : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] border border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-secondary)] hover:scale-[1.01]'
                 } disabled:cursor-not-allowed disabled:opacity-50`}
                 title="深度思考会展示推理过程，响应时间更长"
               >
-                <Brain className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">思考</span>
-                <span className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                  thinkingEnabled ? 'bg-[var(--color-primary-dark)]' : 'bg-[var(--color-border-strong)]'
-                }`} />
+                <Brain className={`h-4 w-4 transition-transform duration-500 ${thinkingEnabled ? 'rotate-[360deg] text-[var(--color-primary-dark)]' : 'text-[var(--color-text-muted)] group-hover:scale-110'}`} />
+                <span className="hidden sm:inline transition-colors duration-200">深度思考</span>
+                <span className="relative flex h-2 w-2">
+                  {thinkingEnabled && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-primary-dark)] opacity-75"></span>
+                  )}
+                  <span className={`relative inline-flex rounded-full h-2 w-2 transition-colors duration-300 ${
+                    thinkingEnabled ? 'bg-[var(--color-primary-dark)]' : 'bg-[var(--color-text-muted)]'
+                  }`} />
+                </span>
               </button>
               <button
               onClick={() => send()}

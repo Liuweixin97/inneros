@@ -3,7 +3,7 @@ import { streamText } from '@/lib/ai/gateway';
 import { buildCompanionMessages, parseCompanionOutput } from '@/lib/game/companion-prompt';
 import { getMemoById } from '@/lib/db/memos';
 import { getCompanionSession } from '@/lib/db/game';
-import type { DialogueMode, MapLocation } from '@/types';
+import type { DialogueMode, MapLocation, Memo } from '@/types';
 
 // POST /api/game/companion — AI 同行者对话（流式响应）
 export async function POST(req: Request) {
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const authorizedMemos = authorizedMemoIds
       .slice(0, 5)
       .map((id) => getMemoById(id))
-      .filter((m) => m !== null && m.privacy_level === 'normal');
+      .filter((m): m is Memo => m !== null && m.privacy_level === 'normal');
 
     // 构建消息列表
     const messages = buildCompanionMessages(body.message, {
