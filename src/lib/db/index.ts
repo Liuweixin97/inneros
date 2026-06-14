@@ -28,6 +28,7 @@ export function getDb(): Database.Database {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       source TEXT NOT NULL DEFAULT 'manual',
+      import_fingerprint TEXT,
       original_tags TEXT NOT NULL DEFAULT '[]',
       ai_title TEXT,
       ai_summary TEXT,
@@ -261,6 +262,17 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_memory_rebuild_proposals_run ON memory_rebuild_proposals(run_id, status);
   `);
 
+  const memoColumns = db.prepare('PRAGMA table_info(memos)').all() as Array<{ name: string }>;
+  const memoColumnNames = new Set(memoColumns.map((column) => column.name));
+  if (!memoColumnNames.has('import_fingerprint')) {
+    db.exec('ALTER TABLE memos ADD COLUMN import_fingerprint TEXT');
+  }
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_memos_import_fingerprint
+    ON memos(import_fingerprint)
+    WHERE import_fingerprint IS NOT NULL
+  `);
+
   const conversationColumns = db.prepare('PRAGMA table_info(conversations)').all() as Array<{ name: string }>;
   const conversationColumnNames = new Set(conversationColumns.map((column) => column.name));
   if (!conversationColumnNames.has('summary')) {
@@ -287,6 +299,65 @@ export function getDb(): Database.Database {
       SELECT 1 FROM memory_evidence e WHERE e.memory_id = memory_items.id
     )
   `).run();
+
+  // ---- 林间世界游戏表 ----
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS game_worlds (
+      id TEXT PRIMARY KEY,
+      owner_user_id TEXT NOT NULL DEFAULT 'local',
+      display_name TEXT NOT NULL DEFAULT '林间世界',
+      created_at TEXT NOT NULL,
+      last_visited_at TEXT NOT NULL,
+      season TEXT NOT NULL DEFAULT 'spring',
+      player_x REAL NOT NULL DEFAULT 400,
+      player_y REAL NOT NULL DEFAULT 300,
+      settings TEXT NOT NULL DEFAULT '{"muted":false,"reducedMotion":false}'
+    );
+
+    CREATE TABLE IF NOT EXISTS world_objects (
+      id TEXT PRIMARY KEY,
+      world_id TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'memory_plant',
+      x REAL NOT NULL,
+      y REAL NOT NULL,
+      layer INTEGER NOT NULL DEFAULT 1,
+      source_memo_ids TEXT NOT NULL DEFAULT '[]',
+      source_session_id TEXT,
+      user_confirmed INTEGER NOT NULL DEFAULT 0,
+      hidden INTEGER NOT NULL DEFAULT 0,
+      annotation TEXT,
+      metadata TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (world_id) REFERENCES game_worlds(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS companion_sessions (
+      id TEXT PRIMARY KEY,
+      world_id TEXT NOT NULL,
+      companion_type TEXT NOT NULL DEFAULT 'none',
+      dialogue_mode TEXT NOT NULL DEFAULT 'listen',
+      authorized_memo_ids TEXT NOT NULL DEFAULT '[]',
+      started_at TEXT NOT NULL,
+      ended_at TEXT,
+      FOREIGN KEY (world_id) REFERENCES game_worlds(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS shared_memory_drafts (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      memo_id TEXT,
+      player_one_text TEXT,
+      player_two_text TEXT,
+      joint_text TEXT,
+      save_decision TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES companion_sessions(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_world_objects_world_id ON world_objects(world_id, hidden);
+    CREATE INDEX IF NOT EXISTS idx_companion_sessions_world ON companion_sessions(world_id, started_at);
+    CREATE INDEX IF NOT EXISTS idx_shared_drafts_session ON shared_memory_drafts(session_id);
+  `);
 
   return db;
 }
