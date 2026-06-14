@@ -2034,3 +2034,18 @@ body {
     display: none;
   }
 }
+
+/* ── 文字大小缩放（由 GameSettings 写入 data-font-scale） ── */
+[data-font-scale="large"] .memo-parchment,
+[data-font-scale="large"] .fireside-panel,
+[data-font-scale="large"] .cowrite-panel {
+  font-size: 1.125rem;
+  line-height: 1.85;
+}
+
+[data-font-scale="large"] .fireside-message p,
+[data-font-scale="large"] .memo-parchment p,
+[data-font-scale="large"] .cowrite-intro {
+  font-size: 1rem;
+  line-height: 1.9;
+}

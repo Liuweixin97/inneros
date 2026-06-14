@@ -124,25 +124,15 @@ export default function GameShell({ onExit }: GameShellProps) {
     }
   }, []);
 
-  // 传送门过场完成 → 初始化世界
+  // 传送门过场完成 → 直接进入探索（默认独自漫游）
   const handlePortalComplete = useCallback(() => {
-    setPhase('character_select');
+    setPhase('explore');
     initWorld();
   }, [initWorld]);
 
-  // 角色选择完成 → 进入探索
-  const handleCharacterConfirmed = useCallback((
-    charId: string,
-    companion: CompanionType,
-    secondCharId?: string,
-    sharedMemoIds: string[] = [],
-  ) => {
-    const char = getCharacterById(charId);
-    setPlayerChar(char);
-    setCompanionType(companion);
-    if (secondCharId) setSecondPlayerChar(getCharacterById(secondCharId));
-    setAuthorizedMemoIds(companion === 'human_local' ? sharedMemoIds : []);
-    setPhase('explore');
+  // 从设置面板更新角色
+  const handleCharacterChange = useCallback((charId: string) => {
+    setPlayerChar(getCharacterById(charId));
   }, []);
 
   // 玩家移动
@@ -265,14 +255,6 @@ export default function GameShell({ onExit }: GameShellProps) {
         <GamePortal onComplete={handlePortalComplete} />
       )}
 
-      {/* 角色 & 模式选择 */}
-      {phase === 'character_select' && (
-        <CharacterSelect
-          memos={memos}
-          onConfirm={handleCharacterConfirmed}
-        />
-      )}
-
       {/* 主地图 */}
       {(phase === 'explore' || phase === 'memo_encounter' || phase === 'fireside_chat' || phase === 'co_write') && (
         <>
@@ -362,9 +344,11 @@ export default function GameShell({ onExit }: GameShellProps) {
             <GameSettings
               world={world}
               reducedMotion={reducedMotion}
-              onReducedMotionChange={(v) => {
-                setReducedMotion(v);
-              }}
+              onReducedMotionChange={(v) => setReducedMotion(v)}
+              currentCharId={playerChar.id}
+              onCharacterChange={handleCharacterChange}
+              companionType={companionType}
+              onCompanionTypeChange={setCompanionType}
               onExit={handleExit}
               onClose={() => setShowSettings(false)}
             />
