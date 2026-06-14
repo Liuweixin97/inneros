@@ -995,3 +995,1042 @@ body {
   transform: translate(-50%, -50%);
   transition: transform 0.05s ease;
 }
+
+.mobile-player-switch {
+  border: 1px solid var(--game-hud-border);
+  border-radius: 999px;
+  background: var(--game-hud-bg);
+  padding: 3px 8px;
+  color: var(--game-hud-muted);
+  font-size: 10px;
+}
+
+.mobile-player-switch.is-active {
+  border-color: var(--game-warm-light);
+  color: var(--game-warm-light);
+}
+
+/* --- 篝火与共写：独立于主站的沉浸式操作层 --- */
+.game-focus-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(18, 11, 7, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.fireside-panel,
+.cowrite-panel {
+  width: min(720px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid rgba(255, 224, 174, 0.28);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 82% 10%, rgba(255, 155, 61, 0.12), transparent 30%),
+    #241710;
+  box-shadow: 0 24px 80px rgba(10, 4, 2, 0.48);
+  color: var(--game-cabin-light);
+}
+
+.fireside-header,
+.cowrite-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 26px 18px;
+}
+
+.fireside-header h2,
+.cowrite-panel h2 {
+  margin-top: 5px;
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 550;
+}
+
+.game-kicker {
+  color: rgba(255, 224, 174, 0.58);
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.game-icon-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 224, 174, 0.18);
+  border-radius: 50%;
+  color: rgba(255, 248, 231, 0.72);
+}
+
+.fireside-modes {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 0 26px 14px;
+}
+
+.fireside-modes button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 224, 174, 0.14);
+  border-radius: 999px;
+  padding: 7px 11px;
+  color: rgba(255, 248, 231, 0.58);
+  font-size: 12px;
+}
+
+.fireside-modes button.is-active {
+  border-color: rgba(255, 185, 106, 0.55);
+  background: rgba(255, 155, 61, 0.14);
+  color: var(--game-cabin-light);
+}
+
+.fireside-memory-summary {
+  display: flex;
+  width: calc(100% - 52px);
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 26px;
+  border-block: 1px solid rgba(255, 224, 174, 0.1);
+  padding: 12px 0;
+  color: rgba(255, 248, 231, 0.62);
+  font-size: 12px;
+}
+
+.fireside-memory-picker {
+  display: grid;
+  max-height: 190px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  overflow-y: auto;
+  padding: 12px 26px 4px;
+}
+
+.fireside-memory-picker label,
+.cowrite-memory-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 10px;
+  padding: 9px;
+  cursor: pointer;
+}
+
+.fireside-memory-picker label:hover,
+.cowrite-memory-list label:hover,
+.cowrite-memory-list label.is-selected {
+  background: rgba(255, 248, 231, 0.06);
+}
+
+.fireside-memory-picker input,
+.cowrite-memory-list input {
+  margin-top: 3px;
+  accent-color: var(--game-green-light);
+}
+
+.fireside-memory-picker span,
+.cowrite-memory-list span {
+  min-width: 0;
+}
+
+.fireside-memory-picker strong,
+.cowrite-memory-list strong {
+  display: block;
+  overflow: hidden;
+  color: rgba(255, 248, 231, 0.84);
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fireside-memory-picker small,
+.cowrite-memory-list small {
+  color: rgba(255, 248, 231, 0.38);
+  font-size: 10px;
+}
+
+.fireside-messages {
+  min-height: 260px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 20px 26px;
+}
+
+.fireside-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  color: rgba(255, 248, 231, 0.46);
+  text-align: center;
+}
+
+.fireside-message {
+  max-width: 84%;
+  margin-bottom: 16px;
+}
+
+.fireside-message.user {
+  margin-left: auto;
+  text-align: right;
+}
+
+.fireside-message > span {
+  color: rgba(255, 224, 174, 0.46);
+  font-size: 10px;
+}
+
+.fireside-message p {
+  margin-top: 4px;
+  border-radius: 14px;
+  background: rgba(255, 248, 231, 0.07);
+  padding: 10px 12px;
+  color: rgba(255, 248, 231, 0.9);
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.fireside-message.user p {
+  background: rgba(125, 184, 90, 0.18);
+}
+
+.fireside-message small,
+.fireside-error {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255, 196, 171, 0.72);
+  font-size: 10px;
+}
+
+.fireside-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(255, 224, 174, 0.1);
+  padding: 16px 20px 20px 26px;
+}
+
+.fireside-composer textarea,
+.cowrite-panel textarea {
+  width: 100%;
+  resize: none;
+  border: 1px solid rgba(255, 224, 174, 0.16);
+  border-radius: 12px;
+  outline: none;
+  background: rgba(6, 3, 2, 0.24);
+  padding: 11px 13px;
+  color: var(--game-cabin-light);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.fireside-composer textarea:focus,
+.cowrite-panel textarea:focus {
+  border-color: rgba(255, 185, 106, 0.5);
+}
+
+.fireside-composer button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--game-green-mid);
+  color: white;
+}
+
+.fireside-composer button:disabled {
+  opacity: 0.35;
+}
+
+.cowrite-panel {
+  overflow-y: auto;
+}
+
+.cowrite-panel section {
+  padding: 4px 26px 26px;
+}
+
+.cowrite-intro {
+  margin-bottom: 15px;
+  color: rgba(255, 248, 231, 0.58);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.cowrite-memory-list {
+  display: grid;
+  max-height: 210px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  overflow-y: auto;
+}
+
+.cowrite-panel blockquote {
+  margin: 14px 0;
+  border-left: 2px solid rgba(255, 185, 106, 0.4);
+  padding: 6px 0 6px 12px;
+  color: rgba(255, 248, 231, 0.55);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.cowrite-primary {
+  width: 100%;
+  margin-top: 18px;
+  border: 1px solid rgba(181, 217, 156, 0.3);
+  border-radius: 12px;
+  background: var(--game-green-mid);
+  padding: 11px 16px;
+  color: white;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.cowrite-primary:disabled {
+  opacity: 0.35;
+}
+
+.cowrite-question {
+  margin: 8px 0 18px;
+  font-size: clamp(19px, 3vw, 25px);
+  font-weight: 550;
+}
+
+.cowrite-two-voices,
+.cowrite-decisions,
+.cowrite-object-grid,
+.game-static-map__places {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cowrite-two-voices article {
+  min-height: 110px;
+  border: 1px solid rgba(255, 224, 174, 0.12);
+  border-radius: 14px;
+  padding: 13px;
+}
+
+.cowrite-two-voices span {
+  color: rgba(255, 224, 174, 0.44);
+  font-size: 10px;
+}
+
+.cowrite-two-voices p {
+  margin-top: 7px;
+  color: rgba(255, 248, 231, 0.82);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.cowrite-decisions {
+  margin-top: 12px;
+}
+
+.cowrite-decisions button,
+.cowrite-object-grid button {
+  border: 1px solid rgba(255, 224, 174, 0.14);
+  border-radius: 12px;
+  padding: 12px;
+  color: rgba(255, 248, 231, 0.64);
+  text-align: left;
+}
+
+.cowrite-decisions button.is-selected,
+.cowrite-object-grid button.is-selected {
+  border-color: rgba(181, 217, 156, 0.52);
+  background: rgba(125, 184, 90, 0.12);
+  color: var(--game-cabin-light);
+}
+
+.cowrite-object-grid strong,
+.cowrite-object-grid span {
+  display: block;
+}
+
+.cowrite-object-grid strong {
+  font-size: 13px;
+}
+
+.cowrite-object-grid span {
+  margin-top: 4px;
+  color: rgba(255, 248, 231, 0.42);
+  font-size: 10px;
+}
+
+.cowrite-done {
+  padding-block: 54px !important;
+  text-align: center;
+}
+
+.cowrite-done > span {
+  color: var(--game-firelight);
+  font-size: 28px;
+}
+
+.cowrite-done h3 {
+  margin-top: 12px;
+  font-size: 22px;
+}
+
+.cowrite-done p,
+.cowrite-empty {
+  margin-top: 8px;
+  color: rgba(255, 248, 231, 0.5);
+  font-size: 12px;
+}
+
+/* --- Canvas 失败时的图文地图 --- */
+.game-static-map {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
+  background: #dbe8c4;
+}
+
+.game-static-map__image {
+  min-height: 100%;
+  background: url('/game/inner-world-map.png') center / cover no-repeat;
+}
+
+.game-static-map__panel {
+  overflow-y: auto;
+  border-left: 1px solid rgba(59, 46, 42, 0.14);
+  background: rgba(253, 246, 227, 0.96);
+  padding: clamp(28px, 4vw, 54px);
+  color: var(--game-ink);
+}
+
+.game-static-map__panel h2 {
+  margin: 8px 0 10px;
+  font-size: 28px;
+}
+
+.game-static-map__panel > p {
+  color: var(--game-stone);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.game-static-map__places {
+  margin-top: 28px;
+}
+
+.game-static-map__places button,
+.game-static-map__memos button {
+  border: 1px solid rgba(107, 63, 26, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.42);
+  padding: 12px;
+  color: var(--game-ink);
+  text-align: left;
+}
+
+.game-static-map__places strong,
+.game-static-map__places span {
+  display: block;
+}
+
+.game-static-map__places span {
+  margin-top: 4px;
+  color: var(--game-stone);
+  font-size: 10px;
+}
+
+.game-static-map__memos {
+  display: grid;
+  gap: 7px;
+  margin-top: 28px;
+}
+
+.game-static-map__memos > span {
+  margin-bottom: 3px;
+  color: var(--game-stone);
+  font-size: 11px;
+}
+
+.game-static-map__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 26px;
+}
+
+@media (max-width: 720px) {
+  .game-focus-layer {
+    align-items: end;
+    padding: 0;
+  }
+
+  .fireside-panel,
+  .cowrite-panel {
+    max-height: 88vh;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .fireside-memory-picker,
+  .cowrite-memory-list,
+  .cowrite-two-voices,
+  .cowrite-object-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .game-static-map {
+    grid-template-columns: 1fr;
+    grid-template-rows: 38vh 1fr;
+  }
+
+  .game-static-map__panel {
+    border-top: 1px solid rgba(59, 46, 42, 0.14);
+    border-left: 0;
+    padding: 24px;
+  }
+}
+
+/* ============================================================
+   林间世界 V2 — 暮色森林
+   ============================================================ */
+
+.game-shell {
+  background: #061719;
+}
+
+.forest-entry,
+.forest-arrival {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  background: #031315;
+  color: #f6ead2;
+}
+
+.forest-entry__image,
+.forest-arrival__image {
+  object-fit: cover;
+  object-position: center;
+  image-rendering: pixelated;
+  transition: transform 1.1s cubic-bezier(0.2, 0.7, 0.2, 1), filter 850ms ease;
+}
+
+.forest-entry__vignette,
+.forest-arrival__shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(1, 11, 14, 0.78) 0%, rgba(1, 11, 14, 0.3) 38%, transparent 64%),
+    linear-gradient(0deg, rgba(1, 9, 10, 0.66) 0%, transparent 38%);
+}
+
+.forest-entry__copy {
+  position: absolute;
+  bottom: clamp(92px, 14vh, 160px);
+  left: clamp(28px, 7vw, 112px);
+  width: min(430px, calc(100vw - 56px));
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
+}
+
+.forest-entry__copy h1,
+.forest-arrival__panel h1 {
+  margin: 0;
+  color: #fff4dc;
+  font-family: "Songti SC", "STSong", serif;
+  font-size: clamp(34px, 4.5vw, 66px);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.08;
+}
+
+.forest-entry__copy p {
+  max-width: 360px;
+  margin: 18px 0 28px;
+  color: rgba(250, 238, 214, 0.76);
+  font-size: clamp(14px, 1.25vw, 17px);
+  letter-spacing: 0.05em;
+  line-height: 1.9;
+}
+
+.forest-entry__copy button,
+.forest-arrival__continue {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  border: 1px solid rgba(255, 211, 132, 0.45);
+  border-radius: 4px;
+  background: rgba(63, 37, 18, 0.78);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+  padding: 0 18px;
+  color: #ffe6b4;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(10px);
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.forest-entry__copy button:hover,
+.forest-arrival__continue:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 220, 154, 0.75);
+  background: rgba(88, 51, 23, 0.88);
+}
+
+.forest-entry__copy button:disabled {
+  cursor: wait;
+}
+
+.forest-entry__hint {
+  position: absolute;
+  right: clamp(24px, 4vw, 64px);
+  bottom: 30px;
+  margin: 0;
+  color: rgba(247, 234, 207, 0.45);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.forest-entry.is-opening .forest-entry__image {
+  transform: scale(1.07);
+  filter: brightness(1.16);
+}
+
+.forest-entry.is-opening .forest-entry__copy,
+.forest-entry.is-opening .forest-entry__hint {
+  opacity: 0;
+  transition: opacity 450ms ease;
+}
+
+.forest-arrival__image {
+  transform: scale(1.03);
+  filter: brightness(0.78);
+}
+
+.forest-arrival__shade {
+  background: rgba(1, 10, 12, 0.48);
+  backdrop-filter: blur(3px);
+}
+
+.forest-arrival__panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(610px, calc(100vw - 40px));
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(237, 204, 139, 0.24);
+  border-radius: 18px;
+  background: rgba(5, 20, 21, 0.78);
+  box-shadow: 0 26px 90px rgba(0, 0, 0, 0.45);
+  padding: clamp(26px, 4vw, 48px);
+  text-align: center;
+  backdrop-filter: blur(18px) saturate(1.15);
+}
+
+.forest-arrival__place {
+  margin: 0 0 10px;
+  color: rgba(235, 197, 127, 0.72);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+}
+
+.forest-arrival__panel h1 {
+  font-size: clamp(27px, 3vw, 40px);
+}
+
+.forest-arrival__description {
+  max-width: 440px;
+  margin: 14px auto 26px;
+  color: rgba(244, 234, 212, 0.58);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.forest-arrival__characters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.forest-arrival__characters button {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(237, 204, 139, 0.13);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 12px 8px 10px;
+  color: rgba(244, 234, 212, 0.62);
+  font-size: 11px;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.forest-arrival__characters button:hover,
+.forest-arrival__characters button.is-selected {
+  border-color: rgba(235, 197, 127, 0.48);
+  background: rgba(235, 197, 127, 0.08);
+  color: #fff1d3;
+}
+
+.forest-arrival__portrait {
+  position: relative;
+  display: grid;
+  width: 68px;
+  height: 68px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.forest-arrival__portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.forest-arrival__swatch {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+
+.forest-arrival__continue {
+  width: 100%;
+  margin-top: 22px;
+}
+
+.game-world-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #061719;
+}
+
+.game-canvas-layer {
+  width: 100%;
+  height: 100%;
+  outline: none;
+  image-rendering: pixelated;
+  cursor: default;
+}
+
+.game-canvas-layer:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(229, 189, 118, 0.42);
+}
+
+.game-hud-identity,
+.game-hud-actions {
+  position: absolute;
+  top: 22px;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(229, 207, 165, 0.16);
+  background: rgba(5, 19, 20, 0.72);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.24);
+  color: #f4ead4;
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+
+.game-hud-identity {
+  left: 24px;
+  gap: 11px;
+  border-radius: 15px;
+  padding: 10px 14px 10px 10px;
+}
+
+.game-hud-mark {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(184, 150, 84, 0.15);
+  color: #dfbb76;
+}
+
+.game-hud-identity > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.game-hud-identity strong {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.game-hud-identity small {
+  margin-top: 2px;
+  color: rgba(244, 234, 212, 0.5);
+  font-size: 10px;
+}
+
+.game-hud-actions {
+  right: 24px;
+  gap: 2px;
+  border-radius: 14px;
+  padding: 4px;
+}
+
+.game-hud-actions button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 10px;
+  padding: 0 11px;
+  color: rgba(244, 234, 212, 0.7);
+  font-size: 11px;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.game-hud-actions button:first-child {
+  width: 36px;
+  padding: 0;
+}
+
+.game-hud-actions button:hover {
+  background: rgba(244, 234, 212, 0.08);
+  color: #fff8e9;
+}
+
+.game-control-legend {
+  position: absolute;
+  right: 25px;
+  bottom: 22px;
+  display: flex;
+  gap: 14px;
+  color: rgba(236, 226, 205, 0.4);
+  font-size: 10px;
+}
+
+.game-control-legend kbd,
+.game-context-prompt kbd {
+  font-family: var(--font-mono);
+}
+
+.game-context-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(237, 204, 139, 0.28);
+  border-radius: 14px;
+  background: rgba(6, 21, 21, 0.8);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.3);
+  padding: 9px 14px 9px 9px;
+  color: #f4ead4;
+  font-size: 12px;
+  backdrop-filter: blur(16px);
+}
+
+.game-context-prompt kbd {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(237, 204, 139, 0.28);
+  border-radius: 8px;
+  background: rgba(231, 190, 111, 0.12);
+  color: #ebc57f;
+  font-size: 11px;
+}
+
+.game-mobile-controls {
+  position: absolute;
+  bottom: 25px;
+  left: 22px;
+}
+
+.game-mobile-interact {
+  position: absolute;
+  right: 24px;
+  bottom: 28px;
+  width: 66px;
+  height: 66px;
+  border: 1px solid rgba(237, 204, 139, 0.28);
+  border-radius: 50%;
+  background: rgba(6, 21, 21, 0.8);
+  color: #f4ead4;
+  font-size: 12px;
+  backdrop-filter: blur(14px);
+}
+
+.game-player-switch {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 7px;
+}
+
+.game-player-switch button {
+  border: 1px solid rgba(237, 204, 139, 0.18);
+  border-radius: 999px;
+  background: rgba(6, 21, 21, 0.75);
+  padding: 4px 9px;
+  color: rgba(244, 234, 212, 0.5);
+  font-size: 9px;
+}
+
+.game-player-switch button.is-active {
+  border-color: rgba(237, 204, 139, 0.42);
+  color: #ebc57f;
+}
+
+.virtual-joystick-base {
+  border-color: rgba(237, 204, 139, 0.2);
+  background: rgba(6, 21, 21, 0.58);
+  backdrop-filter: blur(12px);
+}
+
+.virtual-joystick-thumb {
+  background: rgba(235, 197, 127, 0.6);
+}
+
+.forest-portal-card {
+  position: relative;
+  display: block;
+  min-height: 116px;
+  overflow: hidden;
+  border: 1px solid rgba(30, 88, 75, 0.18);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(8, 40, 34, 0.1);
+  color: white;
+  isolation: isolate;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.forest-portal-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(8, 40, 34, 0.18);
+}
+
+.forest-portal-card__image,
+.forest-portal-card__shade {
+  position: absolute;
+  inset: 0;
+}
+
+.forest-portal-card__image {
+  z-index: -2;
+  background: url('/game/forest-portal-entry.png') 75% 46% / cover no-repeat;
+  transform: scale(1.02);
+  transition: transform 420ms ease;
+}
+
+.forest-portal-card:hover .forest-portal-card__image {
+  transform: scale(1.07);
+}
+
+.forest-portal-card__shade {
+  z-index: -1;
+  background: linear-gradient(90deg, rgba(4, 18, 18, 0.92), rgba(4, 18, 18, 0.47));
+}
+
+.forest-portal-card__content {
+  display: flex;
+  min-height: 116px;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 14px;
+}
+
+.forest-portal-card__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 5px;
+}
+
+.forest-portal-card__title strong {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.forest-portal-card small {
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 10px;
+}
+
+.forest-portal-card.is-active {
+  border-color: rgba(235, 197, 127, 0.45);
+}
+
+@media (max-width: 768px) {
+  .forest-entry__image,
+  .forest-arrival__image {
+    object-position: 67% center;
+  }
+
+  .forest-entry__vignette {
+    background:
+      linear-gradient(0deg, rgba(1, 10, 12, 0.88) 0%, rgba(1, 10, 12, 0.18) 68%),
+      linear-gradient(90deg, rgba(1, 10, 12, 0.28), transparent);
+  }
+
+  .forest-entry__copy {
+    bottom: max(74px, calc(env(safe-area-inset-bottom) + 52px));
+    left: 24px;
+    width: calc(100vw - 48px);
+  }
+
+  .forest-entry__copy p {
+    max-width: 290px;
+    margin: 13px 0 20px;
+  }
+
+  .forest-entry__hint {
+    display: none;
+  }
+
+  .forest-arrival__panel {
+    padding: 26px 18px 22px;
+  }
+
+  .forest-arrival__characters {
+    gap: 7px;
+  }
+
+  .forest-arrival__portrait {
+    width: 58px;
+    height: 58px;
+  }
+
+  .game-hud-identity {
+    top: max(14px, env(safe-area-inset-top));
+    left: 14px;
+  }
+
+  .game-hud-actions {
+    top: max(14px, env(safe-area-inset-top));
+    right: 14px;
+  }
+
+  .game-hud-actions span,
+  .game-control-legend,
+  .game-context-prompt {
+    display: none;
+  }
+}

@@ -86,7 +86,7 @@ export function getOrCreateWorld(): GameWorld {
   const id = uuidv4();
   db.prepare(`
     INSERT INTO game_worlds (id, owner_user_id, display_name, created_at, last_visited_at, season, player_x, player_y, settings)
-    VALUES (?, 'local', '林间世界', ?, ?, 'spring', 400, 300, '{"muted":false,"reducedMotion":false}')
+    VALUES (?, 'local', '林间世界', ?, ?, 'spring', 345, 245, '{"muted":false,"reducedMotion":false}')
   `).run(id, now, now);
 
   const row = db.prepare('SELECT * FROM game_worlds WHERE id = ?').get(id) as Record<string, unknown>;
@@ -287,4 +287,10 @@ export function getDraftsBySession(sessionId: string): SharedMemoryDraft[] {
     .prepare('SELECT * FROM shared_memory_drafts WHERE session_id = ? ORDER BY created_at ASC')
     .all(sessionId) as Record<string, unknown>[];
   return rows.map(parseSharedDraft);
+}
+
+export function getSharedDraft(id: string): SharedMemoryDraft | null {
+  const db = getDb();
+  const row = db.prepare('SELECT * FROM shared_memory_drafts WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  return row ? parseSharedDraft(row) : null;
 }

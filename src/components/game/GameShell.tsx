@@ -1,18 +1,26 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { GameWorld, WorldObject, GamePhase, CompanionType, DialogueMode, Memo } from '@/types';
-import { loadWorld, loadGameMemos, syncPlayerPosition, clearCache } from '@/lib/game/world-state';
+import {
+  annotateObject,
+  loadWorld,
+  loadGameMemos,
+  placeObject,
+  syncPlayerPosition,
+  clearCache,
+} from '@/lib/game/world-state';
 import { mapMemosToWorldObjects } from '@/lib/game/memo-mapper';
 import { getDefaultCharacter, getCharacterById } from '@/lib/game/sprite';
+import { isWalkable } from '@/lib/game/collisions';
 import GamePortal from './GamePortal';
 import CharacterSelect from './CharacterSelect';
 import PixelWorldCanvas from './PixelWorldCanvas';
 import WorldHUD from './WorldHUD';
 import GameSettings from './GameSettings';
 import MemoEncounter from './MemoEncounter';
-// import FiresideChat from './FiresideChat';
-// import CoWritePanel from './CoWritePanel';
+import FiresideChat from './FiresideChat';
+import CoWritePanel from './CoWritePanel';
 
 interface GameShellProps {
   onExit: () => void;
@@ -28,11 +36,13 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [memos, setMemos] = useState<Memo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [canvasFailed, setCanvasFailed] = useState(false);
 
   // ---- 玩家状态 ----
-  const [playerX, setPlayerX] = useState(400);
-  const [playerY, setPlayerY] = useState(300);
+  const [playerX, setPlayerX] = useState(345);
+  const [playerY, setPlayerY] = useState(245);
   const [playerChar, setPlayerChar] = useState(getDefaultCharacter());
+  const [secondPlayerChar, setSecondPlayerChar] = useState(getCharacterById('drifter'));
 
   // ---- 同行者 ----
   const [companionType, setCompanionType] = useState<CompanionType>('none');
@@ -41,6 +51,7 @@ export default function GameShell({ onExit }: GameShellProps) {
 
   // ---- 弹层状态 ----
   const [activeMemo, setActiveMemo] = useState<Memo | null>(null);
+  const [activeObject, setActiveObject] = useState<WorldObject | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [firesideChatOpen, setFiresideChatOpen] = useState(false);
   const [coWriteOpen, setCoWriteOpen] = useState(false);
@@ -52,11 +63,18 @@ export default function GameShell({ onExit }: GameShellProps) {
   const initWorld = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
+    setCanvasFailed(false);
     try {
       const { world: w, objects: objs } = await loadWorld();
+      const safePlayerPosition = isWalkable(w.playerX, w.playerY)
+        ? { x: w.playerX, y: w.playerY }
+        : { x: 345, y: 245 };
       setWorld(w);
-      setPlayerX(w.playerX);
-      setPlayerY(w.playerY);
+      setPlayerX(safePlayerPosition.x);
+      setPlayerY(safePlayerPosition.y);
+      if (safePlayerPosition.x !== w.playerX || safePlayerPosition.y !== w.playerY) {
+        syncPlayerPosition(w.id, safePlayerPosition.x, safePlayerPosition.y);
+      }
       setReducedMotion(w.settings.reducedMotion);
 
       // 加载 Memo
@@ -83,6 +101,21 @@ export default function GameShell({ onExit }: GameShellProps) {
           createdAt: new Date().toISOString(),
         } as WorldObject)),
       ];
+      if (loadedMemos.length === 0 && objs.length === 0) {
+        allObjects.push({
+          id: 'empty-pot',
+          worldId: w.id,
+          type: 'empty_pot',
+          x: 480,
+          y: 145,
+          layer: 1,
+          sourceMemoIds: [],
+          userConfirmed: false,
+          hidden: false,
+          metadata: { hintText: '这里还没有长出故事。今天空着也可以。' },
+          createdAt: new Date().toISOString(),
+        });
+      }
       setObjects(allObjects);
     } catch {
       setLoadError('世界暂时无法抵达，请稍后再试。');
@@ -101,10 +134,14 @@ export default function GameShell({ onExit }: GameShellProps) {
   const handleCharacterConfirmed = useCallback((
     charId: string,
     companion: CompanionType,
+    secondCharId?: string,
+    sharedMemoIds: string[] = [],
   ) => {
     const char = getCharacterById(charId);
     setPlayerChar(char);
     setCompanionType(companion);
+    if (secondCharId) setSecondPlayerChar(getCharacterById(secondCharId));
+    setAuthorizedMemoIds(companion === 'human_local' ? sharedMemoIds : []);
     setPhase('explore');
   }, []);
 
@@ -118,13 +155,14 @@ export default function GameShell({ onExit }: GameShellProps) {
   }, [world]);
 
   // 打开 Memo
-  const handleOpenMemo = useCallback((memoId: string) => {
+  const handleOpenMemo = useCallback((memoId: string, objectId: string) => {
     const memo = memos.find((m) => m.id === memoId);
     if (memo) {
       setActiveMemo(memo);
+      setActiveObject(objects.find((object) => object.id === objectId) ?? null);
       setPhase('memo_encounter');
     }
-  }, [memos]);
+  }, [memos, objects]);
 
   // 进入篝火对话
   const handleEnterFireside = useCallback(() => {
@@ -141,6 +179,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   // 关闭所有弹层，回到探索
   const handleCloseAll = useCallback(() => {
     setActiveMemo(null);
+    setActiveObject(null);
     setFiresideChatOpen(false);
     setCoWriteOpen(false);
     setPhase('explore');
@@ -169,8 +208,54 @@ export default function GameShell({ onExit }: GameShellProps) {
 
   // 授权 Memo（用户勾选后可带入 AI 对话）
   const handleAuthorizeMemos = useCallback((ids: string[]) => {
-    setAuthorizedMemoIds(ids);
+    setAuthorizedMemoIds([...new Set(ids)].slice(-5));
   }, []);
+
+  const handleSaveAnnotation = useCallback(async (annotation: string) => {
+    if (!activeMemo || !world) return false;
+    if (activeObject && !activeObject.id.startsWith('candidate-')) {
+      await annotateObject(activeObject.id, annotation);
+      setObjects((current) => current.map((object) => (
+        object.id === activeObject.id ? { ...object, annotation } : object
+      )));
+      return true;
+    }
+    const created = await placeObject({
+      type: activeObject?.type ?? 'memory_plant',
+      x: activeObject?.x,
+      y: activeObject?.y,
+      sourceMemoIds: [activeMemo.id],
+      annotation,
+      userConfirmed: true,
+    });
+    if (!created) return false;
+    setObjects((current) => [
+      ...current.filter((object) => object.id !== activeObject?.id),
+      created,
+    ]);
+    setActiveObject(created);
+    return true;
+  }, [activeMemo, activeObject, world]);
+
+  const handleObjectPlaced = useCallback((object: WorldObject) => {
+    setObjects((current) => [...current, object]);
+  }, []);
+
+  const visibleMemos = useMemo(
+    () => companionType === 'human_local'
+      ? memos.filter((memo) => authorizedMemoIds.includes(memo.id))
+      : memos,
+    [authorizedMemoIds, companionType, memos],
+  );
+  const visibleObjects = useMemo(
+    () => companionType !== 'human_local'
+      ? objects
+      : objects.filter((object) => (
+        object.sourceMemoIds.length === 0
+        || object.sourceMemoIds.every((id) => authorizedMemoIds.includes(id))
+      )),
+    [authorizedMemoIds, companionType, objects],
+  );
 
   // ---- 渲染 ----
   return (
@@ -183,6 +268,7 @@ export default function GameShell({ onExit }: GameShellProps) {
       {/* 角色 & 模式选择 */}
       {phase === 'character_select' && (
         <CharacterSelect
+          memos={memos}
           onConfirm={handleCharacterConfirmed}
         />
       )}
@@ -190,28 +276,39 @@ export default function GameShell({ onExit }: GameShellProps) {
       {/* 主地图 */}
       {(phase === 'explore' || phase === 'memo_encounter' || phase === 'fireside_chat' || phase === 'co_write') && (
         <>
-          {loadError ? (
-            <GameFallbackView message={loadError} onRetry={initWorld} onExit={handleExit} />
+          {loadError || canvasFailed ? (
+            <GameFallbackView
+              message={loadError ?? '动态地图无法显示，已切换为图文地图。'}
+              memos={visibleMemos}
+              onOpenMemo={(memoId) => handleOpenMemo(memoId, `fallback-${memoId}`)}
+              onOpenFireside={handleEnterFireside}
+              onOpenCoWrite={handleEnterCoWrite}
+              onRetry={initWorld}
+              onExit={handleExit}
+            />
           ) : (
             <>
               <PixelWorldCanvas
                 playerX={playerX}
                 playerY={playerY}
                 playerChar={playerChar}
-                objects={objects}
-                memos={memos}
+                secondPlayerChar={secondPlayerChar}
+                objects={visibleObjects}
                 companionType={companionType}
                 reducedMotion={reducedMotion}
                 onPlayerMove={handlePlayerMove}
                 onOpenMemo={handleOpenMemo}
                 onEnterFireside={handleEnterFireside}
                 onEnterCoWrite={handleEnterCoWrite}
+                onCanvasFailure={() => setCanvasFailed(true)}
               />
 
               <WorldHUD
                 world={world}
                 phase={phase}
                 companionType={companionType}
+                playerX={playerX}
+                playerY={playerY}
                 onOpenSettings={() => setShowSettings(true)}
                 onExit={handleExit}
               />
@@ -222,8 +319,10 @@ export default function GameShell({ onExit }: GameShellProps) {
           {phase === 'memo_encounter' && activeMemo && (
             <MemoEncounter
               memo={activeMemo}
+              worldObject={activeObject}
               authorizedMemoIds={authorizedMemoIds}
               onAuthorize={(id) => handleAuthorizeMemos([...authorizedMemoIds, id])}
+              onSaveAnnotation={handleSaveAnnotation}
               onClose={handleCloseAll}
               onOpenFireside={() => {
                 setActiveMemo(null);
@@ -234,40 +333,28 @@ export default function GameShell({ onExit }: GameShellProps) {
 
           {/* 篝火对话 */}
           {phase === 'fireside_chat' && firesideChatOpen && (
-            <div className="absolute inset-0 z-40 bg-[rgba(30,18,8,0.7)] backdrop-blur-sm flex items-center justify-center text-white font-mono">
-              <div className="text-center p-6 rounded-lg max-w-sm border-2 border-[#C4A882]" style={{ background: '#3B2E2A' }}>
-                <h3 className="text-lg font-bold mb-2" style={{ color: '#FF9B3D' }}>🔥 篝火对话（暂未实现）</h3>
-                <p className="text-xs opacity-80 mb-4 leading-relaxed">
-                  AI 同行者在此与你探讨记忆。此处可以切换倾听、询问与整理姿态。
-                </p>
-                <button
-                  onClick={handleCloseAll}
-                  className="px-4 py-2 rounded text-xs transition-colors"
-                  style={{ background: 'var(--game-green-mid)' }}
-                >
-                  返回世界
-                </button>
-              </div>
-            </div>
+            world ? (
+              <FiresideChat
+                world={world}
+                memos={memos}
+                authorizedMemoIds={authorizedMemoIds}
+                dialogueMode={dialogueMode}
+                onDialogueModeChange={setDialogueMode}
+                onAuthorizeMemos={handleAuthorizeMemos}
+                onClose={handleCloseAll}
+              />
+            ) : null
           )}
 
           {/* 共写面板 */}
           {phase === 'co_write' && coWriteOpen && (
-            <div className="absolute inset-0 z-40 bg-[rgba(30,18,8,0.7)] backdrop-blur-sm flex items-center justify-center text-white font-mono">
-              <div className="text-center p-6 rounded-lg max-w-sm border-2 border-[#C4A882]" style={{ background: '#3B2E2A' }}>
-                <h3 className="text-lg font-bold mb-2" style={{ color: '#C4A882' }}>📝 共写面板（暂未实现）</h3>
-                <p className="text-xs opacity-80 mb-4 leading-relaxed">
-                  与同伴或 AI 轮流记叙今日感想，共同制作世界物件。
-                </p>
-                <button
-                  onClick={handleCloseAll}
-                  className="px-4 py-2 rounded text-xs transition-colors"
-                  style={{ background: 'var(--game-green-mid)' }}
-                >
-                  返回世界
-                </button>
-              </div>
-            </div>
+            <CoWritePanel
+              companionType={companionType}
+              memos={memos}
+              authorizedMemoIds={authorizedMemoIds}
+              onClose={handleCloseAll}
+              onObjectPlaced={handleObjectPlaced}
+            />
           )}
 
           {/* 游戏设置 */}
@@ -301,20 +388,51 @@ export default function GameShell({ onExit }: GameShellProps) {
 // 降级视图：API 失败时的图文地图
 function GameFallbackView({
   message,
+  memos,
+  onOpenMemo,
+  onOpenFireside,
+  onOpenCoWrite,
   onRetry,
   onExit,
 }: {
   message: string;
+  memos: Memo[];
+  onOpenMemo: (memoId: string) => void;
+  onOpenFireside: () => void;
+  onOpenCoWrite: () => void;
   onRetry: () => void;
   onExit: () => void;
 }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F0EBE0] z-10">
-      <div className="text-center max-w-sm px-6">
-        <div className="text-4xl mb-4">🌲</div>
-        <h2 className="text-lg font-medium text-[var(--game-ink)] mb-2">林间世界</h2>
-        <p className="text-sm text-[var(--game-stone)] mb-6">{message}</p>
-        <div className="flex gap-3 justify-center">
+    <div className="game-static-map">
+      <div className="game-static-map__image" aria-hidden="true" />
+      <section className="game-static-map__panel">
+        <p className="game-kicker">图文地图</p>
+        <h2>林间世界仍然在这里</h2>
+        <p>{message}</p>
+
+        <div className="game-static-map__places">
+          <button type="button" onClick={onOpenFireside}>
+            <strong>篝火地</strong>
+            <span>与同行者谈谈</span>
+          </button>
+          <button type="button" onClick={onOpenCoWrite}>
+            <strong>共居工坊</strong>
+            <span>一起留下痕迹</span>
+          </button>
+        </div>
+
+        <div className="game-static-map__memos">
+          <span>最近长出的故事</span>
+          {memos.slice(0, 4).map((memo) => (
+            <button key={memo.id} type="button" onClick={() => onOpenMemo(memo.id)}>
+              {memo.ai_title || memo.plain_text.slice(0, 28) || '未命名记录'}
+            </button>
+          ))}
+          {memos.length === 0 && <p>这里还没有故事。今天空着也可以。</p>}
+        </div>
+
+        <div className="game-static-map__actions">
           <button
             onClick={onRetry}
             className="game-hud-btn"
@@ -330,7 +448,7 @@ function GameFallbackView({
             返回 InnerOS
           </button>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

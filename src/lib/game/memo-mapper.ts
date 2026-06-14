@@ -80,10 +80,6 @@ export function mapMemosToWorldObjects(
  * 注意：不用颜色或大小表示情绪正负，只按时间和来源区分形态
  */
 function selectObjectType(memo: Memo): WorldObjectType {
-  // 如果是收藏或有 AI 标题（被明确处理过的）→ 小灯
-  if (memo.ai_title && memo.analysis_status === 'done') {
-    return 'lamp';
-  }
   // 带有标签的 → 风铃
   if (memo.original_tags.length > 0) {
     return 'windchime';
@@ -91,6 +87,10 @@ function selectObjectType(memo: Memo): WorldObjectType {
   // 较长的记录 → 信件
   if (memo.plain_text.length > 300) {
     return 'letter';
+  }
+  // 已整理过的短记录 → 小灯
+  if (memo.ai_title && memo.analysis_status === 'done') {
+    return 'lamp';
   }
   // 默认 → 植物（最基础、最自然的形态）
   return 'memory_plant';
@@ -151,7 +151,6 @@ function generatePlacementGrid(
  */
 export function suggestPlacementPosition(
   location: MapLocation,
-  objectType: WorldObjectType,
 ): { x: number; y: number } {
   const region = MAP_REGIONS.find((r) => r.id === location);
   if (!region) return { x: 400, y: 300 };

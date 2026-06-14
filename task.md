@@ -40,7 +40,7 @@
 - [x] `components/game/GamePortal.tsx` (已完成)
 - [x] `components/game/WorldHUD.tsx` (已完成)
 - [x] `components/game/GameSettings.tsx` (已完成)
-- [ ] `cocreate/page.tsx` — 游戏入口页面 (待创建)
+- [x] `cocreate/page.tsx` — 游戏入口页面
 
 ### Phase 2：地图 + 角色 + 碰撞
 - [x] `lib/game/map.ts` (已完成)
@@ -52,17 +52,22 @@
 ### Phase 3：Memo 世界对象
 - [x] `lib/game/memo-mapper.ts` (已完成)
 - [x] `lib/game/world-state.ts` (已完成)
-- [ ] `components/game/WorldObject.tsx` (已完成，渲染合并在 Canvas 中，需要的话可单独抽取)
+- [x] 世界对象渲染（合并在 Canvas 中）
 - [x] `components/game/MemoEncounter.tsx` (已完成)
 
 ### Phase 4：AI 同行者 + 共写
 - [x] `lib/game/companion-prompt.ts` (已完成)
 - [x] `api/game/companion/route.ts` (已完成)
-- [ ] `components/game/FiresideChat.tsx` (待实现，目前使用占位弹窗)
-- [ ] `components/game/CoWritePanel.tsx` (待实现，目前使用占位弹窗)
+- [x] `components/game/FiresideChat.tsx`
+- [x] `components/game/CoWritePanel.tsx`
+- [x] 同屏双人角色选择、共享 Memo 授权与共写草稿持久化
+- [x] AI 同行者流式对话、会话记录与引用范围约束
 
 ### Phase 5：打磨 + 降级
+- [x] 采用确认的木屋夜景图作为唯一传送门视觉
+- [x] 统一入口，不再预先拆分独自 / 双人 / AI 三种模式
 - [ ] 声音与环境音效 (静音开关已留出，资产待引入)
-- [ ] 空状态处理与 Canvas 初始化失败降级（图文地图）
-- [ ] 减少动态模式完整适配
-- [ ] 性能调优与双人联机/同屏共创演示数据对接
+- [x] 空状态处理与 Canvas 初始化失败降级（图文地图）
+- [x] 减少动态模式完整适配
+- [x] 同屏共创与移动端角色切换
+- [ ] 在线双人联机（当前版本明确为同屏模式）

@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import { streamText } from '@/lib/ai/gateway';
 import { buildCompanionMessages, parseCompanionOutput } from '@/lib/game/companion-prompt';
 import { getMemoById } from '@/lib/db/memos';
-import { getCompanionSession } from '@/lib/db/game';
+import {
+  createCompanionSession,
+  getCompanionSession,
+  getOrCreateWorld,
+  updateSessionAuthorizedMemos,
+  updateSessionDialogueMode,
+} from '@/lib/db/game';
 import type { DialogueMode, MapLocation, Memo } from '@/types';
 
 // POST /api/game/companion — AI 同行者对话（流式响应）
@@ -10,6 +16,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json() as {
       message: string;
+      worldId?: string;
       sessionId?: string;
       location: MapLocation;
       dialogueMode: DialogueMode;
@@ -22,15 +29,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '消息不能为空' }, { status: 400 });
     }
 
-    // 获取授权 Memo
-    let authorizedMemoIds = body.authorizedMemoIds ?? [];
+    const world = getOrCreateWorld();
 
-    // 如果提供了 sessionId，从会话获取授权 Memo
-    if (body.sessionId) {
-      const session = getCompanionSession(body.sessionId);
-      if (session) {
-        authorizedMemoIds = session.authorizedMemoIds;
-      }
+    // 获取授权 Memo，并将本次明确授权写回会话。
+    const authorizedMemoIds = body.authorizedMemoIds ?? [];
+    let session = body.sessionId ? getCompanionSession(body.sessionId) : null;
+
+    if (!session) {
+      session = createCompanionSession({
+        worldId: world.id,
+        companionType: 'llm',
+        dialogueMode: body.dialogueMode ?? 'listen',
+        authorizedMemoIds,
+      });
+    } else {
+      updateSessionDialogueMode(session.id, body.dialogueMode ?? session.dialogueMode);
+      updateSessionAuthorizedMemos(session.id, authorizedMemoIds);
     }
 
     // 加载 Memo 内容（最多 5 条，避免 context 过大）
@@ -83,6 +97,8 @@ export async function POST(req: Request) {
           const done = JSON.stringify({
             type: 'done',
             text: fullText,
+            sessionId: session.id,
+            sourceMemoIds: authorizedMemos.map((memo) => memo.id),
             isInference: parsed.isInference,
             suggestedActions: parsed.suggestedActions,
           });

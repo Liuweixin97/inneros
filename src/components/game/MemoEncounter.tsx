@@ -1,24 +1,28 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { Memo } from '@/types';
+import type { Memo, WorldObject } from '@/types';
 
 interface MemoEncounterProps {
   memo: Memo;
+  worldObject: WorldObject | null;
   authorizedMemoIds: string[];
   onAuthorize: (id: string) => void;
+  onSaveAnnotation: (annotation: string) => Promise<boolean>;
   onClose: () => void;
   onOpenFireside: () => void;
 }
 
 export default function MemoEncounter({
   memo,
+  worldObject,
   authorizedMemoIds,
   onAuthorize,
+  onSaveAnnotation,
   onClose,
   onOpenFireside,
 }: MemoEncounterProps) {
-  const [annotation, setAnnotation] = useState('');
+  const [annotation, setAnnotation] = useState(worldObject?.annotation ?? '');
   const [showAnnotationInput, setShowAnnotationInput] = useState(false);
   const [annotationSaved, setAnnotationSaved] = useState(false);
 
@@ -26,11 +30,18 @@ export default function MemoEncounter({
   const date = new Date(memo.created_at);
   const dateStr = `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日`;
 
-  const handleSaveAnnotation = () => {
+  const [saveError, setSaveError] = useState('');
+
+  const handleSaveAnnotation = async () => {
     if (!annotation.trim()) return;
-    // TODO: 调用 world-state annotateObject
-    setAnnotationSaved(true);
-    setTimeout(() => setShowAnnotationInput(false), 800);
+    setSaveError('');
+    const saved = await onSaveAnnotation(annotation.trim());
+    if (saved) {
+      setAnnotationSaved(true);
+      setTimeout(() => setShowAnnotationInput(false), 800);
+    } else {
+      setSaveError('这句话暂时没有保存成功。');
+    }
   };
 
   return (
@@ -157,6 +168,7 @@ export default function MemoEncounter({
                     取消
                   </button>
                 </div>
+                {saveError && <p className="mt-2 text-[11px] text-red-700">{saveError}</p>}
               </div>
             )}
 

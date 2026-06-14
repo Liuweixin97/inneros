@@ -109,7 +109,7 @@ export async function placeObject(input: {
 }): Promise<WorldObject | null> {
   const pos = (input.x !== undefined && input.y !== undefined)
     ? { x: input.x, y: input.y }
-    : suggestPlacementPosition(input.location ?? 'garden', input.type);
+    : suggestPlacementPosition(input.location ?? 'garden');
 
   try {
     const res = await fetch('/api/game/world', {
@@ -180,7 +180,7 @@ export async function loadGameMemos(
 ) {
   const url = mode === 'selected' && selectedIds?.length
     ? `/api/game/memos?ids=${selectedIds.join(',')}`
-    : '/api/game/memos?limit=20';
+    : '/api/game/memos?limit=8';
 
   const res = await fetch(url);
   if (!res.ok) throw new Error('无法加载 Memo');
@@ -219,10 +219,12 @@ export interface CompanionMessage {
   content: string;
   isInference?: boolean;
   suggestedActions?: string[];
+  sourceMemoIds?: string[];
 }
 
 export async function sendCompanionMessage(input: {
   message: string;
+  worldId: string;
   sessionId?: string;
   location: string;
   dialogueMode: DialogueMode;
@@ -230,13 +232,15 @@ export async function sendCompanionMessage(input: {
   conversationHistory?: CompanionMessage[];
   recentUserAction?: string;
   onChunk?: (text: string) => void;
-}): Promise<CompanionMessage | null> {
+  signal?: AbortSignal;
+}): Promise<{ message: CompanionMessage; sessionId: string } | null> {
   try {
     const res = await fetch('/api/game/companion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: input.message,
+        worldId: input.worldId,
         sessionId: input.sessionId,
         location: input.location,
         dialogueMode: input.dialogueMode,
@@ -247,6 +251,7 @@ export async function sendCompanionMessage(input: {
         })),
         recentUserAction: input.recentUserAction,
       }),
+      signal: input.signal,
     });
 
     if (!res.ok || !res.body) throw new Error('同行者无响应');
@@ -255,6 +260,7 @@ export async function sendCompanionMessage(input: {
     const decoder = new TextDecoder();
     let buffer = '';
     let finalMessage: CompanionMessage | null = null;
+    let sessionId = input.sessionId ?? '';
 
     while (true) {
       const { done, value } = await reader.read();
@@ -271,6 +277,7 @@ export async function sendCompanionMessage(input: {
           if (event.type === 'chunk' && typeof event.content === 'string') {
             input.onChunk?.(event.content);
           } else if (event.type === 'done' && typeof event.text === 'string') {
+            if (typeof event.sessionId === 'string') sessionId = event.sessionId;
             finalMessage = {
               role: 'assistant',
               content: event.text,
@@ -278,7 +285,12 @@ export async function sendCompanionMessage(input: {
               suggestedActions: Array.isArray(event.suggestedActions)
                 ? event.suggestedActions as string[]
                 : [],
+              sourceMemoIds: Array.isArray(event.sourceMemoIds)
+                ? event.sourceMemoIds as string[]
+                : [],
             };
+          } else if (event.type === 'error') {
+            throw new Error(typeof event.message === 'string' ? event.message : '同行者暂时无法说话');
           }
         } catch {
           // ignore malformed SSE lines
@@ -286,8 +298,9 @@ export async function sendCompanionMessage(input: {
       }
     }
 
-    return finalMessage;
+    return finalMessage && sessionId ? { message: finalMessage, sessionId } : null;
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') return null;
     console.error('[world-state] 同行者消息发送失败', error);
     return null;
   }

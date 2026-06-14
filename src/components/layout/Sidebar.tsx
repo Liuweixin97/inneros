@@ -12,6 +12,7 @@ import {
   Settings,
   PenLine,
   Sparkles,
+  ArrowUpRight,
 } from 'lucide-react';
 
 interface NavItem {
@@ -32,14 +33,15 @@ const navItems: NavItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const isCoCreate = pathname.startsWith('/cocreate');
+
+  if (isCoCreate) return null;
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     if (href === '/insights' && pathname.startsWith('/topics')) return true;
     return pathname.startsWith(href);
   };
-
-  const isCoCreate = pathname.startsWith('/cocreate');
 
   return (
     <aside
@@ -152,75 +154,20 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      {/* ✦ 林间世界 — 传送门入口（与普通导航有明显分隔） */}
       <div className="px-3 pb-3">
-        {/* 分隔线 + 标签 */}
-        <div className="flex items-center gap-2 mb-2 px-1">
-          <div className="flex-1 h-px bg-[var(--color-border-light)]" />
-          <span className="text-[10px] text-[var(--color-text-muted)] tracking-widest uppercase select-none">传送门</span>
-          <div className="flex-1 h-px bg-[var(--color-border-light)]" />
-        </div>
-
         <Link
           href="/cocreate"
           id="sidebar-cocreate-btn"
-          className={`
-            relative group flex items-center gap-2.5 w-full
-            px-3 py-2.5 rounded-xl
-            text-[13px] font-medium overflow-hidden
-            transition-all duration-300
-            ${isCoCreate
-              ? 'text-white shadow-lg'
-              : 'text-[var(--color-text-secondary)] hover:text-white'
-            }
-          `}
-          style={{
-            background: isCoCreate
-              ? 'linear-gradient(135deg, #6ee7b7, #86efac, #fde68a, #fbcfe8)'
-              : undefined,
-          }}
+          className="forest-portal-card"
         >
-          {/* Animated warm forest border when not active */}
-          {!isCoCreate && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              style={{
-                background: 'linear-gradient(135deg, #6ee7b7, #86efac, #fde68a, #fbcfe8)',
-              }}
-            />
-          )}
-          {/* inner bg to create border effect */}
-          {!isCoCreate && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-[1.5px] rounded-[10px] bg-[var(--color-bg-sidebar)] group-hover:opacity-95 transition-all duration-300"
-            />
-          )}
-
-          {/* Tree icon */}
-          <span className="relative z-10 flex items-center justify-center w-[18px] h-[18px] shrink-0">
-            <span
-              className={`text-base leading-none transition-transform duration-300 group-hover:scale-110 ${isCoCreate ? 'animate-pulse-soft' : ''}`}
-              style={{ fontSize: '16px' }}
-            >
-              🌲
+          <span className="forest-portal-card__image" aria-hidden="true" />
+          <span className="forest-portal-card__shade" aria-hidden="true" />
+          <span className="forest-portal-card__content">
+            <span className="forest-portal-card__title">
+              <strong>林间世界</strong>
+              <ArrowUpRight size={15} strokeWidth={1.7} />
             </span>
-          </span>
-
-          <span className="relative z-10 flex flex-col leading-tight">
-            <span className="text-[13px] font-medium">林间世界</span>
-            <span className="text-[10px] opacity-60 group-hover:opacity-80 transition-opacity">
-              由你的经历慢慢长成
-            </span>
-          </span>
-
-          {/* Sparkle */}
-          <span
-            className="relative z-10 ml-auto text-[10px] opacity-50 group-hover:opacity-100 transition-opacity duration-300 animate-pulse-soft"
-            aria-hidden
-          >
-            ✦
+            <small>由你的经历慢慢长成</small>
           </span>
         </Link>
       </div>
