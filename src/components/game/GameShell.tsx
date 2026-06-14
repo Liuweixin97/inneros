@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { GameWorld, WorldObject, GamePhase, CompanionType, DialogueMode, Memo } from '@/types';
 import {
   annotateObject,
+  hideObject,
   loadWorld,
   loadGameMemos,
   placeObject,
@@ -314,12 +315,15 @@ export default function GameShell({ onExit }: GameShellProps) {
               authorizedMemoIds={authorizedMemoIds}
               onAuthorize={(id) => handleAuthorizeMemos([...authorizedMemoIds, id])}
               onSaveAnnotation={handleSaveAnnotation}
-              onHide={activeObject ? () => {
-                setObjects((current) => current.map((o) =>
-                  o.id === activeObject.id ? { ...o, hidden: true } : o
-                ));
-                handleCloseAll();
-              } : undefined}
+              onHide={activeObject
+                && !activeObject.id.startsWith('candidate-')
+                && !activeObject.id.startsWith('fallback-')
+                ? async () => {
+                  await hideObject(activeObject.id);
+                  setObjects((current) => current.filter((object) => object.id !== activeObject.id));
+                  handleCloseAll();
+                }
+                : undefined}
               onClose={handleCloseAll}
               onOpenFireside={() => {
                 setActiveMemo(null);
@@ -381,7 +385,7 @@ export default function GameShell({ onExit }: GameShellProps) {
       {/* 加载骨架：首次进入时完全覆盖 Canvas，防止坐标闪烁 */}
       {isLoading && phase !== 'portal' && (
         <div
-          className="absolute inset-0 flex flex-col items-center justify-center z-50"
+          className="absolute inset-0 flex flex-col items-center justify-center z-20"
           style={{
             background: 'linear-gradient(160deg, #071b1d 0%, #0d2a2e 60%, #071b1d 100%)',
             pointerEvents: 'none',

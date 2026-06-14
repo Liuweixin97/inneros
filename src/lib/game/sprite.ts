@@ -7,7 +7,7 @@
 
 import type { PlayerCharacter } from '@/types';
 
-// 默认角色预设（6–8 个）
+// 当前角色图集只包含两套完整角色素材。
 export const CHARACTER_PRESETS: PlayerCharacter[] = [
   {
     id: 'wanderer',
@@ -22,34 +22,6 @@ export const CHARACTER_PRESETS: PlayerCharacter[] = [
     colorSkin: '#FADBD8',
     colorHair: '#1A1A2E',
     colorOutfit: '#5B9BD5',
-  },
-  {
-    id: 'hermit',
-    displayName: '隐者',
-    colorSkin: '#D4AC0D',
-    colorHair: '#7B3F00',
-    colorOutfit: '#A0622A',
-  },
-  {
-    id: 'dreamer',
-    displayName: '梦者',
-    colorSkin: '#E8DAEF',
-    colorHair: '#76448A',
-    colorOutfit: '#FFC4D0',
-  },
-  {
-    id: 'keeper',
-    displayName: '守者',
-    colorSkin: '#A9CCE3',
-    colorHair: '#2E4057',
-    colorOutfit: '#2E4057',
-  },
-  {
-    id: 'ember',
-    displayName: '余烬',
-    colorSkin: '#F9CBA5',
-    colorHair: '#E74C3C',
-    colorOutfit: '#E67E22',
   },
 ];
 

@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CompanionType, PlayerCharacter, WorldObject, WorldObjectType } from '@/types';
 import { resolveMovement } from '@/lib/game/collisions';
-import { WORLD_HEIGHT, WORLD_WIDTH } from '@/lib/game/map';
+import {
+  GAME_ACTION_POINTS,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  type GameActionId,
+} from '@/lib/game/map';
 
 interface PixelWorldCanvasProps {
   playerX: number;
@@ -22,7 +27,7 @@ interface PixelWorldCanvasProps {
 }
 
 type Direction = 'down' | 'left' | 'right' | 'up';
-type NearbyAction = 'fireside' | 'workshop' | 'pond' | null;
+type NearbyAction = GameActionId | null;
 
 const SPEED = 3;
 const INTERACT_RADIUS = 42;
@@ -380,11 +385,16 @@ function findNearbyAction(
   secondX: number,
   secondY: number,
 ): NearbyAction {
-  if (Math.hypot(650 - x, 170 - y) < 54) return 'fireside';
-  const nearWorkshop = Math.hypot(665 - x, 335 - y) < 58;
-  const secondNearWorkshop = Math.hypot(665 - secondX, 335 - secondY) < 70;
+  const fireside = GAME_ACTION_POINTS.fireside;
+  if (Math.hypot(fireside.x - x, fireside.y - y) < fireside.radius) return 'fireside';
+
+  const workshop = GAME_ACTION_POINTS.workshop;
+  const nearWorkshop = Math.hypot(workshop.x - x, workshop.y - y) < workshop.radius;
+  const secondNearWorkshop = Math.hypot(workshop.x - secondX, workshop.y - secondY) < workshop.radius + 12;
   if (nearWorkshop && (companionType !== 'human_local' || secondNearWorkshop)) return 'workshop';
-  if (Math.hypot(195 - x, 285 - y) < 52) return 'pond';
+
+  const pond = GAME_ACTION_POINTS.pond;
+  if (Math.hypot(pond.x - x, pond.y - y) < pond.radius) return 'pond';
   return null;
 }
 
@@ -449,7 +459,8 @@ function drawScene(
   }
 
   if (nearbyAction) {
-    const target = nearbyAction === 'fireside' ? toScreen(650, 170) : toScreen(665, 335);
+    const actionPoint = GAME_ACTION_POINTS[nearbyAction];
+    const target = toScreen(actionPoint.x, actionPoint.y);
     context.save();
     context.strokeStyle = 'rgba(255, 210, 128, 0.8)';
     context.lineWidth = Math.max(2, 1.5 * scale);

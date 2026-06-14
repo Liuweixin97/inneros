@@ -815,7 +815,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 10;
+  z-index: 21;
 }
 
 .game-hud > * {
@@ -855,6 +855,21 @@ body {
     0 8px 32px rgba(60, 30, 10, 0.25),
     inset 0 0 40px rgba(210, 180, 120, 0.15);
   color: var(--game-ink);
+}
+
+.game-memo-markdown .markdown-content {
+  color: inherit;
+}
+
+.game-memo-markdown .markdown-content pre,
+.game-memo-markdown .markdown-content code {
+  border-color: rgba(107, 63, 26, 0.18);
+  background: rgba(107, 63, 26, 0.08);
+  color: #4b2f1b;
+}
+
+.game-memo-markdown .markdown-content a {
+  color: #6b4f1d;
 }
 
 /* AI 对话面板 — 木框风格 */
@@ -1092,25 +1107,132 @@ body {
   color: var(--game-cabin-light);
 }
 
-.fireside-memory-summary {
-  display: flex;
+.fireside-memory-context {
   width: calc(100% - 52px);
-  align-items: center;
-  justify-content: space-between;
   margin: 0 26px;
   border-block: 1px solid rgba(255, 224, 174, 0.1);
-  padding: 12px 0;
+}
+
+.fireside-memory-summary {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  text-align: left;
   color: rgba(255, 248, 231, 0.62);
+}
+
+.fireside-memory-summary__icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(255, 155, 61, 0.1);
+  color: rgba(255, 190, 112, 0.78);
+}
+
+.fireside-memory-summary__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fireside-memory-summary__copy strong {
+  color: rgba(255, 248, 231, 0.82);
   font-size: 12px;
+  font-weight: 550;
+}
+
+.fireside-memory-summary__copy small {
+  overflow: hidden;
+  color: rgba(255, 248, 231, 0.4);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fireside-memory-summary__action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 211, 148, 0.68);
+  font-size: 11px;
+}
+
+.fireside-memory-summary__action svg {
+  transition: transform 160ms ease;
+}
+
+.fireside-memory-context.is-open .fireside-memory-summary__action svg {
+  transform: rotate(180deg);
+}
+
+.fireside-memory-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 0 11px 40px;
+}
+
+.fireside-memory-chips span {
+  max-width: 180px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(125, 184, 90, 0.22);
+  border-radius: 999px;
+  background: rgba(125, 184, 90, 0.08);
+  padding: 4px 8px;
+  color: rgba(226, 241, 214, 0.7);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fireside-memory-picker {
+  min-height: 330px;
+  padding: 4px 0 12px;
+}
+
+.fireside-memory-picker__header,
+.fireside-memory-picker__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fireside-memory-picker__header {
+  padding: 8px 0 10px;
+}
+
+.fireside-memory-picker__header div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fireside-memory-picker__header strong {
+  color: rgba(255, 248, 231, 0.78);
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.fireside-memory-picker__header small,
+.fireside-memory-picker__header > span {
+  color: rgba(255, 248, 231, 0.38);
+  font-size: 10px;
+}
+
+.fireside-memory-picker__list {
   display: grid;
-  max-height: 190px;
+  max-height: 260px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
   overflow-y: auto;
-  padding: 12px 26px 4px;
 }
 
 .fireside-memory-picker label,
@@ -1124,15 +1246,51 @@ body {
 }
 
 .fireside-memory-picker label:hover,
+.fireside-memory-picker label.is-selected,
 .cowrite-memory-list label:hover,
 .cowrite-memory-list label.is-selected {
   background: rgba(255, 248, 231, 0.06);
+}
+
+.fireside-memory-picker label.is-selected {
+  box-shadow: inset 0 0 0 1px rgba(125, 184, 90, 0.22);
+}
+
+.fireside-memory-picker label.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
 }
 
 .fireside-memory-picker input,
 .cowrite-memory-list input {
   margin-top: 3px;
   accent-color: var(--game-green-light);
+}
+
+.fireside-memory-picker input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fireside-memory-check {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 224, 174, 0.22);
+  border-radius: 5px;
+  color: #e5f3da;
+}
+
+.fireside-memory-picker label.is-selected .fireside-memory-check {
+  border-color: rgba(125, 184, 90, 0.55);
+  background: rgba(125, 184, 90, 0.32);
+}
+
+.fireside-memory-copy {
+  overflow: hidden;
 }
 
 .fireside-memory-picker span,
@@ -1153,8 +1311,29 @@ body {
 
 .fireside-memory-picker small,
 .cowrite-memory-list small {
+  display: block;
+  overflow: hidden;
   color: rgba(255, 248, 231, 0.38);
   font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fireside-memory-picker__footer {
+  padding-top: 11px;
+}
+
+.fireside-memory-picker__footer button {
+  border-radius: 9px;
+  padding: 7px 10px;
+  color: rgba(255, 248, 231, 0.5);
+  font-size: 11px;
+}
+
+.fireside-memory-picker__footer button.is-primary {
+  border: 1px solid rgba(125, 184, 90, 0.34);
+  background: rgba(125, 184, 90, 0.16);
+  color: rgba(229, 243, 219, 0.9);
 }
 
 .fireside-messages {
@@ -1480,7 +1659,7 @@ body {
     border-radius: 18px 18px 0 0;
   }
 
-  .fireside-memory-picker,
+  .fireside-memory-picker__list,
   .cowrite-memory-list,
   .cowrite-two-voices,
   .cowrite-object-grid {

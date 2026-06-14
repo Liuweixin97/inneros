@@ -2,7 +2,7 @@
  * 林间世界 — 地图数据与区域定义
  *
  * MVP 采用逻辑坐标系，Canvas 渲染时缩放到实际尺寸。
- * 世界坐标：800 × 600 单位（每单位 = 1 游戏像素）
+ * 世界坐标：800 × 450 单位（每单位 = 1 游戏像素）
  * Tile 大小：16 × 16 单位
  */
 
@@ -11,6 +11,22 @@ import type { MapLocation } from '@/types';
 export const WORLD_WIDTH = 800;
 export const WORLD_HEIGHT = 450;
 export const TILE_SIZE = 16;
+
+export type GameActionId = 'fireside' | 'workshop' | 'pond';
+
+export interface GameActionPoint {
+  id: GameActionId;
+  x: number;
+  y: number;
+  radius: number;
+}
+
+// 互动点使用可行走的地标边缘坐标，HUD 区域仍使用地标中心。
+export const GAME_ACTION_POINTS: Record<GameActionId, GameActionPoint> = {
+  fireside: { id: 'fireside', x: 650, y: 170, radius: 54 },
+  workshop: { id: 'workshop', x: 590, y: 335, radius: 52 },
+  pond: { id: 'pond', x: 380, y: 285, radius: 52 },
+};
 
 // 地图区域定义：中心点 + 半径（椭圆触发区）
 export interface MapRegion {

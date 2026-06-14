@@ -73,7 +73,7 @@ export default function GameSettings({
               <p className="text-[11px] mb-3 tracking-wider" style={{ color: 'var(--game-hud-muted)' }}>
                 外观
               </p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {CHARACTER_PRESETS.map((char) => {
                   const selected = char.id === currentCharId;
                   return (
@@ -92,11 +92,7 @@ export default function GameSettings({
                         className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center"
                         style={{ background: `linear-gradient(145deg, ${char.colorHair}, ${char.colorOutfit})` }}
                       >
-                        {CHARACTER_ART[char.id] ? (
-                          <Image src={CHARACTER_ART[char.id]} alt="" width={40} height={40} className="object-cover" />
-                        ) : (
-                          <span className="w-full h-full rounded-full block" style={{ background: `linear-gradient(145deg, ${char.colorHair}, ${char.colorOutfit})` }} />
-                        )}
+                        <Image src={CHARACTER_ART[char.id]} alt="" width={40} height={40} className="object-cover" />
                       </span>
                       <span className="text-[11px]" style={{ color: selected ? 'var(--game-warm-light)' : 'var(--game-hud-muted)' }}>
                         {char.displayName}

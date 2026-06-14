@@ -54,21 +54,12 @@ export default function CharacterSelect({ onConfirm }: CharacterSelectProps) {
                 onClick={() => setSelectedChar(character.id)}
               >
                 <span className="forest-arrival__portrait">
-                  {CHARACTER_ART[character.id] ? (
-                    <Image
-                      src={CHARACTER_ART[character.id]}
-                      alt=""
-                      width={88}
-                      height={88}
-                    />
-                  ) : (
-                    <span
-                      className="forest-arrival__swatch"
-                      style={{
-                        background: `linear-gradient(145deg, ${character.colorHair}, ${character.colorOutfit})`,
-                      }}
-                    />
-                  )}
+                  <Image
+                    src={CHARACTER_ART[character.id]}
+                    alt=""
+                    width={88}
+                    height={88}
+                  />
                 </span>
                 <span>{character.displayName}</span>
               </button>

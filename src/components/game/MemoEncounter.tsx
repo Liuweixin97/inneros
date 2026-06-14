@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { Memo, WorldObject } from '@/types';
+import MarkdownContent from '@/components/ui/MarkdownContent';
 
 interface MemoEncounterProps {
   memo: Memo;
@@ -137,10 +138,10 @@ export default function MemoEncounter({
                 )}
               </div>
               <div
-                className="text-[14px] leading-[1.9] max-h-48 overflow-y-auto"
+                className="game-memo-markdown text-[14px] leading-[1.9] max-h-48 overflow-y-auto"
                 style={{ color: '#3B2E2A', fontFamily: 'var(--font-sans)' }}
               >
-                <p className="whitespace-pre-wrap">{displayOriginal}</p>
+                <MarkdownContent content={displayOriginal} />
               </div>
             </div>
 
