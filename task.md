@@ -25,48 +25,44 @@
 
 ### Phase 0：工程骨架 + 类型 + 样式 + API
 - [x] task.md 更新
-- [ ] `Sidebar.tsx` — 改名「林间世界」+ 视觉微调
-- [ ] `cocreate/layout.tsx` — 更新 metadata
-- [ ] `types/index.ts` — 追加游戏专属类型
-- [ ] `globals.css` — 追加游戏 CSS 变量与像素动画
-- [ ] `lib/db/index.ts` — 新增 game_worlds / world_objects / companion_sessions / shared_memory_drafts 表
-- [ ] `lib/db/game.ts` — 游戏数据 CRUD
-- [ ] `api/game/world/route.ts` — 世界状态 API
-- [ ] `api/game/memos/route.ts` — 游戏用 Memo 查询 API
-- [ ] git commit: feat(game): phase0 skeleton + types + db
+- [x] `Sidebar.tsx` — 改名「林间世界」+ 视觉微调 (已完成)
+- [x] `cocreate/layout.tsx` — 更新 metadata (已完成)
+- [x] `types/index.ts` — 追加游戏专属类型 (已完成)
+- [x] `globals.css` — 追加游戏 CSS 变量与像素动画 (已完成)
+- [x] `lib/db/index.ts` — 新增 game_worlds / world_objects / companion_sessions / shared_memory_drafts 表 (已完成)
+- [x] `lib/db/game.ts` — 游戏数据 CRUD (已完成)
+- [x] `api/game/world/route.ts` — 世界状态 API (已完成)
+- [x] `api/game/memos/route.ts` — 游戏用 Memo 查询 API (已完成)
+- [x] git commit: feat(game): phase0 skeleton + types + db
 
 ### Phase 1：GameShell + 过场 + HUD + 设置
-- [ ] `components/game/GameShell.tsx`
-- [ ] `components/game/GamePortal.tsx`
-- [ ] `components/game/WorldHUD.tsx`
-- [ ] `components/game/GameSettings.tsx`
-- [ ] `cocreate/page.tsx`
-- [ ] git commit: feat(game): phase1 shell + portal + HUD
+- [x] `components/game/GameShell.tsx` (已完成，伴侣与共写使用占位 UI)
+- [x] `components/game/GamePortal.tsx` (已完成)
+- [x] `components/game/WorldHUD.tsx` (已完成)
+- [x] `components/game/GameSettings.tsx` (已完成)
+- [ ] `cocreate/page.tsx` — 游戏入口页面 (待创建)
 
 ### Phase 2：地图 + 角色 + 碰撞
-- [ ] `lib/game/map.ts`
-- [ ] `lib/game/collisions.ts`
-- [ ] `lib/game/sprite.ts`
-- [ ] `components/game/PixelWorldCanvas.tsx`
-- [ ] `components/game/CharacterSelect.tsx`
-- [ ] git commit: feat(game): phase2 canvas map + character
+- [x] `lib/game/map.ts` (已完成)
+- [x] `lib/game/collisions.ts` (已完成)
+- [x] `lib/game/sprite.ts` (已完成)
+- [x] `components/game/PixelWorldCanvas.tsx` (已完成)
+- [x] `components/game/CharacterSelect.tsx` (已完成)
 
 ### Phase 3：Memo 世界对象
-- [ ] `lib/game/memo-mapper.ts`
-- [ ] `lib/game/world-state.ts`
-- [ ] `components/game/WorldObject.tsx`
-- [ ] `components/game/MemoEncounter.tsx`
-- [ ] git commit: feat(game): phase3 memo world objects
+- [x] `lib/game/memo-mapper.ts` (已完成)
+- [x] `lib/game/world-state.ts` (已完成)
+- [ ] `components/game/WorldObject.tsx` (已完成，渲染合并在 Canvas 中，需要的话可单独抽取)
+- [x] `components/game/MemoEncounter.tsx` (已完成)
 
 ### Phase 4：AI 同行者 + 共写
-- [ ] `lib/game/companion-prompt.ts`
-- [ ] `api/game/companion/route.ts`
-- [ ] `components/game/FiresideChat.tsx`
-- [ ] `components/game/CoWritePanel.tsx`
-- [ ] git commit: feat(game): phase4 AI companion + co-write
+- [x] `lib/game/companion-prompt.ts` (已完成)
+- [x] `api/game/companion/route.ts` (已完成)
+- [ ] `components/game/FiresideChat.tsx` (待实现，目前使用占位弹窗)
+- [ ] `components/game/CoWritePanel.tsx` (待实现，目前使用占位弹窗)
 
 ### Phase 5：打磨 + 降级
-- [ ] 空状态处理
-- [ ] Canvas 初始化失败降级（图文地图）
-- [ ] 减少动态模式
-- [ ] git commit: feat(game): phase5 polish + fallback
+- [ ] 声音与环境音效 (静音开关已留出，资产待引入)
+- [ ] 空状态处理与 Canvas 初始化失败降级（图文地图）
+- [ ] 减少动态模式完整适配
+- [ ] 性能调优与双人联机/同屏共创演示数据对接
