@@ -51,7 +51,7 @@
   --font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
 
   /* Spacing & Layout */
-  --sidebar-width: 260px;
+  --sidebar-width: 232px;
   --context-panel-width: 340px;
   --content-max-width: 720px;
   --header-height: 64px;
@@ -468,7 +468,6 @@ body {
 .card:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--color-border);
-  transform: translateY(-1px);
 }
 
 .card-selected {
@@ -629,6 +628,17 @@ body {
 
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @media (min-width: 769px) and (max-width: 1200px) {
   :root {
     --context-panel-width: 0px;
@@ -645,4 +655,343 @@ body {
   .no-print {
     display: none !important;
   }
+}
+
+/* ============================================================
+   林间世界 — 游戏模式 CSS
+   ============================================================ */
+
+/* --- 游戏设计令牌 --- */
+:root {
+  /* Forest Palette — 手绘暖色系 */
+  --game-green-deep:    #2D5016;
+  --game-green-mid:     #4A7C2F;
+  --game-green-light:   #7DB85A;
+  --game-green-pale:    #B5D99C;
+  --game-bark:          #6B3F1A;
+  --game-bark-light:    #A0622A;
+  --game-earth:         #8B6340;
+  --game-earth-pale:    #C4A882;
+  --game-stone:         #7A7D6F;
+  --game-stone-pale:    #B8BAA8;
+  --game-sky-day:       #87CEEB;
+  --game-sky-dawn:      #FFB085;
+  --game-sky-dusk:      #FF6B6B;
+  --game-sky-night:     #1A1B3A;
+  --game-water:         #5B9BD5;
+  --game-water-pale:    #A8D4F5;
+  --game-warm-light:    #FFF3C4;
+  --game-firelight:     #FF9B3D;
+  --game-firefly:       #CCFF88;
+
+  /* Cabin Warmth */
+  --game-cabin-bg:      #2C1810;
+  --game-cabin-light:   #FFF8E7;
+  --game-cabin-wood:    #8B4513;
+
+  /* Parchment — Memo 阅读面 */
+  --game-parchment:     #FDF6E3;
+  --game-parchment-dark:#E8D9B5;
+  --game-ink:           #3B2E2A;
+
+  /* HUD */
+  --game-hud-bg:        rgba(20, 12, 5, 0.72);
+  --game-hud-border:    rgba(255, 243, 196, 0.2);
+  --game-hud-text:      #FFF8E7;
+  --game-hud-muted:     rgba(255, 248, 231, 0.5);
+
+  /* 像素字体 — 短标签用 */
+  --font-pixel:         'Courier New', 'Lucida Console', monospace;
+}
+
+/* --- 游戏动画关键帧 --- */
+
+/* 角色行走步伐（上下微弹） */
+@keyframes pixel-walk {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-2px); }
+}
+
+/* 世界对象轻摇（植物、风铃） */
+@keyframes pixel-sway {
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  50%       { transform: rotate(2deg) translateY(-1px); }
+}
+
+/* 灯光脉冲 */
+@keyframes pixel-glow {
+  0%, 100% { opacity: 0.85; filter: brightness(1); }
+  50%       { opacity: 1;    filter: brightness(1.2); }
+}
+
+/* 萤火虫漂浮 */
+@keyframes firefly-float {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translate(var(--fx, 30px), var(--fy, -40px)) scale(0.7); opacity: 0; }
+}
+
+/* 水面波纹 */
+@keyframes water-ripple {
+  0%   { transform: scaleX(1) scaleY(1); opacity: 0.6; }
+  100% { transform: scaleX(1.8) scaleY(0.4); opacity: 0; }
+}
+
+/* 传送门光效 */
+@keyframes portal-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(180, 220, 120, 0.3); }
+  50%       { box-shadow: 0 0 0 12px rgba(180, 220, 120, 0); }
+}
+
+/* 像素淡入 — 分块像素化过场 */
+@keyframes pixel-fade-in {
+  0%   { opacity: 0; filter: brightness(2) blur(0); image-rendering: pixelated; }
+  50%  { opacity: 0.6; filter: brightness(1.2); }
+  100% { opacity: 1; filter: brightness(1); }
+}
+
+/* 物件放置落下 */
+@keyframes place-bounce {
+  0%   { transform: translateY(-12px) scale(0.85); opacity: 0; }
+  60%  { transform: translateY(2px)   scale(1.05); opacity: 1; }
+  80%  { transform: translateY(-2px)  scale(0.97); }
+  100% { transform: translateY(0)     scale(1); }
+}
+
+/* 文字逐字出现 — AI 对话用 */
+@keyframes text-appear {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 篝火闪烁 */
+@keyframes campfire-flicker {
+  0%, 100% { transform: scaleY(1)    scaleX(1);    opacity: 0.9; }
+  25%       { transform: scaleY(1.08) scaleX(0.96); opacity: 1; }
+  50%       { transform: scaleY(0.95) scaleX(1.04); opacity: 0.85; }
+  75%       { transform: scaleY(1.05) scaleX(0.98); opacity: 0.95; }
+}
+
+/* 漂流瓶摇晃 */
+@keyframes bottle-rock {
+  0%, 100% { transform: rotate(-4deg); }
+  50%       { transform: rotate(4deg); }
+}
+
+/* --- 动画类 --- */
+.animate-pixel-walk    { animation: pixel-walk 0.4s ease-in-out infinite; }
+.animate-pixel-sway    { animation: pixel-sway 3s ease-in-out infinite; }
+.animate-pixel-glow    { animation: pixel-glow 2.5s ease-in-out infinite; }
+.animate-firefly       { animation: firefly-float 4s ease-in-out infinite; }
+.animate-portal-pulse  { animation: portal-pulse 2s ease-in-out infinite; }
+.animate-pixel-fade-in { animation: pixel-fade-in 0.6s ease-out forwards; }
+.animate-place-bounce  { animation: place-bounce 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+.animate-campfire      { animation: campfire-flicker 0.8s ease-in-out infinite; }
+.animate-bottle-rock   { animation: bottle-rock 3s ease-in-out infinite; }
+
+/* --- 游戏 UI 层 --- */
+
+/* 全屏游戏容器 */
+.game-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: hidden;
+  background: var(--game-sky-day);
+  font-family: var(--font-sans);
+}
+
+/* Canvas 地图层 */
+.game-canvas-layer {
+  position: absolute;
+  inset: 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* HUD 层（漂浮在 Canvas 上方） */
+.game-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.game-hud > * {
+  pointer-events: auto;
+}
+
+/* HUD 胶囊按钮 */
+.game-hud-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--game-hud-bg);
+  border: 1px solid var(--game-hud-border);
+  border-radius: 20px;
+  color: var(--game-hud-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.game-hud-btn:hover {
+  background: rgba(30, 18, 8, 0.88);
+  border-color: rgba(255, 243, 196, 0.4);
+}
+
+/* Memo 阅读弹层 — 羊皮纸风格 */
+.memo-parchment {
+  background: var(--game-parchment);
+  border: 2px solid var(--game-parchment-dark);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 4px rgba(139, 99, 64, 0.12),
+    0 8px 32px rgba(60, 30, 10, 0.25),
+    inset 0 0 40px rgba(210, 180, 120, 0.15);
+  color: var(--game-ink);
+}
+
+/* AI 对话面板 — 木框风格 */
+.chat-woodframe {
+  background: var(--game-cabin-bg);
+  border: 3px solid var(--game-bark);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 2px rgba(160, 98, 42, 0.4),
+    0 8px 32px rgba(0, 0, 0, 0.5);
+  color: var(--game-hud-text);
+}
+
+/* 世界物件标签 — 靠近时出现 */
+.world-object-hint {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--game-hud-bg);
+  border: 1px solid var(--game-hud-border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--game-hud-text);
+  white-space: nowrap;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  animation: pixel-fade-in 0.2s ease-out forwards;
+}
+
+.world-object-hint::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--game-hud-bg);
+}
+
+/* 传送门 — 木门效果 */
+.portal-door {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.portal-door:hover {
+  transform: scale(1.02);
+}
+
+.portal-door:hover .portal-door-glow {
+  opacity: 1;
+}
+
+.portal-door-glow {
+  position: absolute;
+  inset: -8px;
+  border-radius: 4px;
+  background: radial-gradient(ellipse at center, rgba(180, 220, 120, 0.3) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+/* 角色 SVG — 像素风轮廓 */
+.pixel-character {
+  image-rendering: pixelated;
+  shape-rendering: crispEdges;
+}
+
+/* 互动区域提示 E 键 */
+.interact-prompt {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--game-warm-light);
+  border: 1.5px solid var(--game-bark-light);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--game-bark);
+  white-space: nowrap;
+  animation: pixel-fade-in 0.2s ease-out;
+  pointer-events: none;
+}
+
+/* 季节滤镜覆盖 */
+.season-spring { filter: hue-rotate(0deg) saturate(1.1); }
+.season-summer { filter: hue-rotate(10deg) saturate(1.2) brightness(1.05); }
+.season-autumn { filter: hue-rotate(-20deg) saturate(1.15) brightness(0.98); }
+.season-winter { filter: saturate(0.6) brightness(1.05); }
+
+/* 减少动态模式 — 游戏层 */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pixel-walk,
+  .animate-pixel-sway,
+  .animate-pixel-glow,
+  .animate-firefly,
+  .animate-campfire,
+  .animate-bottle-rock {
+    animation: none !important;
+  }
+}
+
+.reduced-motion .animate-pixel-walk,
+.reduced-motion .animate-pixel-sway,
+.reduced-motion .animate-pixel-glow,
+.reduced-motion .animate-firefly,
+.reduced-motion .animate-campfire,
+.reduced-motion .animate-bottle-rock {
+  animation: none !important;
+}
+
+/* 移动端虚拟摇杆 */
+.virtual-joystick-base {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  touch-action: none;
+}
+
+.virtual-joystick-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: transform 0.05s ease;
 }
