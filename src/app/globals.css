@@ -1033,8 +1033,8 @@ body {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(18, 11, 7, 0.72);
-  backdrop-filter: blur(12px);
+  background: rgba(18, 11, 7, 0.48);
+  backdrop-filter: blur(6px);
 }
 
 .fireside-panel,
@@ -1049,6 +1049,17 @@ body {
     #241710;
   box-shadow: 0 24px 80px rgba(10, 4, 2, 0.48);
   color: var(--game-cabin-light);
+}
+
+.fireside-panel {
+  width: min(650px, 100%);
+  max-height: min(720px, calc(100vh - 64px));
+  border-color: rgba(255, 224, 174, 0.2);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 72%, rgba(255, 133, 45, 0.1), transparent 35%),
+    rgba(36, 23, 16, 0.95);
+  box-shadow: 0 20px 70px rgba(10, 4, 2, 0.4);
 }
 
 .fireside-header,
@@ -2363,152 +2374,253 @@ body {
   font-size: 13px;
 }
 
-.fire-rings {
-  max-height: 560px;
+.fire-reflection {
+  max-height: 570px;
   overflow-y: auto;
-  padding: 10px 26px 22px;
+  padding: 8px 48px 28px;
 }
 
-.fire-rings__orbit {
-  position: relative;
-  width: 170px;
-  height: 120px;
-  margin: 0 auto 12px;
+.fire-reflection__rings {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
 }
 
-.fire-rings__orbit .ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  border: 1px solid rgba(255, 167, 79, 0.3);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.fire-rings__orbit .ring--outer { width: 165px; height: 105px; }
-.fire-rings__orbit .ring--middle { width: 112px; height: 72px; }
-.fire-rings__orbit .ring--inner { width: 58px; height: 38px; }
-
-.fire-rings__orbit i {
-  position: absolute;
-  top: 47px;
-  left: 77px;
-  width: 16px;
-  height: 25px;
-  border-radius: 60% 40% 65% 35%;
-  background: #ff9b3d;
-  box-shadow: 0 0 22px rgba(255, 155, 61, 0.75);
-}
-
-.fire-rings__columns {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.fire-rings__columns > article {
-  min-width: 0;
-  border: 1px solid rgba(255, 224, 174, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 248, 231, 0.035);
-  padding: 10px;
-}
-
-.fire-rings__columns header {
-  min-height: 48px;
-}
-
-.fire-rings__columns header strong,
-.fire-rings__columns header small {
-  display: block;
-}
-
-.fire-rings__columns header strong {
-  font-size: 11px;
-}
-
-.fire-rings__columns header small {
-  margin-top: 3px;
-  color: rgba(255, 248, 231, 0.35);
-  font-size: 9px;
-}
-
-.fire-line {
-  position: relative;
-  margin-top: 7px;
-  border-radius: 9px;
-  background: rgba(0, 0, 0, 0.14);
-  padding: 7px;
-}
-
-.fire-line textarea {
-  min-height: 58px;
-  border: 0;
-  background: transparent;
-  padding: 0;
+.fire-reflection__rings button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(255, 248, 231, 0.3);
   font-size: 10px;
 }
 
-.fire-line > small {
-  color: #c99bdb;
-  font-size: 8px;
+.fire-reflection__rings button span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid rgba(255, 224, 174, 0.14);
+  border-radius: 50%;
+  font-size: 9px;
 }
 
-.fire-line select {
-  width: calc(100% - 25px);
-  margin-top: 5px;
-  border: 0;
-  background: transparent;
-  color: rgba(255, 248, 231, 0.38);
-  font-size: 8px;
+.fire-reflection__rings button.is-active {
+  color: rgba(255, 220, 170, 0.8);
 }
 
-.fire-line > button {
+.fire-reflection__rings button.is-active span {
+  border-color: rgba(255, 167, 79, 0.55);
+  background: rgba(255, 155, 61, 0.12);
+  box-shadow: 0 0 18px rgba(255, 155, 61, 0.12);
+}
+
+.fire-reflection__flame {
+  position: relative;
+  width: 210px;
+  height: 105px;
+  margin: 16px auto 4px;
+}
+
+.fire-reflection__flame span {
   position: absolute;
-  right: 5px;
-  bottom: 5px;
-  color: rgba(255, 248, 231, 0.25);
+  top: 50%;
+  left: 50%;
+  border: 1px solid rgba(255, 178, 92, 0.18);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 240ms ease, height 240ms ease, border-color 240ms ease;
 }
 
-.fire-rings__add {
+.fire-reflection__flame span.is-ring-1 { width: 70px; height: 38px; border-color: rgba(255, 190, 115, 0.62); }
+.fire-reflection__flame span.is-ring-2 { width: 132px; height: 68px; border-color: rgba(255, 180, 100, 0.48); }
+.fire-reflection__flame span.is-ring-3 { width: 205px; height: 100px; border-color: rgba(255, 170, 86, 0.38); }
+
+.fire-reflection__flame i {
+  position: absolute;
+  top: 39px;
+  left: 97px;
+  width: 16px;
+  height: 27px;
+  border-radius: 65% 35% 62% 38%;
+  background: #ff9b3d;
+  box-shadow: 0 0 24px rgba(255, 155, 61, 0.7);
+}
+
+.fire-reflection__header {
+  text-align: center;
+}
+
+.fire-reflection__header p {
+  color: rgba(255, 190, 116, 0.48);
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.fire-reflection__header h3 {
+  margin-top: 4px;
+  font-family: var(--font-serif);
+  font-size: 21px;
+  font-weight: 500;
+}
+
+.fire-reflection__header span {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255, 248, 231, 0.37);
+  font-size: 10px;
+}
+
+.fire-reflection__notes {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.fire-reflection__notes article {
+  border: 1px solid rgba(255, 224, 174, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 248, 231, 0.028);
+  padding: 11px 13px 8px;
+}
+
+.fire-reflection__notes article.is-unaccepted {
+  border-style: dashed;
+  opacity: 0.62;
+}
+
+.fire-reflection__notes textarea {
+  width: 100%;
+  resize: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  color: rgba(255, 248, 231, 0.84);
+  font-family: var(--font-serif);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.fire-reflection__notes article footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.fire-reflection__notes article footer > span,
+.fire-note__inference {
+  color: rgba(255, 248, 231, 0.25);
+  font-size: 8px;
+}
+
+.fire-note__inference {
+  color: rgba(181, 151, 198, 0.72);
+}
+
+.fire-reflection__notes article footer > div {
+  display: flex;
+  gap: 5px;
+}
+
+.fire-reflection__notes article footer > div button {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border-radius: 7px;
+  padding: 4px 6px;
+  color: rgba(255, 248, 231, 0.3);
+  font-size: 8px;
+}
+
+.fire-reflection__notes article footer > div button:hover {
+  background: rgba(255, 248, 231, 0.05);
+  color: rgba(255, 224, 174, 0.68);
+}
+
+.fire-reflection__empty {
+  padding: 25px 0;
+  color: rgba(255, 248, 231, 0.3);
+  text-align: center;
+  font-family: var(--font-serif);
+  font-size: 12px;
+}
+
+.fire-reflection__add {
   display: flex;
   gap: 7px;
   margin-top: 10px;
 }
 
-.fire-rings__add input {
+.fire-reflection__add input {
   flex: 1;
-  border: 1px solid rgba(255, 224, 174, 0.14);
-  border-radius: 9px;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 224, 174, 0.13);
   outline: none;
-  background: rgba(0, 0, 0, 0.14);
-  padding: 9px;
+  background: transparent;
+  padding: 9px 2px;
   color: #fff8e7;
   font-size: 11px;
 }
 
-.fire-rings__add button,
-.fire-rings__save {
+.fire-reflection__add button {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 5px;
+  color: rgba(255, 190, 116, 0.62);
+  font-size: 9px;
+}
+
+.fire-reflection__add button:disabled {
+  opacity: 0.25;
+}
+
+.fire-reflection__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  border-top: 1px solid rgba(255, 224, 174, 0.08);
+  padding-top: 14px;
+}
+
+.fire-reflection__footer p {
+  color: rgba(255, 248, 231, 0.28);
+  font-size: 9px;
+}
+
+.fire-reflection__footer button {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
   gap: 6px;
-  border: 1px solid rgba(255, 168, 81, 0.24);
+  border: 1px solid rgba(255, 168, 81, 0.2);
   border-radius: 9px;
-  background: rgba(255, 155, 61, 0.1);
-  padding: 9px 11px;
-  color: #ffc079;
+  background: rgba(255, 155, 61, 0.07);
+  padding: 8px 11px;
+  color: rgba(255, 192, 121, 0.76);
   font-size: 10px;
 }
 
-.fire-rings__save {
-  width: 100%;
-  margin-top: 9px;
+.fire-reflection__footer button:disabled {
+  opacity: 0.35;
 }
 
 @media (max-width: 640px) {
-  .fire-rings__columns {
-    grid-template-columns: 1fr;
+  .fire-reflection {
+    padding-inline: 20px;
+  }
+
+  .fire-reflection__rings {
+    gap: 10px;
+  }
+
+  .fire-reflection__footer {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 
