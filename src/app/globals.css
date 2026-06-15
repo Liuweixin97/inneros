@@ -2380,87 +2380,13 @@ body {
   padding: 8px 48px 28px;
 }
 
-.fire-reflection__rings {
-  display: flex;
-  justify-content: center;
-  gap: 22px;
-}
-
-.fire-reflection__rings button {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: rgba(255, 248, 231, 0.3);
-  font-size: 10px;
-}
-
-.fire-reflection__rings button span {
-  display: grid;
-  width: 22px;
-  height: 22px;
-  place-items: center;
-  border: 1px solid rgba(255, 224, 174, 0.14);
-  border-radius: 50%;
-  font-size: 9px;
-}
-
-.fire-reflection__rings button.is-active {
-  color: rgba(255, 220, 170, 0.8);
-}
-
-.fire-reflection__rings button.is-active span {
-  border-color: rgba(255, 167, 79, 0.55);
-  background: rgba(255, 155, 61, 0.12);
-  box-shadow: 0 0 18px rgba(255, 155, 61, 0.12);
-}
-
-.fire-reflection__flame {
-  position: relative;
-  width: 210px;
-  height: 105px;
-  margin: 16px auto 4px;
-}
-
-.fire-reflection__flame span {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  border: 1px solid rgba(255, 178, 92, 0.18);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: width 240ms ease, height 240ms ease, border-color 240ms ease;
-}
-
-.fire-reflection__flame span.is-ring-1 { width: 70px; height: 38px; border-color: rgba(255, 190, 115, 0.62); }
-.fire-reflection__flame span.is-ring-2 { width: 132px; height: 68px; border-color: rgba(255, 180, 100, 0.48); }
-.fire-reflection__flame span.is-ring-3 { width: 205px; height: 100px; border-color: rgba(255, 170, 86, 0.38); }
-
-.fire-reflection__flame i {
-  position: absolute;
-  top: 39px;
-  left: 97px;
-  width: 16px;
-  height: 27px;
-  border-radius: 65% 35% 62% 38%;
-  background: #ff9b3d;
-  box-shadow: 0 0 24px rgba(255, 155, 61, 0.7);
-}
-
 .fire-reflection__header {
   text-align: center;
 }
 
-.fire-reflection__header p {
-  color: rgba(255, 190, 116, 0.48);
-  font-family: var(--font-pixel);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-}
-
 .fire-reflection__header h3 {
-  margin-top: 4px;
   font-family: var(--font-serif);
-  font-size: 21px;
+  font-size: 18px;
   font-weight: 500;
 }
 
@@ -2615,7 +2541,7 @@ body {
   }
 
   .fire-reflection__rings {
-    gap: 10px;
+    display: none;
   }
 
   .fire-reflection__footer {

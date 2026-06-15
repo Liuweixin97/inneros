@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Plus, X } from 'lucide-react';
+import { Check, Plus, X } from 'lucide-react';
 import type { Memo } from '@/types';
 
 type RingId = 'fact' | 'then' | 'now';
@@ -20,40 +20,28 @@ interface FireRingsProps {
 }
 
 const RINGS: Array<{ id: RingId; eyebrow: string; title: string; prompt: string }> = [
-  { id: 'fact', eyebrow: '内圈', title: '发生过什么', prompt: '先只留下能从原记录中找到依据的事。' },
-  { id: 'then', eyebrow: '中圈', title: '当时的我怎样感受', prompt: '这不是事实判断，只是当时真实存在的感受。' },
-  { id: 'now', eyebrow: '外圈', title: '现在的我怎么看', prompt: '可以是一句新认识，也可以仍然只是一个问题。' },
+  { id: 'fact', eyebrow: '', title: '发生过什么', prompt: '先只留下能从原记录中找到依据的事。' },
+  { id: 'then', eyebrow: '', title: '当时的我怎样感受', prompt: '这不是事实判断，只是当时真实存在的感受。' },
+  { id: 'now', eyebrow: '', title: '现在的我怎么看', prompt: '可以是一句新认识，也可以仍然只是一个问题。' },
 ];
 
 export default function FireRings({ memos, onSave }: FireRingsProps) {
   const initialLines = useMemo(() => buildInitialLines(memos), [memos]);
   const [lines, setLines] = useState<FireLine[]>(initialLines);
-  const [activeRing, setActiveRing] = useState<RingId>('fact');
   const [draft, setDraft] = useState('');
   const [saved, setSaved] = useState(false);
-  const activeIndex = RINGS.findIndex((ring) => ring.id === activeRing);
-  const ring = RINGS[activeIndex];
-  const visibleLines = lines.filter((line) => line.ring === activeRing);
+  const visibleLines = lines.filter((line) => !line.inferred || line.accepted);
 
   const addLine = () => {
     if (!draft.trim()) return;
     setLines((current) => [...current, {
       id: crypto.randomUUID(),
       text: draft.trim(),
-      ring: activeRing,
+      ring: 'now',
       inferred: false,
       accepted: true,
     }]);
     setDraft('');
-  };
-
-  const moveLine = (id: string, direction: -1 | 1) => {
-    setLines((current) => current.map((line) => {
-      if (line.id !== id) return line;
-      const index = RINGS.findIndex((item) => item.id === line.ring);
-      const next = RINGS[Math.max(0, Math.min(RINGS.length - 1, index + direction))];
-      return { ...line, ring: next.id };
-    }));
   };
 
   const save = () => {
@@ -70,29 +58,9 @@ export default function FireRings({ memos, onSave }: FireRingsProps) {
 
   return (
     <section className="fire-reflection">
-      <nav className="fire-reflection__rings" aria-label="三层火光">
-        {RINGS.map((item, index) => (
-          <button
-            key={item.id}
-            type="button"
-            className={activeRing === item.id ? 'is-active' : ''}
-            onClick={() => setActiveRing(item.id)}
-          >
-            <span>{index + 1}</span>
-            <small>{item.eyebrow}</small>
-          </button>
-        ))}
-      </nav>
-
-      <div className="fire-reflection__flame" aria-hidden="true">
-        <span className={`is-ring-${activeIndex + 1}`} />
-        <i />
-      </div>
-
       <header className="fire-reflection__header">
-        <p>{ring.eyebrow}</p>
-        <h3>{ring.title}</h3>
-        <span>{ring.prompt}</span>
+        <h3>把此刻最想留下的几句话放在一起</h3>
+        <span>不需要分类，也不需要把它整理完整。</span>
       </header>
 
       <div className="fire-reflection__notes">
@@ -106,20 +74,8 @@ export default function FireRings({ memos, onSave }: FireRingsProps) {
               rows={3}
             />
             <footer>
-              {line.inferred ? (
-                <button
-                  type="button"
-                  className="fire-note__inference"
-                  onClick={() => setLines((current) => current.map((item) => (
-                    item.id === line.id ? { ...item, accepted: !item.accepted } : item
-                  )))}
-                >
-                  {line.accepted ? '已由我确认' : '苔灯的一个角度 · 点此接纳'}
-                </button>
-              ) : <span>我的话</span>}
+              <span>{line.inferred ? '我确认留下的角度' : '我的话'}</span>
               <div>
-                {activeIndex > 0 && <button type="button" onClick={() => moveLine(line.id, -1)}><ArrowLeft size={13} />更靠里</button>}
-                {activeIndex < RINGS.length - 1 && <button type="button" onClick={() => moveLine(line.id, 1)}>更靠外<ArrowRight size={13} /></button>}
                 <button type="button" onClick={() => setLines((current) => current.filter((item) => item.id !== line.id))} aria-label="不留下这句"><X size={13} /></button>
               </div>
             </footer>
@@ -139,13 +95,13 @@ export default function FireRings({ memos, onSave }: FireRingsProps) {
               addLine();
             }
           }}
-          placeholder={`在「${ring.title}」里补一句自己的话`}
+          placeholder="再补一句自己的话"
         />
-        <button type="button" onClick={addLine} disabled={!draft.trim()}><Plus size={15} />放进这一圈</button>
+        <button type="button" onClick={addLine} disabled={!draft.trim()}><Plus size={15} />放在一起</button>
       </div>
 
       <footer className="fire-reflection__footer">
-        <p>不需要把三圈都填满。只有你确认过的话会被留下。</p>
+        <p>删除或改写都不会影响原始记录。</p>
         <button type="button" disabled={saved || lines.length === 0} onClick={save}>
           <Check size={15} />
           {saved ? '这张札记已留在火边' : '先这样放着'}
