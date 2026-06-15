@@ -7,7 +7,6 @@ import {
   sendCompanionMessage,
   type CompanionMessage,
 } from '@/lib/game/world-state';
-import FireRings from './FireRings';
 
 interface FiresideChatProps {
   world: GameWorld;
@@ -294,19 +293,14 @@ export default function FiresideChat({
           </section>
         ) : !showMemoryPicker && (
           <>
-            {dialogueMode === 'organize' && authorizedMemos.length > 0 ? (
-              <FireRings
-                memos={authorizedMemos}
-                onSave={(text, memoIds) => onSaveJourneyEvent('fireside_note', text, memoIds)}
-              />
-            ) : (
-            <>
             <div className="fireside-messages" aria-live="polite">
               {messages.length === 0 ? (
                 <div className="fireside-empty">
                   <p>
                     {dialogueMode === 'silent'
                       ? '火焰轻轻响着。你不需要先说什么。'
+                      : dialogueMode === 'organize'
+                        ? '可以从一件具体发生过的事开始。苔灯会陪你区分当时发生了什么、当时怎样感受，以及现在怎么看。'
                       : '你可以从刚刚遇见的那段记忆开始，也可以只说此刻想到的事。'}
                   </p>
                 </div>
@@ -324,7 +318,13 @@ export default function FiresideChat({
               <textarea
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
-                placeholder={dialogueMode === 'silent' ? '想说时再写……' : '在火边说一点……'}
+                placeholder={
+                  dialogueMode === 'silent'
+                    ? '想说时再写……'
+                    : dialogueMode === 'organize'
+                      ? '先说一件具体发生过的事……'
+                      : '在火边说一点……'
+                }
                 rows={2}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
@@ -343,8 +343,6 @@ export default function FiresideChat({
                 </button>
               )}
             </footer>
-            </>
-            )}
           </>
         )}
       </div>
