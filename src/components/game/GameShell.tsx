@@ -32,6 +32,7 @@ import CoWritePanel from './CoWritePanel';
 import PondPanel from './PondPanel';
 import CompanionBench from './CompanionBench';
 import CabinPanel from './CabinPanel';
+import LightTrailPanel from './LightTrailPanel';
 import {
   loadBagMemoIds,
   loadCompanionInvited,
@@ -78,6 +79,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [pondOpen, setPondOpen] = useState(false);
   const [benchOpen, setBenchOpen] = useState(false);
   const [cabinOpen, setCabinOpen] = useState(false);
+  const [lightTrailOpen, setLightTrailOpen] = useState(false);
 
   // ---- 减少动态模式 ----
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -210,6 +212,7 @@ export default function GameShell({ onExit }: GameShellProps) {
     setPondOpen(false);
     setBenchOpen(false);
     setCabinOpen(false);
+    setLightTrailOpen(false);
     setPhase('explore');
   }, []);
 
@@ -367,6 +370,7 @@ export default function GameShell({ onExit }: GameShellProps) {
                   authorizedMemoIds.filter((id) => id !== memoId),
                 )}
                 onOpenFireside={handleEnterFireside}
+                onOpenLightTrail={() => setLightTrailOpen(true)}
                 onOpenSettings={() => setShowSettings(true)}
                 onExit={handleExit}
               />
@@ -418,6 +422,11 @@ export default function GameShell({ onExit }: GameShellProps) {
                 companionType={companionType}
                 onCompanionTypeChange={handleCompanionTypeChange}
                 onClose={handleCloseAll}
+                onSaveJourneyEvent={(type, text, memoIds) => addJourneyEvent({
+                  type,
+                  text,
+                  sourceMemoIds: memoIds,
+                })}
               />
             ) : null
           )}
@@ -456,6 +465,21 @@ export default function GameShell({ onExit }: GameShellProps) {
               }}
               onExit={handleExit}
               onClose={() => setCabinOpen(false)}
+            />
+          )}
+
+          {lightTrailOpen && (
+            <LightTrailPanel
+              memos={memos.filter((memo) => authorizedMemoIds.includes(memo.id))}
+              onConfirm={(name, memoIds) => {
+                addJourneyEvent({
+                  type: 'named_path',
+                  text: `把小径命名为「${name}」`,
+                  sourceMemoIds: memoIds,
+                });
+                setLightTrailOpen(false);
+              }}
+              onClose={() => setLightTrailOpen(false)}
             />
           )}
 

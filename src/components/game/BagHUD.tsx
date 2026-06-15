@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Backpack, Flame, Leaf, X } from 'lucide-react';
+import { Backpack, Flame, Lamp, Leaf, X } from 'lucide-react';
 import type { Memo } from '@/types';
 
 interface BagHUDProps {
@@ -9,6 +9,8 @@ interface BagHUDProps {
   memoIds: string[];
   onRemove: (memoId: string) => void;
   onOpenFireside: () => void;
+  companionInvited: boolean;
+  onOpenLightTrail: () => void;
 }
 
 export default function BagHUD({
@@ -16,6 +18,8 @@ export default function BagHUD({
   memoIds,
   onRemove,
   onOpenFireside,
+  companionInvited,
+  onOpenLightTrail,
 }: BagHUDProps) {
   const [open, setOpen] = useState(false);
   const carried = memoIds
@@ -93,6 +97,12 @@ export default function BagHUD({
             >
               <Flame size={15} />
               带到篝火边
+            </button>
+          )}
+          {companionInvited && carried.length >= 2 && (
+            <button type="button" className="game-bag__light-trail" onClick={onOpenLightTrail}>
+              <Lamp size={15} />
+              请苔灯照一条候选光路
             </button>
           )}
         </div>

@@ -7,6 +7,7 @@ import {
   sendCompanionMessage,
   type CompanionMessage,
 } from '@/lib/game/world-state';
+import FireRings from './FireRings';
 
 interface FiresideChatProps {
   world: GameWorld;
@@ -18,6 +19,7 @@ interface FiresideChatProps {
   companionType: CompanionType;
   onCompanionTypeChange: (t: CompanionType) => void;
   onClose: () => void;
+  onSaveJourneyEvent: (type: 'fireside_note' | 'left_question', text: string, memoIds: string[]) => void;
 }
 
 const MODES: Array<{ id: DialogueMode; label: string; description: string }> = [
@@ -39,6 +41,7 @@ export default function FiresideChat({
   companionType,
   onCompanionTypeChange,
   onClose,
+  onSaveJourneyEvent,
 }: FiresideChatProps) {
   const [messages, setMessages] = useState<CompanionMessage[]>([]);
   const [input, setInput] = useState('');
@@ -259,6 +262,13 @@ export default function FiresideChat({
 
         {!showMemoryPicker && (
           <>
+            {dialogueMode === 'organize' && authorizedMemos.length > 0 ? (
+              <FireRings
+                memos={authorizedMemos}
+                onSave={(text, memoIds) => onSaveJourneyEvent('fireside_note', text, memoIds)}
+              />
+            ) : (
+            <>
             <div className="fireside-messages" aria-live="polite">
               {messages.length === 0 ? (
                 <div className="fireside-empty">
@@ -301,6 +311,8 @@ export default function FiresideChat({
                 </button>
               )}
             </footer>
+            </>
+            )}
           </>
         )}
       </div>

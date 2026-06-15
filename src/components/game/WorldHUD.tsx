@@ -15,6 +15,7 @@ interface WorldHUDProps {
   bagMemoIds: string[];
   onRemoveFromBag: (memoId: string) => void;
   onOpenFireside: () => void;
+  onOpenLightTrail: () => void;
   onOpenSettings: () => void;
   onExit: () => void;
 }
@@ -27,6 +28,7 @@ export default function WorldHUD({
   bagMemoIds,
   onRemoveFromBag,
   onOpenFireside,
+  onOpenLightTrail,
   onOpenSettings,
   onExit,
 }: WorldHUDProps) {
@@ -102,6 +104,8 @@ export default function WorldHUD({
         memoIds={bagMemoIds}
         onRemove={onRemoveFromBag}
         onOpenFireside={onOpenFireside}
+        companionInvited={companionType === 'llm'}
+        onOpenLightTrail={onOpenLightTrail}
       />
     </div>
   );
