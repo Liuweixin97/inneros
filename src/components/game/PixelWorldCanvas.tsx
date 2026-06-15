@@ -468,7 +468,7 @@ function drawScene(
     drawCharacterSprite(context, images.characters, secondPlayerChar.id === 'wanderer' ? 0 : 1, second.direction, point.x, point.y, scale, now, reducedMotion);
   } else if (companionType === 'llm' && images.companion?.complete) {
     const point = toScreen(second.x, second.y);
-    const size = 42 * scale;
+    const size = 30 * scale;
     const frame = reducedMotion ? 0 : Math.floor(now / 520) % 2;
     context.save();
     context.shadowColor = 'rgba(255, 207, 92, 0.62)';
