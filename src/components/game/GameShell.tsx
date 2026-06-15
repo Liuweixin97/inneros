@@ -33,6 +33,7 @@ import PondPanel from './PondPanel';
 import CompanionBench from './CompanionBench';
 import CabinPanel from './CabinPanel';
 import LightTrailPanel from './LightTrailPanel';
+import WorldObjectDetail from './WorldObjectDetail';
 import {
   loadBagMemoIds,
   loadCompanionInvited,
@@ -80,6 +81,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [benchOpen, setBenchOpen] = useState(false);
   const [cabinOpen, setCabinOpen] = useState(false);
   const [lightTrailOpen, setLightTrailOpen] = useState(false);
+  const [activePlacedObject, setActivePlacedObject] = useState<WorldObject | null>(null);
 
   // ---- 减少动态模式 ----
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -177,6 +179,11 @@ export default function GameShell({ onExit }: GameShellProps) {
 
   // 打开 Memo
   const handleOpenMemo = useCallback((memoId: string, objectId: string) => {
+    const object = objects.find((item) => item.id === objectId);
+    if (object?.sourceSessionId) {
+      setActivePlacedObject(object);
+      return;
+    }
     const memo = memos.find((m) => m.id === memoId);
     if (memo) {
       setActiveMemo(memo);
@@ -213,6 +220,7 @@ export default function GameShell({ onExit }: GameShellProps) {
     setBenchOpen(false);
     setCabinOpen(false);
     setLightTrailOpen(false);
+    setActivePlacedObject(null);
     setPhase('explore');
   }, []);
 
@@ -434,11 +442,15 @@ export default function GameShell({ onExit }: GameShellProps) {
           {/* 共写面板 */}
           {phase === 'co_write' && coWriteOpen && (
             <CoWritePanel
-              companionType={companionType}
               memos={memos}
               authorizedMemoIds={authorizedMemoIds}
               onClose={handleCloseAll}
               onObjectPlaced={handleObjectPlaced}
+              onJourneyEvent={(text, memoIds) => addJourneyEvent({
+                type: 'placed_object',
+                text,
+                sourceMemoIds: memoIds,
+              })}
             />
           )}
 
@@ -488,6 +500,14 @@ export default function GameShell({ onExit }: GameShellProps) {
                 setLightTrailOpen(false);
               }}
               onClose={() => setLightTrailOpen(false)}
+            />
+          )}
+
+          {activePlacedObject && (
+            <WorldObjectDetail
+              object={activePlacedObject}
+              memos={memos}
+              onClose={() => setActivePlacedObject(null)}
             />
           )}
 

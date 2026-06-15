@@ -1,81 +1,83 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { X } from 'lucide-react';
-import type {
-  CompanionType,
-  Memo,
-  SharedMemoryDraft,
-  WorldObject,
-  WorldObjectType,
-} from '@/types';
-import { CO_OBJECT_TEMPLATES } from '@/lib/game/memo-mapper';
+import { Check, X } from 'lucide-react';
+import type { Memo, SharedMemoryDraft, WorldObject, WorldObjectType } from '@/types';
 import { placeObject } from '@/lib/game/world-state';
 
 interface CoWritePanelProps {
-  companionType: CompanionType;
   memos: Memo[];
   authorizedMemoIds: string[];
   onClose: () => void;
   onObjectPlaced: (object: WorldObject) => void;
+  onJourneyEvent: (text: string, memoIds: string[]) => void;
 }
 
-type Step = 'memory' | 'player_one' | 'player_two' | 'decision' | 'object' | 'done';
+type Step = 'material' | 'question' | 'write_one' | 'write_two' | 'reveal' | 'carrier' | 'confirm' | 'done';
+type LayoutDecision = 'side_by_side' | 'intersect' | 'gap' | 'withdraw';
+
+const QUESTIONS = [
+  '你最记得哪个瞬间？',
+  '当时有什么没有说出口？',
+  '你希望以后怎样记得这件事？',
+];
+
+const CARRIERS: Array<{ type: WorldObjectType; name: string; meaning: string }> = [
+  { type: 'bench', name: '长椅', meaning: '两种版本并存' },
+  { type: 'sign', name: '双面路牌', meaning: '我们记得不一样' },
+  { type: 'lamp', name: '灯笼', meaning: '共同确认的一句话' },
+  { type: 'frame', name: '里程碑', meaning: '一段阶段性经历' },
+  { type: 'bottle', name: '木箱', meaning: '暂时封存' },
+];
 
 export default function CoWritePanel({
-  companionType,
   memos,
   authorizedMemoIds,
   onClose,
   onObjectPlaced,
+  onJourneyEvent,
 }: CoWritePanelProps) {
   const availableMemos = useMemo(
-    () => companionType === 'human_local'
-      ? memos.filter((memo) => authorizedMemoIds.includes(memo.id))
-      : memos,
-    [authorizedMemoIds, companionType, memos],
+    () => memos.filter((memo) => authorizedMemoIds.includes(memo.id)),
+    [authorizedMemoIds, memos],
   );
-  const [step, setStep] = useState<Step>('memory');
+  const [step, setStep] = useState<Step>('material');
   const [memoId, setMemoId] = useState(availableMemos[0]?.id ?? '');
+  const [question, setQuestion] = useState(QUESTIONS[0]);
+  const [customQuestion, setCustomQuestion] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [draft, setDraft] = useState<SharedMemoryDraft | null>(null);
   const [playerOneText, setPlayerOneText] = useState('');
   const [playerTwoText, setPlayerTwoText] = useState('');
+  const [decision, setDecision] = useState<LayoutDecision>('side_by_side');
   const [jointText, setJointText] = useState('');
-  const [decision, setDecision] = useState<'separate' | 'joint'>('separate');
   const [objectType, setObjectType] = useState<WorldObjectType>('bench');
+  const [confirmOne, setConfirmOne] = useState(false);
+  const [confirmTwo, setConfirmTwo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const selectedMemo = availableMemos.find((memo) => memo.id === memoId);
-  const secondWriter = companionType === 'human_local' ? '身边的人' : '另一个视角';
+  const finalQuestion = customQuestion.trim() || question;
 
   const startDraft = async () => {
     setError('');
     const response = await fetch('/api/game/cowrite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memoId: memoId || undefined }),
+      body: JSON.stringify({ memoId }),
     });
     if (!response.ok) {
-      setError('这次共写暂时无法开始。');
+      setError('这次共同制作暂时无法开始。');
       return;
     }
-    const data = await response.json() as {
-      session: { id: string };
-      draft: SharedMemoryDraft;
-    };
+    const data = await response.json() as { session: { id: string }; draft: SharedMemoryDraft };
     setSessionId(data.session.id);
     setDraft(data.draft);
-    setStep('player_one');
+    setStep('question');
   };
 
-  const saveDraft = async (
-    updates: Partial<Pick<
-      SharedMemoryDraft,
-      'playerOneText' | 'playerTwoText' | 'jointText' | 'saveDecision'
-    >>,
-  ) => {
+  const saveDraft = async (updates: Partial<SharedMemoryDraft>) => {
     if (!draft || !sessionId) return false;
     const response = await fetch('/api/game/cowrite', {
       method: 'PATCH',
@@ -83,230 +85,211 @@ export default function CoWritePanel({
       body: JSON.stringify({ draftId: draft.id, sessionId, updates }),
     });
     if (!response.ok) {
-      setError('文字还留在当前页面，但暂时没有保存成功。');
+      setError('文字仍保留在当前页面，但暂时没有保存成功。');
       return false;
     }
-    const data = await response.json() as { draft: SharedMemoryDraft };
-    setDraft(data.draft);
     return true;
   };
 
   const finish = async () => {
-    if (!draft) return;
+    if (!confirmOne || !confirmTwo) return;
     setSaving(true);
-    setError('');
+    const saveDecision = decision === 'intersect' ? 'joint' : decision === 'withdraw' ? 'discard' : 'separate';
     const saved = await saveDraft({
       playerOneText,
-      playerTwoText,
-      jointText: decision === 'joint' ? jointText : undefined,
-      saveDecision: decision,
+      playerTwoText: decision === 'withdraw' ? undefined : playerTwoText,
+      jointText: decision === 'intersect' ? jointText : undefined,
+      saveDecision,
     });
     if (!saved) {
       setSaving(false);
       return;
     }
-    const annotation = decision === 'joint'
-      ? jointText.trim()
-      : `你：${playerOneText.trim()}\n${secondWriter}：${playerTwoText.trim()}`;
+    const annotation = [
+      `问题：${finalQuestion}`,
+      decision === 'intersect'
+        ? `共同确认：${jointText}`
+        : decision === 'withdraw'
+          ? `你：${playerOneText}`
+          : `你：${playerOneText}\n同行者：${playerTwoText}`,
+      decision === 'gap' ? '我们记得不一样。' : '',
+    ].filter(Boolean).join('\n');
     const object = await placeObject({
       type: objectType,
       location: 'workshop',
-      sourceMemoIds: memoId ? [memoId] : [],
+      sourceMemoIds: [memoId],
       sourceSessionId: sessionId,
       annotation,
       userConfirmed: true,
     });
     if (!object) {
-      setError('共同文字已经保存，但物件暂时没能放进世界。');
+      setError('文字已经保存，但物件暂时没能放进世界。');
       setSaving(false);
       return;
     }
     onObjectPlaced(object);
+    onJourneyEvent(`在工坊放下了「${CARRIERS.find((carrier) => carrier.type === objectType)?.name}」`, [memoId]);
     setStep('done');
     setSaving(false);
   };
 
-  const discardAndClose = async () => {
-    const hasWriting = playerOneText.trim() || playerTwoText.trim() || jointText.trim();
-    if (hasWriting && step !== 'done' && !window.confirm('这次还没有完成。确定放下当前共写并离开吗？')) {
-      return;
-    }
-    if (draft && sessionId) {
-      await saveDraft({ saveDecision: 'discard' });
-    }
-    onClose();
-  };
-
   return (
     <div className="game-focus-layer" role="dialog" aria-label="共居工坊">
-      <div className="cowrite-panel">
+      <section className="workshop-panel">
         <header>
           <div>
-            <p className="game-kicker">共居工坊 · 一起留下</p>
-            <h2>让两种记得并排存在</h2>
+            <p className="game-kicker">共居工坊 · 双面工作台</p>
+            <h2>让差异决定怎样存在</h2>
           </div>
-          <button type="button" className="game-icon-button" onClick={() => void discardAndClose()} aria-label="离开工坊">
-            <X size={17} />
-          </button>
+          <button type="button" className="game-icon-button" onClick={onClose} aria-label="离开工坊"><X size={17} /></button>
         </header>
 
-        {step === 'memory' && (
-          <section>
-            <p className="cowrite-intro">
-              先选择这次愿意共同看见的经历。未选择的记录不会进入本次共写。
-            </p>
-            <div className="cowrite-memory-list">
-              {availableMemos.slice(0, 12).map((memo) => (
-                <label key={memo.id} className={memoId === memo.id ? 'is-selected' : ''}>
-                  <input
-                    type="radio"
-                    name="cowrite-memo"
-                    value={memo.id}
-                    checked={memoId === memo.id}
-                    onChange={() => setMemoId(memo.id)}
-                  />
-                  <span>
-                    <strong>{memo.ai_title || memo.plain_text.slice(0, 32) || '未命名记录'}</strong>
-                    <small>{new Date(memo.created_at).toLocaleDateString('zh-CN')}</small>
-                  </span>
-                </label>
+        <div className="workshop-progress">
+          {['材料', '问题', '背对书写', '同时翻开', '选择载体', '共同放置'].map((label, index) => (
+            <span key={label} className={index <= stepIndex(step) ? 'is-active' : ''}>{label}</span>
+          ))}
+        </div>
+
+        {step === 'material' && (
+          <div className="workshop-step">
+            <p>从行囊中放上一段双方获准查看的记忆。</p>
+            <div className="workshop-memory-list">
+              {availableMemos.map((memo) => (
+                <button key={memo.id} type="button" className={memoId === memo.id ? 'is-selected' : ''} onClick={() => setMemoId(memo.id)}>
+                  <strong>{memo.ai_title || memo.plain_text.slice(0, 35) || '未命名记录'}</strong>
+                  <small>{new Date(memo.created_at).toLocaleDateString('zh-CN')}</small>
+                </button>
               ))}
-              {availableMemos.length === 0 && (
-                <div className="cowrite-empty">
-                  <p>这次没有共享任何记录。</p>
-                  <span>可以先回到世界，在角色选择时明确勾选愿意分享的内容。</span>
-                </div>
-              )}
+              {availableMemos.length === 0 && <p>行囊里还没有可以放上工作台的记忆。</p>}
             </div>
-            {selectedMemo && <blockquote>{selectedMemo.plain_text.slice(0, 180)}</blockquote>}
+            {selectedMemo && <blockquote>“{selectedMemo.plain_text.slice(0, 150)}”</blockquote>}
             {error && <p className="fireside-error">{error}</p>}
-            <button type="button" className="cowrite-primary" disabled={!memoId} onClick={() => void startDraft()}>
-              共同走近这段经历
-            </button>
-          </section>
+            <button type="button" className="workshop-primary" disabled={!memoId} onClick={() => void startDraft()}>放上工作台</button>
+          </div>
         )}
 
-        {step === 'player_one' && (
-          <WriteStep
-            title="你最记得哪个具体瞬间？"
-            label="你"
-            value={playerOneText}
-            onChange={setPlayerOneText}
-            onNext={async () => {
-              if (await saveDraft({ playerOneText })) setStep('player_two');
-            }}
-          />
-        )}
-
-        {step === 'player_two' && (
-          <WriteStep
-            title="有什么是当时没来得及说的？"
-            label={secondWriter}
-            value={playerTwoText}
-            onChange={setPlayerTwoText}
-            onNext={async () => {
-              if (await saveDraft({ playerTwoText })) setStep('decision');
-            }}
-          />
-        )}
-
-        {step === 'decision' && (
-          <section>
-            <p className="cowrite-intro">你们不需要记得一样。</p>
-            <div className="cowrite-two-voices">
-              <article><span>你</span><p>{playerOneText}</p></article>
-              <article><span>{secondWriter}</span><p>{playerTwoText}</p></article>
+        {step === 'question' && (
+          <div className="workshop-step">
+            <p>选择一个具体问题。双方也可以跳过预设，自己写。</p>
+            <div className="workshop-question-list">
+              {QUESTIONS.map((item) => (
+                <button key={item} type="button" className={question === item && !customQuestion ? 'is-selected' : ''} onClick={() => { setQuestion(item); setCustomQuestion(''); }}>{item}</button>
+              ))}
             </div>
-            <div className="cowrite-decisions">
-              <button type="button" className={decision === 'separate' ? 'is-selected' : ''} onClick={() => setDecision('separate')}>
-                保留两种版本
-              </button>
-              <button type="button" className={decision === 'joint' ? 'is-selected' : ''} onClick={() => setDecision('joint')}>
-                一起写一句
-              </button>
-            </div>
-            {decision === 'joint' && (
-              <textarea
-                value={jointText}
-                onChange={(event) => setJointText(event.target.value)}
-                placeholder="这句话需要由你们共同确认……"
-                rows={3}
-              />
-            )}
-            <button
-              type="button"
-              className="cowrite-primary"
-              disabled={decision === 'joint' && !jointText.trim()}
-              onClick={() => setStep('object')}
-            >
-              选择留下的物件
-            </button>
-          </section>
+            <input value={customQuestion} onChange={(event) => setCustomQuestion(event.target.value)} placeholder="或者写下你们自己的问题" />
+            <button type="button" className="workshop-primary" onClick={() => setStep('write_one')}>开始背对书写</button>
+          </div>
         )}
 
-        {step === 'object' && (
-          <section>
-            <p className="cowrite-intro">物件只是一处可回访的痕迹，不代表这段经历的价值。</p>
-            <div className="cowrite-object-grid">
-              {CO_OBJECT_TEMPLATES.map((template) => (
-                <button
-                  key={template.type}
-                  type="button"
-                  className={objectType === template.type ? 'is-selected' : ''}
-                  onClick={() => setObjectType(template.type)}
-                >
-                  <strong>{template.name}</strong>
-                  <span>{template.description}</span>
+        {step === 'write_one' && (
+          <WritingFace label="Player 1" question={finalQuestion} value={playerOneText} onChange={setPlayerOneText} onNext={async () => {
+            if (await saveDraft({ playerOneText })) setStep('write_two');
+          }} />
+        )}
+
+        {step === 'write_two' && (
+          <WritingFace label="Player 2" question={finalQuestion} value={playerTwoText} onChange={setPlayerTwoText} onNext={async () => {
+            if (await saveDraft({ playerTwoText })) setStep('reveal');
+          }} />
+        )}
+
+        {step === 'reveal' && (
+          <div className="workshop-step">
+            <p>两块木牌同时翻开。系统不会替你们总结共识。</p>
+            <div className={`workshop-boards decision-${decision}`}>
+              <article><small>Player 1</small><p>{playerOneText}</p></article>
+              <article><small>Player 2</small><p>{playerTwoText}</p></article>
+            </div>
+            <div className="workshop-decisions">
+              <button type="button" className={decision === 'side_by_side' ? 'is-selected' : ''} onClick={() => setDecision('side_by_side')}>并排</button>
+              <button type="button" className={decision === 'intersect' ? 'is-selected' : ''} onClick={() => setDecision('intersect')}>相交</button>
+              <button type="button" className={decision === 'gap' ? 'is-selected' : ''} onClick={() => setDecision('gap')}>留缝</button>
+              <button type="button" className={decision === 'withdraw' ? 'is-selected' : ''} onClick={() => setDecision('withdraw')}>收回一面</button>
+            </div>
+            {decision === 'intersect' && <textarea value={jointText} onChange={(event) => setJointText(event.target.value)} rows={3} placeholder="选择共同词，再共同确认一句话……" />}
+            <button type="button" className="workshop-primary" disabled={decision === 'intersect' && !jointText.trim()} onClick={() => setStep('carrier')}>决定它以什么形式留下</button>
+          </div>
+        )}
+
+        {step === 'carrier' && (
+          <div className="workshop-step">
+            <p>物件只表达保存方式，不代表关系质量。</p>
+            <div className="workshop-carriers">
+              {CARRIERS.map((carrier) => (
+                <button key={carrier.name} type="button" className={objectType === carrier.type ? 'is-selected' : ''} onClick={() => setObjectType(carrier.type)}>
+                  <strong>{carrier.name}</strong><span>{carrier.meaning}</span>
                 </button>
               ))}
             </div>
+            <button type="button" className="workshop-primary" onClick={() => setStep('confirm')}>搬到地图边缘</button>
+          </div>
+        )}
+
+        {step === 'confirm' && (
+          <div className="workshop-step workshop-confirm">
+            <p>两个角色分别站在物件两侧。双方都确认后，物件才会进入世界。</p>
+            <div>
+              <button type="button" className={confirmOne ? 'is-confirmed' : ''} onClick={() => setConfirmOne((value) => !value)}>
+                <Check size={18} /> Player 1 {confirmOne ? '已确认' : '站到左侧'}
+              </button>
+              <span>{CARRIERS.find((carrier) => carrier.type === objectType)?.name}</span>
+              <button type="button" className={confirmTwo ? 'is-confirmed' : ''} onClick={() => setConfirmTwo((value) => !value)}>
+                <Check size={18} /> Player 2 {confirmTwo ? '已确认' : '站到右侧'}
+              </button>
+            </div>
             {error && <p className="fireside-error">{error}</p>}
-            <button type="button" className="cowrite-primary" disabled={saving} onClick={() => void finish()}>
-              {saving ? '正在放进世界……' : '确认放置'}
+            <button type="button" className="workshop-primary" disabled={!confirmOne || !confirmTwo || saving} onClick={() => void finish()}>
+              {saving ? '正在共同放置……' : '共同放置'}
             </button>
-          </section>
+          </div>
         )}
 
         {step === 'done' && (
-          <section className="cowrite-done">
-            <span>✦</span>
-            <h3>世界里多了一处共同痕迹</h3>
-            <p>它保留了两种视角，也能追溯到这次共同选择的记录。</p>
-            <button type="button" className="cowrite-primary" onClick={onClose}>回到世界看看</button>
-          </section>
+          <div className="workshop-step workshop-done">
+            <Check size={28} />
+            <h3>世界里多了一处可以回访的痕迹</h3>
+            <p>靠近它，可以再次看到来源记忆和双方保留的文字。</p>
+            <button type="button" className="workshop-primary" onClick={onClose}>回到地图</button>
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
 
-function WriteStep({
-  title,
+function WritingFace({
   label,
+  question,
   value,
   onChange,
   onNext,
 }: {
-  title: string;
   label: string;
+  question: string;
   value: string;
   onChange: (value: string) => void;
   onNext: () => void | Promise<void>;
 }) {
   return (
-    <section>
-      <p className="game-kicker">现在由 {label} 执笔</p>
-      <h3 className="cowrite-question">{title}</h3>
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="写下具体发生过的事，或当时真实的感受……"
-        rows={6}
-        autoFocus
-      />
-      <button type="button" className="cowrite-primary" disabled={!value.trim()} onClick={() => void onNext()}>
-        交给下一位
-      </button>
-    </section>
+    <div className="workshop-step workshop-writing">
+      <p className="game-kicker">现在只有 {label} 看得见这一面</p>
+      <h3>{question}</h3>
+      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={7} autoFocus placeholder="写下自己的版本。另一面现在仍然扣着。" />
+      <button type="button" className="workshop-primary" disabled={!value.trim()} onClick={() => void onNext()}>扣好木牌，交给下一位</button>
+    </div>
   );
+}
+
+function stepIndex(step: Step): number {
+  const map: Record<Step, number> = {
+    material: 0,
+    question: 1,
+    write_one: 2,
+    write_two: 2,
+    reveal: 3,
+    carrier: 4,
+    confirm: 5,
+    done: 5,
+  };
+  return map[step];
 }
