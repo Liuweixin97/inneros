@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import type { Memo, WorldObject } from '@/types';
 import MarkdownContent from '@/components/ui/MarkdownContent';
 
@@ -13,6 +14,8 @@ interface MemoEncounterProps {
   onHide?: () => void;
   onClose: () => void;
   onOpenFireside: () => void;
+  hasNextMemo: boolean;
+  onNextMemo: () => void;
 }
 
 /** 来源徽章 */
@@ -42,6 +45,8 @@ export default function MemoEncounter({
   onHide,
   onClose,
   onOpenFireside,
+  hasNextMemo,
+  onNextMemo,
 }: MemoEncounterProps) {
   const [stage, setStage] = useState<'approach' | 'read'>('approach');
   const [annotation, setAnnotation] = useState(worldObject?.annotation ?? '');
@@ -72,6 +77,9 @@ export default function MemoEncounter({
       setSaveError('这句话暂时没有保存成功。');
     }
   };
+  const hasUnsavedAnnotation = showAnnotationInput
+    && annotation.trim() !== (worldObject?.annotation ?? '').trim()
+    && !annotationSaved;
 
   return (
     <>
@@ -133,6 +141,11 @@ export default function MemoEncounter({
                   )}
                   <button type="button" onClick={onClose}>今天不看</button>
                 </div>
+                <MemoEncounterNext
+                  hasNext={hasNextMemo}
+                  disabled={false}
+                  onNext={onNextMemo}
+                />
               </div>
             ) : (
               <>
@@ -321,6 +334,11 @@ export default function MemoEncounter({
                 </button>
               )}
             </div>
+            <MemoEncounterNext
+              hasNext={hasNextMemo}
+              disabled={hasUnsavedAnnotation}
+              onNext={onNextMemo}
+            />
               </>
             )}
           </div>
@@ -330,5 +348,34 @@ export default function MemoEncounter({
         </div>
       </div>
     </>
+  );
+}
+
+function MemoEncounterNext({
+  hasNext,
+  disabled,
+  onNext,
+}: {
+  hasNext: boolean;
+  disabled: boolean;
+  onNext: () => void;
+}) {
+  return (
+    <div className="memo-encounter-next">
+      {hasNext ? (
+        <>
+          <button type="button" disabled={disabled} onClick={onNext}>
+            <Sparkles size={14} />
+            <span>
+              <strong>附近还有一处微光</strong>
+              <small>{disabled ? '先留下或取消正在写的这句话' : '不回到列表，继续在花园里走近下一段记忆'}</small>
+            </span>
+            <ArrowRight size={15} />
+          </button>
+        </>
+      ) : (
+        <p>这一带暂时安静下来了。你可以回到花园里继续走走。</p>
+      )}
+    </div>
   );
 }

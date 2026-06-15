@@ -326,6 +326,22 @@ export default function GameShell({ onExit }: GameShellProps) {
       )),
     [authorizedMemoIds, companionType, objects],
   );
+  const memoryEncounterObjects = useMemo(
+    () => visibleObjects.filter((object) => (
+      !object.hidden
+      && !object.sourceSessionId
+      && object.sourceMemoIds.some((memoId) => memos.some((memo) => memo.id === memoId))
+    )),
+    [memos, visibleObjects],
+  );
+  const nextMemoryEncounter = useMemo(() => {
+    if (!activeObject) return null;
+    const activeIndex = memoryEncounterObjects.findIndex((object) => object.id === activeObject.id);
+    if (activeIndex < 0) return null;
+    return memoryEncounterObjects.slice(activeIndex + 1).find((object) => (
+      object.sourceMemoIds.some((memoId) => memos.some((memo) => memo.id === memoId))
+    )) ?? null;
+  }, [activeObject, memoryEncounterObjects, memos]);
 
   // ---- 渲染 ----
   return (
@@ -390,6 +406,7 @@ export default function GameShell({ onExit }: GameShellProps) {
           {/* Memo 阅读弹层 */}
           {phase === 'memo_encounter' && activeMemo && (
             <MemoEncounter
+              key={activeMemo.id}
               memo={activeMemo}
               worldObject={activeObject}
               authorizedMemoIds={authorizedMemoIds}
@@ -415,6 +432,15 @@ export default function GameShell({ onExit }: GameShellProps) {
               onOpenFireside={() => {
                 setActiveMemo(null);
                 handleEnterFireside();
+              }}
+              hasNextMemo={Boolean(nextMemoryEncounter)}
+              onNextMemo={() => {
+                const nextMemoId = nextMemoryEncounter?.sourceMemoIds.find((memoId) => (
+                  memos.some((memo) => memo.id === memoId)
+                ));
+                if (nextMemoryEncounter && nextMemoId) {
+                  handleOpenMemo(nextMemoId, nextMemoryEncounter.id);
+                }
               }}
             />
           )}
