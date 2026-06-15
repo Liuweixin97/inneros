@@ -29,7 +29,7 @@ const MODES: Array<{ id: DialogueMode; label: string; description: string }> = [
   { id: 'silent', label: '只陪我坐着', description: '不追问，也不要求留下什么' },
 ];
 
-const MAX_AUTHORIZED_MEMOS = 5;
+const MAX_AUTHORIZED_MEMOS = 3;
 
 export default function FiresideChat({
   world,
@@ -116,7 +116,7 @@ export default function FiresideChat({
     } else {
       setMessages((current) => current.slice(0, -1));
       if (!controller.signal.aborted) {
-        setError('同行者现在听得见，但暂时说不了话。你写下的内容仍留在这里。');
+        setError('苔灯现在听得见，但暂时说不了话。你写下的内容仍留在这里。');
       }
     }
     setLoading(false);
@@ -138,10 +138,10 @@ export default function FiresideChat({
         <header className="fireside-header">
           <div>
             <p className="game-kicker">篝火地 · 一起说</p>
-            <h2>同行者坐在火光的另一边</h2>
+            <h2>{companionType === 'llm' ? '苔灯在火光的另一边亮着' : '火光的另一边暂时空着'}</h2>
           </div>
           <div className="flex items-center gap-2">
-            {/* 邀请 / 结束 AI 同行者 */}
+            {/* 邀请或遣散苔灯 */}
             <button
               type="button"
               className="game-hud-btn text-[11px] px-2 py-1"
@@ -155,9 +155,9 @@ export default function FiresideChat({
                 color: companionType === 'llm' ? '#FF9B3D' : 'var(--game-hud-muted)',
               }}
               onClick={() => onCompanionTypeChange(companionType === 'llm' ? 'none' : 'llm')}
-              title={companionType === 'llm' ? '结束 AI 同行，独自漫游' : '邀请 AI 同行者'}
+              title={companionType === 'llm' ? '遣散苔灯，独自漫游' : '邀请苔灯'}
             >
-              {companionType === 'llm' ? '✦ AI 同行中' : '+ 邀请同行'}
+              {companionType === 'llm' ? '苔灯同行中' : '+ 邀请苔灯'}
             </button>
             <button type="button" className="game-icon-button" onClick={close} aria-label="离开篝火">
               <X size={17} />
@@ -197,7 +197,7 @@ export default function FiresideChat({
               </strong>
               <small>
                 {authorizedMemos.length > 0
-                  ? '同行者只会看到你本次选择的内容'
+                  ? '苔灯只会看到你本次选择的内容'
                   : '可选。也可以不带记录，直接说此刻的事'}
               </small>
             </span>
@@ -312,9 +312,9 @@ export default function FiresideChat({
                 </div>
               ) : messages.map((message, index) => (
                 <div key={`${message.role}-${index}`} className={`fireside-message ${message.role}`}>
-                  <span>{message.role === 'user' ? '你' : '同行者'}</span>
+                  <span>{message.role === 'user' ? '你' : '苔灯'}</span>
                   <p>{message.content || (loading ? '……' : '')}</p>
-                  {message.isInference && <small>这是同行者的推测，不是原记录中的事实。</small>}
+                  {message.isInference && <small>这是苔灯的推测，不是原记录中的事实。</small>}
                 </div>
               ))}
               {error && <p className="fireside-error">{error}</p>}

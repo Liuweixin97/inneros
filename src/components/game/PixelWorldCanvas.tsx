@@ -109,7 +109,7 @@ export default function PixelWorldCanvas({
       ['map', '/game/twilight-world-map-v3.png'],
       ['characters', '/game/twilight-character-atlas-cutout.png'],
       ['objects', '/game/twilight-object-atlas-cutout.png'],
-      ['companion', '/game/forest-companion.png'],
+      ['companion', '/game/moss-lantern-sprites.png'],
     ] as const;
     let cancelled = false;
     entries.forEach(([key, src]) => {
@@ -276,7 +276,7 @@ export default function PixelWorldCanvas({
       : nearbyAction === 'bench'
         ? '在长椅上坐下'
         : nearbyAction === 'fireside'
-      ? '坐下来，和同行者谈谈'
+      ? '坐下来，和苔灯谈谈'
       : nearbyAction === 'workshop'
         ? '进入共写小屋'
         : nearbyAction === 'pond'
@@ -468,11 +468,12 @@ function drawScene(
     drawCharacterSprite(context, images.characters, secondPlayerChar.id === 'wanderer' ? 0 : 1, second.direction, point.x, point.y, scale, now, reducedMotion);
   } else if (companionType === 'llm' && images.companion?.complete) {
     const point = toScreen(second.x, second.y);
-    const size = 34 * scale;
+    const size = 42 * scale;
+    const frame = reducedMotion ? 0 : Math.floor(now / 520) % 2;
     context.save();
     context.shadowColor = 'rgba(255, 207, 92, 0.62)';
     context.shadowBlur = 12 * scale;
-    context.drawImage(images.companion, point.x - size / 2, point.y - size, size, size);
+    drawAtlasCell(context, images.companion, frame, 0, 8, 1, point.x, point.y, size, size);
     context.restore();
   }
 

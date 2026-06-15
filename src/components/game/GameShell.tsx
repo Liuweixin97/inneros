@@ -596,7 +596,7 @@ function GameFallbackView({
         <div className="game-static-map__places">
           <button type="button" onClick={onOpenFireside}>
             <strong>篝火地</strong>
-            <span>与同行者谈谈</span>
+            <span>与苔灯谈谈</span>
           </button>
           <button type="button" onClick={onOpenCoWrite}>
             <strong>共居工坊</strong>

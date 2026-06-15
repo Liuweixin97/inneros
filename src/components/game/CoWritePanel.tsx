@@ -111,7 +111,7 @@ export default function CoWritePanel({
         ? `共同确认：${jointText}`
         : decision === 'withdraw'
           ? `你：${playerOneText}`
-          : `你：${playerOneText}\n同行者：${playerTwoText}`,
+          : `Player 1：${playerOneText}\nPlayer 2：${playerTwoText}`,
       decision === 'gap' ? '我们记得不一样。' : '',
     ].filter(Boolean).join('\n');
     const object = await placeObject({
