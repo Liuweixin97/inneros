@@ -1,8 +1,9 @@
 'use client';
 
-import { ArrowLeft, Settings, Trees } from 'lucide-react';
-import type { CompanionType, GamePhase, GameWorld } from '@/types';
+import { ArrowLeft, Flame, Flower2, Hammer, Home, Settings, Trees, Waves } from 'lucide-react';
+import type { CompanionType, GamePhase, GameWorld, Memo } from '@/types';
 import { getPlayerLocation, getRegion } from '@/lib/game/map';
+import BagHUD from './BagHUD';
 
 interface WorldHUDProps {
   world: GameWorld | null;
@@ -10,6 +11,10 @@ interface WorldHUDProps {
   companionType: CompanionType;
   playerX: number;
   playerY: number;
+  memos: Memo[];
+  bagMemoIds: string[];
+  onRemoveFromBag: (memoId: string) => void;
+  onOpenFireside: () => void;
   onOpenSettings: () => void;
   onExit: () => void;
 }
@@ -18,22 +23,33 @@ export default function WorldHUD({
   companionType,
   playerX,
   playerY,
+  memos,
+  bagMemoIds,
+  onRemoveFromBag,
+  onOpenFireside,
   onOpenSettings,
   onExit,
 }: WorldHUDProps) {
   const locationId = getPlayerLocation(playerX, playerY);
   const region = locationId ? getRegion(locationId) : null;
+  const RegionIcon = region?.id === 'cabin'
+    ? Home
+    : region?.id === 'garden'
+      ? Flower2
+      : region?.id === 'fireside'
+        ? Flame
+        : region?.id === 'pond'
+          ? Waves
+          : region?.id === 'workshop'
+            ? Hammer
+            : Trees;
 
   return (
     <div className="game-hud">
       {/* 左上：区域标识 */}
       <div className="game-hud-identity">
         <span className="game-hud-mark">
-          {region ? (
-            <span style={{ fontSize: 18, lineHeight: 1 }}>{region.icon}</span>
-          ) : (
-            <Trees size={18} strokeWidth={1.7} />
-          )}
+          <RegionIcon size={18} strokeWidth={1.7} />
         </span>
         <span>
           <strong style={{ color: region?.color ?? 'var(--game-warm-light)' }}>
@@ -58,7 +74,7 @@ export default function WorldHUD({
             pointerEvents: 'none',
           }}
         >
-          ✦ AI 同行者陪在附近
+          苔灯陪在附近
         </div>
       )}
 
@@ -77,8 +93,16 @@ export default function WorldHUD({
       <div className="game-control-legend">
         <span><kbd>WASD</kbd> 移动</span>
         <span><kbd>E</kbd> 互动</span>
+        <span><kbd>Q</kbd> 行囊</span>
         <span><kbd>Esc</kbd> 设置</span>
       </div>
+
+      <BagHUD
+        memos={memos}
+        memoIds={bagMemoIds}
+        onRemove={onRemoveFromBag}
+        onOpenFireside={onOpenFireside}
+      />
     </div>
   );
 }

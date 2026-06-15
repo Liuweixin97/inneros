@@ -20,6 +20,8 @@ interface PixelWorldCanvasProps {
   reducedMotion: boolean;
   onPlayerMove: (x: number, y: number) => void;
   onOpenMemo: (memoId: string, objectId: string) => void;
+  onEnterCabin: () => void;
+  onEnterBench: () => void;
   onEnterFireside: () => void;
   onEnterCoWrite: () => void;
   onEnterPond: () => void;
@@ -66,6 +68,8 @@ export default function PixelWorldCanvas({
   reducedMotion,
   onPlayerMove,
   onOpenMemo,
+  onEnterCabin,
+  onEnterBench,
   onEnterFireside,
   onEnterCoWrite,
   onEnterPond,
@@ -128,10 +132,12 @@ export default function PixelWorldCanvas({
       if (memoId) onOpenMemo(memoId, object.id);
       return;
     }
+    if (action === 'cabin') onEnterCabin();
+    if (action === 'bench') onEnterBench();
     if (action === 'fireside') onEnterFireside();
     if (action === 'workshop') onEnterCoWrite();
     if (action === 'pond') onEnterPond();
-  }, [onEnterCoWrite, onEnterFireside, onEnterPond, onOpenMemo]);
+  }, [onEnterBench, onEnterCabin, onEnterCoWrite, onEnterFireside, onEnterPond, onOpenMemo]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -263,7 +269,11 @@ export default function PixelWorldCanvas({
 
   const interactionLabel = nearbyObject
     ? '靠近，看看这段记忆'
-    : nearbyAction === 'fireside'
+    : nearbyAction === 'cabin'
+      ? '走上门廊'
+      : nearbyAction === 'bench'
+        ? '在长椅上坐下'
+        : nearbyAction === 'fireside'
       ? '坐下来，和同行者谈谈'
       : nearbyAction === 'workshop'
         ? '进入共写小屋'
@@ -385,6 +395,12 @@ function findNearbyAction(
   secondX: number,
   secondY: number,
 ): NearbyAction {
+  const cabin = GAME_ACTION_POINTS.cabin;
+  if (Math.hypot(cabin.x - x, cabin.y - y) < cabin.radius) return 'cabin';
+
+  const bench = GAME_ACTION_POINTS.bench;
+  if (Math.hypot(bench.x - x, bench.y - y) < bench.radius) return 'bench';
+
   const fireside = GAME_ACTION_POINTS.fireside;
   if (Math.hypot(fireside.x - x, fireside.y - y) < fireside.radius) return 'fireside';
 

@@ -366,6 +366,21 @@ export interface NavItem {
 export type GameSeason = 'spring' | 'summer' | 'autumn' | 'winter';
 export type CompanionType = 'none' | 'human_local' | 'llm';
 export type DialogueMode = 'listen' | 'ask' | 'organize' | 'silent';
+export type JourneyEventType =
+  | 'carried_memory'
+  | 'left_annotation'
+  | 'named_path'
+  | 'fireside_note'
+  | 'left_question'
+  | 'placed_object';
+
+export interface JourneyEvent {
+  id: string;
+  type: JourneyEventType;
+  text: string;
+  sourceMemoIds: string[];
+  createdAt: string;
+}
 
 export type WorldObjectType =
   | 'memory_plant'

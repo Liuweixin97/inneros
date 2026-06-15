@@ -12,7 +12,7 @@ export const WORLD_WIDTH = 800;
 export const WORLD_HEIGHT = 450;
 export const TILE_SIZE = 16;
 
-export type GameActionId = 'fireside' | 'workshop' | 'pond';
+export type GameActionId = 'cabin' | 'bench' | 'fireside' | 'workshop' | 'pond';
 
 export interface GameActionPoint {
   id: GameActionId;
@@ -23,6 +23,8 @@ export interface GameActionPoint {
 
 // 互动点使用可行走的地标边缘坐标，HUD 区域仍使用地标中心。
 export const GAME_ACTION_POINTS: Record<GameActionId, GameActionPoint> = {
+  cabin: { id: 'cabin', x: 332, y: 222, radius: 44 },
+  bench: { id: 'bench', x: 165, y: 326, radius: 48 },
   fireside: { id: 'fireside', x: 650, y: 170, radius: 54 },
   workshop: { id: 'workshop', x: 590, y: 335, radius: 52 },
   pond: { id: 'pond', x: 380, y: 285, radius: 52 },
@@ -51,7 +53,7 @@ export const MAP_REGIONS: MapRegion[] = [
     rx: 80,
     ry: 55,
     color: '#A0622A',
-    icon: '🏠',
+    icon: 'cabin',
   },
   {
     id: 'garden',
@@ -62,7 +64,7 @@ export const MAP_REGIONS: MapRegion[] = [
     rx: 75,
     ry: 50,
     color: '#7DB85A',
-    icon: '🌸',
+    icon: 'garden',
   },
   {
     id: 'fireside',
@@ -73,7 +75,7 @@ export const MAP_REGIONS: MapRegion[] = [
     rx: 70,
     ry: 55,
     color: '#FF9B3D',
-    icon: '🔥',
+    icon: 'fireside',
   },
   {
     id: 'pond',
@@ -84,7 +86,7 @@ export const MAP_REGIONS: MapRegion[] = [
     rx: 105,
     ry: 60,
     color: '#5B9BD5',
-    icon: '💧',
+    icon: 'pond',
   },
   {
     id: 'workshop',
@@ -95,18 +97,18 @@ export const MAP_REGIONS: MapRegion[] = [
     rx: 75,
     ry: 65,
     color: '#C4A882',
-    icon: '🪴',
+    icon: 'workshop',
   },
   {
     id: 'forest',
-    name: '记忆林',
-    subtitle: '尚未被命名',
+    name: '林间小径',
+    subtitle: '慢慢走',
     cx: 110,
     cy: 105,
     rx: 90,
     ry: 70,
     color: '#4A7C2F',
-    icon: '🌲',
+    icon: 'forest',
   },
 ];
 

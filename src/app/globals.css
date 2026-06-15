@@ -1999,6 +1999,227 @@ body {
   font-size: 10px;
 }
 
+.game-bag {
+  position: absolute;
+  bottom: 22px;
+  left: 24px;
+  z-index: 22;
+}
+
+.game-bag__trigger {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(229, 207, 165, 0.18);
+  border-radius: 13px;
+  background: rgba(5, 19, 20, 0.78);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.24);
+  padding: 0 11px;
+  color: #f4ead4;
+  font-size: 11px;
+  backdrop-filter: blur(14px);
+}
+
+.game-bag__trigger small {
+  color: #ebc57f;
+}
+
+.game-bag__trigger kbd {
+  border: 1px solid rgba(235, 197, 127, 0.25);
+  border-radius: 5px;
+  padding: 1px 4px;
+  color: rgba(244, 234, 212, 0.48);
+  font-size: 9px;
+}
+
+.game-bag__panel {
+  position: absolute;
+  bottom: 52px;
+  left: 0;
+  width: min(360px, calc(100vw - 48px));
+  border: 1px solid rgba(229, 207, 165, 0.2);
+  border-radius: 18px;
+  background:
+    linear-gradient(rgba(38, 24, 15, 0.97), rgba(25, 18, 12, 0.98)),
+    #241710;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+  padding: 16px;
+  color: var(--game-cabin-light);
+}
+
+.game-bag__panel header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.game-bag__panel header div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.game-bag__panel header strong {
+  font-size: 13px;
+}
+
+.game-bag__panel header span {
+  color: rgba(255, 248, 231, 0.42);
+  font-size: 10px;
+}
+
+.game-bag__panel header button {
+  color: rgba(255, 248, 231, 0.5);
+}
+
+.game-bag__slots {
+  display: grid;
+  gap: 7px;
+}
+
+.game-bag__slots article,
+.game-bag__empty {
+  display: grid;
+  min-height: 48px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 224, 174, 0.1);
+  border-radius: 11px;
+  background: rgba(255, 248, 231, 0.04);
+  padding: 8px 10px;
+}
+
+.game-bag__slot-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(125, 184, 90, 0.12);
+  color: #a9cf8d;
+}
+
+.game-bag__slots article div {
+  min-width: 0;
+}
+
+.game-bag__slots article strong,
+.game-bag__slots article small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-bag__slots article strong {
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.game-bag__slots article small,
+.game-bag__slots article button {
+  color: rgba(255, 248, 231, 0.38);
+  font-size: 9px;
+}
+
+.game-bag__empty {
+  grid-template-columns: auto 1fr;
+  border-style: dashed;
+  color: rgba(255, 248, 231, 0.25);
+}
+
+.game-bag__empty span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(255, 248, 231, 0.04);
+  font-size: 9px;
+}
+
+.game-bag__fireside {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 10px;
+  border: 1px solid rgba(255, 155, 61, 0.28);
+  border-radius: 10px;
+  background: rgba(255, 155, 61, 0.1);
+  padding: 8px;
+  color: #ffc078;
+  font-size: 11px;
+}
+
+.game-focus-layer--soft {
+  background: rgba(7, 18, 17, 0.52);
+}
+
+.companion-bench {
+  width: min(620px, 100%);
+  border: 1px solid rgba(255, 224, 174, 0.24);
+  border-radius: 20px;
+  background: #241710;
+  box-shadow: 0 24px 80px rgba(10, 4, 2, 0.48);
+  padding: 24px;
+  color: var(--game-cabin-light);
+}
+
+.companion-bench header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.companion-bench h2 {
+  margin-top: 5px;
+  font-size: 24px;
+}
+
+.companion-bench__choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.companion-bench__choices button {
+  display: flex;
+  min-height: 150px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  border: 1px solid rgba(255, 224, 174, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 248, 231, 0.035);
+  padding: 16px;
+  color: rgba(255, 248, 231, 0.62);
+  text-align: left;
+}
+
+.companion-bench__choices button.is-selected,
+.companion-bench__choices button:hover {
+  border-color: rgba(235, 197, 127, 0.42);
+  background: rgba(235, 197, 127, 0.09);
+  color: #ebc57f;
+}
+
+.companion-bench__choices strong {
+  color: var(--game-cabin-light);
+  font-size: 13px;
+}
+
+.companion-bench__choices span {
+  color: rgba(255, 248, 231, 0.4);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
 .game-control-legend kbd,
 .game-context-prompt kbd {
   font-family: var(--font-mono);

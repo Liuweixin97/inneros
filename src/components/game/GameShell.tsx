@@ -1,7 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { GameWorld, WorldObject, GamePhase, CompanionType, DialogueMode, Memo } from '@/types';
+import type {
+  GameWorld,
+  WorldObject,
+  GamePhase,
+  CompanionType,
+  DialogueMode,
+  JourneyEvent,
+  Memo,
+} from '@/types';
 import {
   annotateObject,
   hideObject,
@@ -22,6 +30,15 @@ import MemoEncounter from './MemoEncounter';
 import FiresideChat from './FiresideChat';
 import CoWritePanel from './CoWritePanel';
 import PondPanel from './PondPanel';
+import CompanionBench from './CompanionBench';
+import {
+  loadBagMemoIds,
+  loadCompanionInvited,
+  loadJourneyEvents,
+  saveBagMemoIds,
+  saveCompanionInvited,
+  saveJourneyEvents,
+} from '@/lib/game/journey-state';
 
 interface GameShellProps {
   onExit: () => void;
@@ -49,6 +66,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [companionType, setCompanionType] = useState<CompanionType>('none');
   const [dialogueMode, setDialogueMode] = useState<DialogueMode>('listen');
   const [authorizedMemoIds, setAuthorizedMemoIds] = useState<string[]>([]);
+  const [, setJourneyEvents] = useState<JourneyEvent[]>([]);
 
   // ---- 弹层状态 ----
   const [activeMemo, setActiveMemo] = useState<Memo | null>(null);
@@ -57,9 +75,16 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [firesideChatOpen, setFiresideChatOpen] = useState(false);
   const [coWriteOpen, setCoWriteOpen] = useState(false);
   const [pondOpen, setPondOpen] = useState(false);
+  const [benchOpen, setBenchOpen] = useState(false);
 
   // ---- 减少动态模式 ----
   const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    setAuthorizedMemoIds(loadBagMemoIds());
+    setJourneyEvents(loadJourneyEvents());
+    setCompanionType(loadCompanionInvited() ? 'llm' : 'none');
+  }, []);
 
   // 加载世界
   const initWorld = useCallback(async () => {
@@ -181,6 +206,7 @@ export default function GameShell({ onExit }: GameShellProps) {
     setFiresideChatOpen(false);
     setCoWriteOpen(false);
     setPondOpen(false);
+    setBenchOpen(false);
     setPhase('explore');
   }, []);
 
@@ -207,7 +233,26 @@ export default function GameShell({ onExit }: GameShellProps) {
 
   // 授权 Memo（用户勾选后可带入 AI 对话）
   const handleAuthorizeMemos = useCallback((ids: string[]) => {
-    setAuthorizedMemoIds([...new Set(ids)].slice(-5));
+    const next = [...new Set(ids)].slice(-3);
+    setAuthorizedMemoIds(next);
+    saveBagMemoIds(next);
+  }, []);
+
+  const addJourneyEvent = useCallback((event: Omit<JourneyEvent, 'id' | 'createdAt'>) => {
+    setJourneyEvents((current) => {
+      const next = [...current, {
+        ...event,
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+      }].slice(-30);
+      saveJourneyEvents(next);
+      return next;
+    });
+  }, []);
+
+  const handleCompanionTypeChange = useCallback((type: CompanionType) => {
+    setCompanionType(type);
+    saveCompanionInvited(type === 'llm');
   }, []);
 
   const handleSaveAnnotation = useCallback(async (annotation: string) => {
@@ -289,6 +334,8 @@ export default function GameShell({ onExit }: GameShellProps) {
                 reducedMotion={reducedMotion}
                 onPlayerMove={handlePlayerMove}
                 onOpenMemo={handleOpenMemo}
+                onEnterCabin={() => setShowSettings(true)}
+                onEnterBench={() => setBenchOpen(true)}
                 onEnterFireside={handleEnterFireside}
                 onEnterCoWrite={handleEnterCoWrite}
                 onEnterPond={handleEnterPond}
@@ -301,6 +348,12 @@ export default function GameShell({ onExit }: GameShellProps) {
                 companionType={companionType}
                 playerX={playerX}
                 playerY={playerY}
+                memos={memos}
+                bagMemoIds={authorizedMemoIds}
+                onRemoveFromBag={(memoId) => handleAuthorizeMemos(
+                  authorizedMemoIds.filter((id) => id !== memoId),
+                )}
+                onOpenFireside={handleEnterFireside}
                 onOpenSettings={() => setShowSettings(true)}
                 onExit={handleExit}
               />
@@ -313,7 +366,14 @@ export default function GameShell({ onExit }: GameShellProps) {
               memo={activeMemo}
               worldObject={activeObject}
               authorizedMemoIds={authorizedMemoIds}
-              onAuthorize={(id) => handleAuthorizeMemos([...authorizedMemoIds, id])}
+              onAuthorize={(id) => {
+                handleAuthorizeMemos([...authorizedMemoIds, id]);
+                addJourneyEvent({
+                  type: 'carried_memory',
+                  text: `带走了「${activeMemo.ai_title || activeMemo.plain_text.slice(0, 24) || '一段记忆'}」`,
+                  sourceMemoIds: [id],
+                });
+              }}
               onSaveAnnotation={handleSaveAnnotation}
               onHide={activeObject
                 && !activeObject.id.startsWith('candidate-')
@@ -343,7 +403,7 @@ export default function GameShell({ onExit }: GameShellProps) {
                 onDialogueModeChange={setDialogueMode}
                 onAuthorizeMemos={handleAuthorizeMemos}
                 companionType={companionType}
-                onCompanionTypeChange={setCompanionType}
+                onCompanionTypeChange={handleCompanionTypeChange}
                 onClose={handleCloseAll}
               />
             ) : null
@@ -365,6 +425,14 @@ export default function GameShell({ onExit }: GameShellProps) {
             <PondPanel onClose={handleCloseAll} />
           )}
 
+          {benchOpen && (
+            <CompanionBench
+              companionType={companionType}
+              onChange={handleCompanionTypeChange}
+              onClose={() => setBenchOpen(false)}
+            />
+          )}
+
           {/* 游戏设置 */}
           {showSettings && (
             <GameSettings
@@ -374,7 +442,7 @@ export default function GameShell({ onExit }: GameShellProps) {
               currentCharId={playerChar.id}
               onCharacterChange={handleCharacterChange}
               companionType={companionType}
-              onCompanionTypeChange={setCompanionType}
+              onCompanionTypeChange={handleCompanionTypeChange}
               onExit={handleExit}
               onClose={() => setShowSettings(false)}
             />
