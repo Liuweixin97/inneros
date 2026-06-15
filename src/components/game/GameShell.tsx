@@ -31,6 +31,7 @@ import FiresideChat from './FiresideChat';
 import CoWritePanel from './CoWritePanel';
 import PondPanel from './PondPanel';
 import CompanionBench from './CompanionBench';
+import CabinPanel from './CabinPanel';
 import {
   loadBagMemoIds,
   loadCompanionInvited,
@@ -66,7 +67,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [companionType, setCompanionType] = useState<CompanionType>('none');
   const [dialogueMode, setDialogueMode] = useState<DialogueMode>('listen');
   const [authorizedMemoIds, setAuthorizedMemoIds] = useState<string[]>([]);
-  const [, setJourneyEvents] = useState<JourneyEvent[]>([]);
+  const [journeyEvents, setJourneyEvents] = useState<JourneyEvent[]>([]);
 
   // ---- 弹层状态 ----
   const [activeMemo, setActiveMemo] = useState<Memo | null>(null);
@@ -76,6 +77,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [coWriteOpen, setCoWriteOpen] = useState(false);
   const [pondOpen, setPondOpen] = useState(false);
   const [benchOpen, setBenchOpen] = useState(false);
+  const [cabinOpen, setCabinOpen] = useState(false);
 
   // ---- 减少动态模式 ----
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -207,6 +209,7 @@ export default function GameShell({ onExit }: GameShellProps) {
     setCoWriteOpen(false);
     setPondOpen(false);
     setBenchOpen(false);
+    setCabinOpen(false);
     setPhase('explore');
   }, []);
 
@@ -262,6 +265,11 @@ export default function GameShell({ onExit }: GameShellProps) {
       setObjects((current) => current.map((object) => (
         object.id === activeObject.id ? { ...object, annotation } : object
       )));
+      addJourneyEvent({
+        type: 'left_annotation',
+        text: annotation,
+        sourceMemoIds: [activeMemo.id],
+      });
       return true;
     }
     const created = await placeObject({
@@ -278,8 +286,13 @@ export default function GameShell({ onExit }: GameShellProps) {
       created,
     ]);
     setActiveObject(created);
+    addJourneyEvent({
+      type: 'left_annotation',
+      text: annotation,
+      sourceMemoIds: [activeMemo.id],
+    });
     return true;
-  }, [activeMemo, activeObject, world]);
+  }, [activeMemo, activeObject, addJourneyEvent, world]);
 
   const handleObjectPlaced = useCallback((object: WorldObject) => {
     setObjects((current) => [...current, object]);
@@ -334,7 +347,7 @@ export default function GameShell({ onExit }: GameShellProps) {
                 reducedMotion={reducedMotion}
                 onPlayerMove={handlePlayerMove}
                 onOpenMemo={handleOpenMemo}
-                onEnterCabin={() => setShowSettings(true)}
+                onEnterCabin={() => setCabinOpen(true)}
                 onEnterBench={() => setBenchOpen(true)}
                 onEnterFireside={handleEnterFireside}
                 onEnterCoWrite={handleEnterCoWrite}
@@ -430,6 +443,19 @@ export default function GameShell({ onExit }: GameShellProps) {
               companionType={companionType}
               onChange={handleCompanionTypeChange}
               onClose={() => setBenchOpen(false)}
+            />
+          )}
+
+          {cabinOpen && (
+            <CabinPanel
+              events={journeyEvents}
+              memos={memos}
+              onOpenSettings={() => {
+                setCabinOpen(false);
+                setShowSettings(true);
+              }}
+              onExit={handleExit}
+              onClose={() => setCabinOpen(false)}
             />
           )}
 

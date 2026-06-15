@@ -43,6 +43,7 @@ export default function MemoEncounter({
   onClose,
   onOpenFireside,
 }: MemoEncounterProps) {
+  const [stage, setStage] = useState<'approach' | 'read'>('approach');
   const [annotation, setAnnotation] = useState(worldObject?.annotation ?? '');
   const [showAnnotationInput, setShowAnnotationInput] = useState(false);
   const [annotationSaved, setAnnotationSaved] = useState(false);
@@ -55,6 +56,7 @@ export default function MemoEncounter({
 
   // 原文与 plain_text 的差异（来源区分）
   const displayOriginal = memo.raw_content || memo.plain_text;
+  const excerpt = memo.plain_text.replace(/\s+/g, ' ').trim().slice(0, 58);
 
   // AI 字段
   const hasAI = memo.ai_title || memo.ai_summary || (memo.ai_emotions && memo.ai_emotions.length > 0);
@@ -119,6 +121,21 @@ export default function MemoEncounter({
               </div>
             </div>
 
+            {stage === 'approach' ? (
+              <div className="memo-approach">
+                <p className="game-kicker">记忆花园 · 偶遇</p>
+                <blockquote>“{excerpt || '这里留着一些过去的话'}{memo.plain_text.length > 58 ? '……' : ''}”</blockquote>
+                <p>你可以靠近，也可以今天不看。物件不会因此枯萎或变暗。</p>
+                <div>
+                  <button type="button" onClick={() => setStage('read')}>读一读</button>
+                  {!isAuthorized && (
+                    <button type="button" onClick={() => onAuthorize(memo.id)}>带在身上</button>
+                  )}
+                  <button type="button" onClick={onClose}>今天不看</button>
+                </div>
+              </div>
+            ) : (
+              <>
             {/* ── 原始记录 ── */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
@@ -304,6 +321,8 @@ export default function MemoEncounter({
                 </button>
               )}
             </div>
+              </>
+            )}
           </div>
 
           {/* 底部装饰条 */}

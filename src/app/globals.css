@@ -2220,6 +2220,208 @@ body {
   line-height: 1.6;
 }
 
+.cabin-panel {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  border: 1px solid rgba(255, 224, 174, 0.26);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 183, 92, 0.13), transparent 34%),
+    #241710;
+  box-shadow: 0 24px 80px rgba(10, 4, 2, 0.52);
+  padding: 25px;
+  color: var(--game-cabin-light);
+}
+
+.cabin-panel > header,
+.cabin-panel > footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cabin-panel h2 {
+  margin-top: 5px;
+  font-size: clamp(22px, 3vw, 29px);
+}
+
+.cabin-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.cabin-panel__grid article {
+  display: flex;
+  min-height: 132px;
+  gap: 12px;
+  border: 1px solid rgba(255, 224, 174, 0.12);
+  border-radius: 15px;
+  background: rgba(255, 248, 231, 0.04);
+  padding: 16px;
+}
+
+.cabin-panel__icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255, 175, 76, 0.11);
+  color: #f3b76d;
+}
+
+.cabin-panel__grid small,
+.cabin-echo small {
+  color: rgba(255, 224, 174, 0.44);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.cabin-panel__grid strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+.cabin-panel__grid p {
+  margin-top: 8px;
+  color: rgba(255, 248, 231, 0.44);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.cabin-echo {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 224, 174, 0.12);
+  border-radius: 15px;
+  padding: 17px;
+}
+
+.cabin-echo h3 {
+  margin-top: 4px;
+  font-size: 15px;
+}
+
+.cabin-echo__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.cabin-echo__list article {
+  min-height: 86px;
+  border-radius: 11px;
+  background: rgba(255, 248, 231, 0.04);
+  padding: 11px;
+}
+
+.cabin-echo__list p {
+  margin-top: 6px;
+  color: rgba(255, 248, 231, 0.76);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.cabin-echo__empty {
+  margin-top: 12px;
+  color: rgba(255, 248, 231, 0.38);
+  font-size: 11px;
+}
+
+.cabin-panel > footer {
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.cabin-panel > footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 224, 174, 0.14);
+  border-radius: 10px;
+  padding: 8px 11px;
+  color: rgba(255, 248, 231, 0.58);
+  font-size: 11px;
+}
+
+.cabin-panel > footer button:nth-child(2) {
+  border-color: rgba(125, 184, 90, 0.3);
+  background: rgba(125, 184, 90, 0.12);
+  color: #dcefd0;
+}
+
+.cabin-panel > footer button.is-exit {
+  color: rgba(255, 203, 175, 0.64);
+}
+
+.memo-approach {
+  padding: 12px 2px 5px;
+  text-align: center;
+}
+
+.memo-approach .game-kicker {
+  color: #8b6340;
+}
+
+.memo-approach blockquote {
+  margin: 18px auto 13px;
+  color: #3b2e2a;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 1.8;
+}
+
+.memo-approach > p {
+  color: rgba(59, 46, 42, 0.56);
+  font-size: 11px;
+}
+
+.memo-approach > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 20px;
+}
+
+.memo-approach button {
+  border: 1px solid rgba(139, 99, 64, 0.22);
+  border-radius: 8px;
+  background: rgba(139, 99, 64, 0.07);
+  padding: 9px;
+  color: #6b3f1a;
+  font-size: 11px;
+}
+
+.memo-approach button:first-child {
+  border-color: rgba(74, 124, 47, 0.3);
+  background: rgba(74, 124, 47, 0.11);
+  color: #3f6a29;
+}
+
+@media (max-width: 640px) {
+  .companion-bench__choices,
+  .cabin-panel__grid,
+  .cabin-echo__list {
+    grid-template-columns: 1fr;
+  }
+
+  .companion-bench__choices button {
+    min-height: 112px;
+  }
+
+  .cabin-panel > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 .game-control-legend kbd,
 .game-context-prompt kbd {
   font-family: var(--font-mono);
