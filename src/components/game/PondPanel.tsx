@@ -1,166 +1,143 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { Eye, PackageOpen, Waves, X } from 'lucide-react';
+import type { JourneyEvent, Memo } from '@/types';
 
 interface PondPanelProps {
+  memos: Memo[];
+  bagMemoIds: string[];
+  events: JourneyEvent[];
+  onRemoveFromBag: (memoId: string) => void;
   onClose: () => void;
 }
 
-const POND_PROMPTS = [
-  '在这里你不需要说话。',
-  '水面很安静。',
-  '想坐多久都可以。',
-  '不用解释，也不用表现。',
-  '这一刻可以只是你自己。',
-];
+type PondMode = 'choose' | 'sit' | 'release' | 'reflection';
 
-export default function PondPanel({ onClose }: PondPanelProps) {
+export default function PondPanel({
+  memos,
+  bagMemoIds,
+  events,
+  onRemoveFromBag,
+  onClose,
+}: PondPanelProps) {
+  const [mode, setMode] = useState<PondMode>('choose');
   const [note, setNote] = useState('');
-  const [saved, setSaved] = useState(false);
-  // useState 初始函数只在首次渲染调用，避免每次渲染都调用 Math.random()
-  const [prompt] = useState(() => POND_PROMPTS[Math.floor(Math.random() * POND_PROMPTS.length)]);
+  const [released, setReleased] = useState(false);
+  const carried = bagMemoIds
+    .map((id) => memos.find((memo) => memo.id === id))
+    .filter((memo): memo is Memo => Boolean(memo));
+  const reflections = events
+    .filter((event) => ['fireside_note', 'named_path', 'placed_object'].includes(event.type))
+    .slice(-4)
+    .reverse();
 
-  const handleSave = () => {
+  const releaseNote = () => {
     if (!note.trim()) return;
-    // 只保存在本地 sessionStorage，不发给 AI，不进 DB（体现「静默」原则）
-    try {
-      const existing = JSON.parse(sessionStorage.getItem('pond-notes') ?? '[]') as string[];
-      sessionStorage.setItem('pond-notes', JSON.stringify([...existing, note.trim()]));
-    } catch {
-      // ignore
-    }
-    setSaved(true);
+    sessionStorage.setItem('inneros-pond-note-v2', note.trim());
+    setReleased(true);
   };
 
   return (
-    <>
-      <div
-        className="absolute inset-0 z-30"
-        style={{ background: 'rgba(10,20,40,0.65)', backdropFilter: 'blur(3px)' }}
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <div className="pond-focus-layer" role="dialog" aria-label="静水池塘">
+      <section className="pond-panel-v2">
+        <header>
+          <div>
+            <p className="game-kicker">静水池塘 · 不必回答</p>
+            <h2>{mode === 'sit' ? '水面很安静' : '有哪些东西，我还不想解释？'}</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="离开池塘"><X size={17} /></button>
+        </header>
 
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 w-full max-w-sm mx-4"
-        role="dialog"
-        aria-label="静水池塘"
-      >
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: 'linear-gradient(160deg, rgba(10,25,50,0.97), rgba(15,35,60,0.97))',
-            border: '1px solid rgba(100,180,220,0.2)',
-            boxShadow: '0 0 40px rgba(80,160,220,0.12)',
-          }}
-        >
-          <div className="p-7">
-            {/* 装饰：水波 */}
-            <div className="flex justify-center mb-5 gap-1 opacity-40" aria-hidden="true">
-              {[20, 28, 36, 28, 20].map((w, i) => (
-                <div
-                  key={i}
-                  className="rounded-full"
-                  style={{
-                    width: w,
-                    height: 3,
-                    background: 'rgba(100,200,240,0.6)',
-                    animationDelay: `${i * 0.15}s`,
-                  }}
-                />
-              ))}
-            </div>
+        <div className="pond-lantern-off">
+          <span />
+          <p>苔灯已经熄灯，并停在远处。这里的文字不会发送给 AI。</p>
+        </div>
 
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <p className="text-[10px] tracking-widest mb-1" style={{ color: 'rgba(100,200,240,0.5)' }}>
-                  静水池塘
-                </p>
-                <p className="text-[15px] leading-relaxed" style={{ color: 'rgba(180,220,240,0.9)' }}>
-                  {prompt}
-                </p>
+        {mode === 'choose' && (
+          <div className="pond-choices">
+            <button type="button" onClick={() => setMode('sit')}>
+              <Waves size={20} />
+              <strong>坐一会儿</strong>
+              <span>不输入，不计时，也不产生任何内容。</span>
+            </button>
+            <button type="button" onClick={() => setMode('release')}>
+              <PackageOpen size={20} />
+              <strong>放下一件东西</strong>
+              <span>移出行囊，或写进只属于本次会话的漂流瓶。</span>
+            </button>
+            <button type="button" onClick={() => setMode('reflection')}>
+              <Eye size={20} />
+              <strong>看看倒影</strong>
+              <span>只看本次由你主动确认过的话。</span>
+            </button>
+          </div>
+        )}
+
+        {mode === 'sit' && (
+          <div className="pond-sit">
+            <div className="pond-ripples" aria-hidden="true"><i /><i /><i /></div>
+            <p>不用解释，也不用表现。</p>
+            <button type="button" onClick={onClose}>坐够了，回到岸上</button>
+          </div>
+        )}
+
+        {mode === 'release' && (
+          <div className="pond-release">
+            <p>它不会被分析，也不会被留下。只是暂时不必拿在手里。</p>
+            {carried.length > 0 && (
+              <div className="pond-release__bag">
+                {carried.map((memo) => (
+                  <article key={memo.id}>
+                    <span>
+                      <strong>{memo.ai_title || memo.plain_text.slice(0, 30) || '未命名记录'}</strong>
+                      <small>从本次行囊移出，不删除原记录</small>
+                    </span>
+                    <button type="button" onClick={() => onRemoveFromBag(memo.id)}>暂时放下</button>
+                  </article>
+                ))}
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="opacity-30 hover:opacity-60 transition-opacity mt-0.5"
-                style={{ color: 'rgba(180,220,240,0.8)' }}
-                aria-label="离开"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {!saved ? (
-              <div>
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="想写什么就写，或者就这样坐着……"
-                  rows={3}
-                  className="w-full text-[13px] leading-relaxed resize-none outline-none rounded-lg"
-                  style={{
-                    background: 'rgba(100,180,220,0.06)',
-                    border: '1px solid rgba(100,180,220,0.15)',
-                    padding: '10px 14px',
-                    color: 'rgba(180,220,240,0.85)',
-                    fontFamily: 'var(--font-sans)',
-                  }}
-                />
-                <div className="flex gap-2 mt-3">
-                  {note.trim() && (
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      className="flex-1 py-2 rounded-lg text-[12px] transition-all"
-                      style={{
-                        background: 'rgba(100,180,220,0.15)',
-                        border: '1px solid rgba(100,180,220,0.3)',
-                        color: 'rgba(180,220,240,0.9)',
-                      }}
-                    >
-                      留在这里
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="flex-1 py-2 rounded-lg text-[12px] transition-all"
-                    style={{
-                      background: 'rgba(100,180,220,0.05)',
-                      border: '1px solid rgba(100,180,220,0.1)',
-                      color: 'rgba(140,180,210,0.6)',
-                    }}
-                  >
-                    {note.trim() ? '不留，走了' : '就坐一会儿，走了'}
-                  </button>
+            )}
+            {!released ? (
+              <>
+                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={4} placeholder="写一点临时的话，也可以什么都不写……" />
+                <div className="pond-release__actions">
+                  <button type="button" disabled={!note.trim()} onClick={releaseNote}>投入漂流瓶</button>
+                  <button type="button" onClick={onClose}>什么也不留下</button>
                 </div>
-                <p className="text-[10px] mt-3 text-center opacity-40" style={{ color: 'rgba(140,180,210,0.8)' }}>
-                  这里写下的不会进入 AI 对话
-                </p>
-              </div>
+              </>
             ) : (
-              <div className="text-center py-2">
-                <p className="text-[14px] mb-1" style={{ color: 'rgba(180,220,240,0.9)' }}>
-                  留下了。
-                </p>
-                <p className="text-[12px] opacity-50" style={{ color: 'rgba(140,180,210,0.8)' }}>
-                  只有你知道这里有什么。
-                </p>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="mt-4 text-[12px] underline underline-offset-2 opacity-50 hover:opacity-80 transition-opacity"
-                  style={{ color: 'rgba(140,180,210,0.8)' }}
-                >
-                  回到世界
-                </button>
+              <div className="pond-release__done">
+                <p>瓶子漂远了。关闭这次林间世界后，这段文字会自动消失。</p>
+                <button type="button" onClick={onClose}>回到岸上</button>
               </div>
             )}
           </div>
-        </div>
-      </div>
-    </>
+        )}
+
+        {mode === 'reflection' && (
+          <div className="pond-reflection">
+            {reflections.length > 0 ? reflections.map((event) => (
+              <article key={event.id}>
+                <p>{event.text}</p>
+                <button
+                  type="button"
+                  onClick={(e) => e.currentTarget.closest('article')?.classList.add('is-dispersed')}
+                >
+                  让它在水面散开
+                </button>
+              </article>
+            )) : (
+              <p className="pond-reflection__empty">水面没有替你生成任何话。</p>
+            )}
+            <button type="button" className="pond-back" onClick={() => setMode('choose')}>回到池边</button>
+          </div>
+        )}
+
+        {mode !== 'choose' && mode !== 'sit' && mode !== 'reflection' ? null : (
+          mode !== 'choose' && <button type="button" className="pond-back" onClick={() => setMode('choose')}>换一种方式</button>
+        )}
+      </section>
+    </div>
   );
 }

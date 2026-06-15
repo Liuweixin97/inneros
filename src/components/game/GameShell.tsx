@@ -444,7 +444,15 @@ export default function GameShell({ onExit }: GameShellProps) {
 
           {/* 池塘面板 */}
           {phase === 'pond' && pondOpen && (
-            <PondPanel onClose={handleCloseAll} />
+            <PondPanel
+              memos={memos}
+              bagMemoIds={authorizedMemoIds}
+              events={journeyEvents}
+              onRemoveFromBag={(memoId) => handleAuthorizeMemos(
+                authorizedMemoIds.filter((id) => id !== memoId),
+              )}
+              onClose={handleCloseAll}
+            />
           )}
 
           {benchOpen && (

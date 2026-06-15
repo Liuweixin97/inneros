@@ -21,6 +21,7 @@ interface WorldHUDProps {
 }
 
 export default function WorldHUD({
+  phase,
   companionType,
   playerX,
   playerY,
@@ -47,7 +48,7 @@ export default function WorldHUD({
             : Trees;
 
   return (
-    <div className="game-hud">
+    <div className={`game-hud ${phase === 'pond' ? 'is-quiet' : ''}`}>
       {/* 左上：区域标识 */}
       <div className="game-hud-identity">
         <span className="game-hud-mark">
