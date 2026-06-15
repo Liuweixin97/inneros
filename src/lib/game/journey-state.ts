@@ -37,3 +37,8 @@ export function loadCompanionInvited(): boolean {
 export function saveCompanionInvited(invited: boolean): void {
   window.localStorage.setItem(COMPANION_KEY, JSON.stringify(invited));
 }
+
+export function clearEphemeralJourneyState(): void {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.removeItem('inneros-pond-note-v2');
+}

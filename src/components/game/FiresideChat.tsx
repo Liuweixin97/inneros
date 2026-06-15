@@ -49,6 +49,9 @@ export default function FiresideChat({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showMemoryPicker, setShowMemoryPicker] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [endingText, setEndingText] = useState('');
+  const [endingType, setEndingType] = useState<'fireside_note' | 'left_question' | 'nothing'>('nothing');
   const abortRef = useRef<AbortController | null>(null);
 
   const authorizedMemos = useMemo(
@@ -122,6 +125,10 @@ export default function FiresideChat({
 
   const close = () => {
     abortRef.current?.abort();
+    if (messages.length > 0 && !ending) {
+      setEnding(true);
+      return;
+    }
     onClose();
   };
 
@@ -260,7 +267,32 @@ export default function FiresideChat({
           )}
         </section>
 
-        {!showMemoryPicker && (
+        {ending ? (
+          <section className="fireside-ending">
+            <p>离开前，可以留下一句话、一个问题，或什么也不留下。</p>
+            <div>
+              <button type="button" className={endingType === 'fireside_note' ? 'is-selected' : ''} onClick={() => setEndingType('fireside_note')}>留下一句话</button>
+              <button type="button" className={endingType === 'left_question' ? 'is-selected' : ''} onClick={() => setEndingType('left_question')}>留下一个问题</button>
+              <button type="button" className={endingType === 'nothing' ? 'is-selected' : ''} onClick={() => setEndingType('nothing')}>什么也不留下</button>
+            </div>
+            {endingType !== 'nothing' && (
+              <textarea value={endingText} onChange={(event) => setEndingText(event.target.value)} rows={4} placeholder={endingType === 'left_question' ? '把还没有回答的问题折成纸鸟……' : '只写下你愿意确认的一句话……'} />
+            )}
+            <button
+              type="button"
+              className="fireside-ending__leave"
+              disabled={endingType !== 'nothing' && !endingText.trim()}
+              onClick={() => {
+                if (endingType !== 'nothing') {
+                  onSaveJourneyEvent(endingType, endingText.trim(), authorizedMemoIds);
+                }
+                onClose();
+              }}
+            >
+              离开火边
+            </button>
+          </section>
+        ) : !showMemoryPicker && (
           <>
             {dialogueMode === 'organize' && authorizedMemos.length > 0 ? (
               <FireRings

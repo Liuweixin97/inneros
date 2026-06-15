@@ -41,6 +41,7 @@ import {
   saveBagMemoIds,
   saveCompanionInvited,
   saveJourneyEvents,
+  clearEphemeralJourneyState,
 } from '@/lib/game/journey-state';
 
 interface GameShellProps {
@@ -226,6 +227,7 @@ export default function GameShell({ onExit }: GameShellProps) {
 
   // 退出游戏
   const handleExit = useCallback(() => {
+    clearEphemeralJourneyState();
     clearCache();
     onExit();
   }, [onExit]);

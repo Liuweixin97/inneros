@@ -86,6 +86,7 @@ export default function PixelWorldCanvas({
     map?: HTMLImageElement;
     characters?: HTMLImageElement;
     objects?: HTMLImageElement;
+    companion?: HTMLImageElement;
   }>({});
   const [nearbyObject, setNearbyObject] = useState<WorldObject | null>(null);
   const [nearbyAction, setNearbyAction] = useState<NearbyAction>(null);
@@ -108,6 +109,7 @@ export default function PixelWorldCanvas({
       ['map', '/game/twilight-world-map-v3.png'],
       ['characters', '/game/twilight-character-atlas-cutout.png'],
       ['objects', '/game/twilight-object-atlas-cutout.png'],
+      ['companion', '/game/forest-companion.png'],
     ] as const;
     let cancelled = false;
     entries.forEach(([key, src]) => {
@@ -416,7 +418,7 @@ function findNearbyAction(
 
 function drawScene(
   canvas: HTMLCanvasElement | null,
-  images: { map?: HTMLImageElement; characters?: HTMLImageElement; objects?: HTMLImageElement },
+  images: { map?: HTMLImageElement; characters?: HTMLImageElement; objects?: HTMLImageElement; companion?: HTMLImageElement },
   player: { x: number; y: number; direction: Direction },
   second: { x: number; y: number; direction: Direction },
   playerChar: PlayerCharacter,
@@ -464,9 +466,14 @@ function drawScene(
   if (companionType === 'human_local' && images.characters?.complete) {
     const point = toScreen(second.x, second.y);
     drawCharacterSprite(context, images.characters, secondPlayerChar.id === 'wanderer' ? 0 : 1, second.direction, point.x, point.y, scale, now, reducedMotion);
-  } else if (companionType === 'llm' && images.objects?.complete) {
+  } else if (companionType === 'llm' && images.companion?.complete) {
     const point = toScreen(second.x, second.y);
-    drawAtlasCell(context, images.objects, 2, 2, 4, 3, point.x, point.y, 34 * scale, 34 * scale);
+    const size = 34 * scale;
+    context.save();
+    context.shadowColor = 'rgba(255, 207, 92, 0.62)';
+    context.shadowBlur = 12 * scale;
+    context.drawImage(images.companion, point.x - size / 2, point.y - size, size, size);
+    context.restore();
   }
 
   if (images.characters?.complete) {
@@ -486,6 +493,17 @@ function drawScene(
     context.stroke();
     context.restore();
   }
+
+  const journeyMarks = objects.filter((object) => object.userConfirmed).slice(-5);
+  journeyMarks.forEach((object) => {
+    const mark = toScreen(object.x - 12, object.y + 8);
+    context.save();
+    context.fillStyle = 'rgba(230, 205, 150, 0.3)';
+    context.beginPath();
+    context.ellipse(mark.x, mark.y, 3 * scale, 5 * scale, -0.4, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+  });
 }
 
 function drawCharacterSprite(

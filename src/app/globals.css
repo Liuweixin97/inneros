@@ -1397,6 +1397,64 @@ body {
   padding: 16px 20px 20px 26px;
 }
 
+.fireside-ending {
+  padding: 24px 26px 28px;
+}
+
+.fireside-ending > p {
+  color: rgba(255, 248, 231, 0.54);
+  font-size: 12px;
+}
+
+.fireside-ending > div {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.fireside-ending > div button {
+  border: 1px solid rgba(255, 224, 174, 0.12);
+  border-radius: 9px;
+  padding: 9px;
+  color: rgba(255, 248, 231, 0.46);
+  font-size: 10px;
+}
+
+.fireside-ending > div button.is-selected {
+  border-color: rgba(255, 168, 81, 0.36);
+  background: rgba(255, 155, 61, 0.1);
+  color: #ffc079;
+}
+
+.fireside-ending textarea {
+  width: 100%;
+  margin-top: 12px;
+  resize: none;
+  border: 1px solid rgba(255, 224, 174, 0.14);
+  border-radius: 11px;
+  outline: none;
+  background: rgba(0, 0, 0, 0.16);
+  padding: 11px;
+  color: #fff8e7;
+  font-size: 12px;
+}
+
+.fireside-ending__leave {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid rgba(125, 184, 90, 0.28);
+  border-radius: 9px;
+  background: rgba(125, 184, 90, 0.12);
+  padding: 9px;
+  color: #dcefd0;
+  font-size: 11px;
+}
+
+.fireside-ending__leave:disabled {
+  opacity: 0.3;
+}
+
 .fireside-composer textarea,
 .cowrite-panel textarea {
   width: 100%;
