@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "predev": "node scripts/kill-dev-server.mjs",
+    "dev": "next dev --webpack",
+    "dev:turbo": "next dev",
     "dev:webpack": "next dev --webpack",
+    "dev:kill": "node scripts/kill-dev-server.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
