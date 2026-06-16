@@ -266,85 +266,87 @@ export default function FiresideChat({
           )}
         </section>
 
-        {ending ? (
-          <section className="fireside-ending">
-            <p>离开前，可以留下一句话、一个问题，或什么也不留下。</p>
-            <div>
-              <button type="button" className={endingType === 'fireside_note' ? 'is-selected' : ''} onClick={() => setEndingType('fireside_note')}>留下一句话</button>
-              <button type="button" className={endingType === 'left_question' ? 'is-selected' : ''} onClick={() => setEndingType('left_question')}>留下一个问题</button>
-              <button type="button" className={endingType === 'nothing' ? 'is-selected' : ''} onClick={() => setEndingType('nothing')}>什么也不留下</button>
-            </div>
-            {endingType !== 'nothing' && (
-              <textarea value={endingText} onChange={(event) => setEndingText(event.target.value)} rows={4} placeholder={endingType === 'left_question' ? '把还没有回答的问题折成纸鸟……' : '只写下你愿意确认的一句话……'} />
-            )}
-            <button
-              type="button"
-              className="fireside-ending__leave"
-              disabled={endingType !== 'nothing' && !endingText.trim()}
-              onClick={() => {
-                if (endingType !== 'nothing') {
-                  onSaveJourneyEvent(endingType, endingText.trim(), authorizedMemoIds);
-                }
-                onClose();
-              }}
-            >
-              离开火边
-            </button>
-          </section>
-        ) : !showMemoryPicker && (
-          <>
-            <div className="fireside-messages" aria-live="polite">
-              {messages.length === 0 ? (
-                <div className="fireside-empty">
-                  <p>
-                    {dialogueMode === 'silent'
-                      ? '火焰轻轻响着。你不需要先说什么。'
-                      : dialogueMode === 'organize'
-                        ? '可以从一件具体发生过的事开始。苔灯会陪你区分当时发生了什么、当时怎样感受，以及现在怎么看。'
-                      : '你可以从刚刚遇见的那段记忆开始，也可以只说此刻想到的事。'}
-                  </p>
-                </div>
-              ) : messages.map((message, index) => (
-                <div key={`${message.role}-${index}`} className={`fireside-message ${message.role}`}>
-                  <span>{message.role === 'user' ? '你' : '苔灯'}</span>
-                  <p>{message.content || (loading ? '……' : '')}</p>
-                  {message.isInference && <small>这是苔灯的推测，不是原记录中的事实。</small>}
-                </div>
-              ))}
-              {error && <p className="fireside-error">{error}</p>}
-            </div>
-
-            <footer className="fireside-composer">
-              <textarea
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                placeholder={
-                  dialogueMode === 'silent'
-                    ? '想说时再写……'
-                    : dialogueMode === 'organize'
-                      ? '先说一件具体发生过的事……'
-                      : '在火边说一点……'
-                }
-                rows={2}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                    void send();
-                  }
-                }}
-              />
-              {loading ? (
-                <button type="button" onClick={() => abortRef.current?.abort()} aria-label="停止回应">
-                  <Pause size={17} />
-                </button>
-              ) : (
-                <button type="button" onClick={() => void send()} disabled={!input.trim()} aria-label="发送">
-                  <Send size={17} />
-                </button>
+        <div className="fireside-body">
+          {ending ? (
+            <section className="fireside-ending">
+              <p>离开前，可以留下一句话、一个问题，或什么也不留下。</p>
+              <div>
+                <button type="button" className={endingType === 'fireside_note' ? 'is-selected' : ''} onClick={() => setEndingType('fireside_note')}>留下一句话</button>
+                <button type="button" className={endingType === 'left_question' ? 'is-selected' : ''} onClick={() => setEndingType('left_question')}>留下一个问题</button>
+                <button type="button" className={endingType === 'nothing' ? 'is-selected' : ''} onClick={() => setEndingType('nothing')}>什么也不留下</button>
+              </div>
+              {endingType !== 'nothing' && (
+                <textarea value={endingText} onChange={(event) => setEndingText(event.target.value)} rows={4} placeholder={endingType === 'left_question' ? '把还没有回答的问题折成纸鸟……' : '只写下你愿意确认的一句话……'} />
               )}
-            </footer>
-          </>
-        )}
+              <button
+                type="button"
+                className="fireside-ending__leave"
+                disabled={endingType !== 'nothing' && !endingText.trim()}
+                onClick={() => {
+                  if (endingType !== 'nothing') {
+                    onSaveJourneyEvent(endingType, endingText.trim(), authorizedMemoIds);
+                  }
+                  onClose();
+                }}
+              >
+                离开火边
+              </button>
+            </section>
+          ) : !showMemoryPicker && (
+            <>
+              <div className="fireside-messages" aria-live="polite">
+                {messages.length === 0 ? (
+                  <div className="fireside-empty">
+                    <p>
+                      {dialogueMode === 'silent'
+                        ? '火焰轻轻响着。你不需要先说什么。'
+                        : dialogueMode === 'organize'
+                          ? '可以从一件具体发生过的事开始。苔灯会陪你区分当时发生了什么、当时怎样感受，以及现在怎么看。'
+                        : '你可以从刚刚遇见的那段记忆开始，也可以只说此刻想到的事。'}
+                    </p>
+                  </div>
+                ) : messages.map((message, index) => (
+                  <div key={`${message.role}-${index}`} className={`fireside-message ${message.role}`}>
+                    <span>{message.role === 'user' ? '你' : '苔灯'}</span>
+                    <p>{message.content || (loading ? '……' : '')}</p>
+                    {message.isInference && <small>这是苔灯的推测，不是原记录中的事实。</small>}
+                  </div>
+                ))}
+                {error && <p className="fireside-error">{error}</p>}
+              </div>
+
+              <footer className="fireside-composer">
+                <textarea
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  placeholder={
+                    dialogueMode === 'silent'
+                      ? '想说时再写……'
+                      : dialogueMode === 'organize'
+                        ? '先说一件具体发生过的事……'
+                        : '在火边说一点……'
+                  }
+                  rows={2}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      void send();
+                    }
+                  }}
+                />
+                {loading ? (
+                  <button type="button" onClick={() => abortRef.current?.abort()} aria-label="停止回应">
+                    <Pause size={17} />
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => void send()} disabled={!input.trim()} aria-label="发送">
+                    <Send size={17} />
+                  </button>
+                )}
+              </footer>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
