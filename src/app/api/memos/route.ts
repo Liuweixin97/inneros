@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     const memo = createMemo({ ...body, user_id: user.id });
     enqueueMemoAnalysis(memo.id);
-    after(() => drainAnalysisJobs(5, 2));
+    after(() => drainAnalysisJobs(8, 2, user.id));
 
     return NextResponse.json(memo, { status: 201 });
   } catch (error) {

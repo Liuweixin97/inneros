@@ -4,6 +4,7 @@ import { createMemosBatch } from '@/lib/db/memos';
 import { enqueueMemoAnalysis } from '@/lib/db/analysis-jobs';
 import { drainAnalysisJobs } from '@/lib/ai/job-runner';
 import type { MemoCreateInput } from '@/types';
+import { getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -11,6 +12,9 @@ export const maxDuration = 300;
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as { memos: MemoCreateInput[] };
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    if (user.isGuest) return NextResponse.json({ error: '游客只读，请登录后操作' }, { status: 403 });
 
     if (!body.memos || !Array.isArray(body.memos)) {
       return NextResponse.json(
@@ -26,12 +30,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { createdMemos, skippedCount } = createMemosBatch(body.memos);
+    const { createdMemos, skippedCount } = createMemosBatch(
+      body.memos.map((memo) => ({ ...memo, user_id: user.id })),
+    );
     for (const memo of createdMemos) {
       enqueueMemoAnalysis(memo.id);
     }
     if (createdMemos.length > 0) {
-      after(() => drainAnalysisJobs(createdMemos.length * 2, 10));
+      after(() => drainAnalysisJobs(Math.min(20, createdMemos.length * 2), 2, user.id));
     }
 
     return NextResponse.json({

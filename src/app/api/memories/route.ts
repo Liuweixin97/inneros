@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMemories } from '@/lib/db/memories';
 import type { MemoryStatus, MemoryType } from '@/types';
+import { getCurrentUserOrGuest } from '@/lib/auth';
 
 const MEMORY_TYPES: MemoryType[] = [
   'event', 'person', 'project', 'goal', 'state',
@@ -11,6 +12,7 @@ const MEMORY_STATUSES: MemoryStatus[] = ['active', 'dormant', 'resolved', 'super
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
+  const user = await getCurrentUserOrGuest();
   const params = request.nextUrl.searchParams;
   const type = params.get('type');
   const status = params.get('status');
@@ -20,6 +22,7 @@ export async function GET(request: NextRequest) {
     type: MEMORY_TYPES.includes(type as MemoryType) ? type as MemoryType : undefined,
     status: MEMORY_STATUSES.includes(status as MemoryStatus) ? status as MemoryStatus : undefined,
     query: params.get('query') || undefined,
+    userId: user.id,
     limit,
     offset,
   });

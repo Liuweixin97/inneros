@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
-import { getDb } from './index';
+import { DEFAULT_OWNER_USER_ID, getDb } from './index';
 import { getMemoById } from './memos';
 import { getEmbeddingVersion } from '@/lib/ai/retrieval-provider';
 import { MEMORY_PROMPT_VERSION } from '@/lib/ai/memory-linker';
@@ -14,6 +14,7 @@ export interface AnalysisJob {
   entity_id: string;
   idempotency_key: string;
   payload: string;
+  user_id: string;
   status: AnalysisJobStatus;
   attempts: number;
   max_attempts: number;
@@ -57,14 +58,16 @@ export function enqueueMemoAnalysis(
   ).get(idempotencyKey) as AnalysisJob | undefined;
   if (existing) return existing;
 
+  const userId = memo.user_id || DEFAULT_OWNER_USER_ID;
   const id = uuidv4();
   db.prepare(`
     INSERT INTO analysis_jobs (
-      id, type, entity_id, idempotency_key, payload, status,
+      id, user_id, type, entity_id, idempotency_key, payload, status,
       attempts, max_attempts, run_after, created_at, updated_at
-    ) VALUES (?, 'memo.extract', ?, ?, ?, 'pending', 0, 3, ?, ?, ?)
+    ) VALUES (?, ?, 'memo.extract', ?, ?, ?, 'pending', 0, 3, ?, ?, ?)
   `).run(
     id,
+    userId,
     memoId,
     idempotencyKey,
     JSON.stringify({ memo_id: memoId, content_hash: contentHash }),
@@ -91,14 +94,16 @@ export function enqueueMemoryLink(memoId: string, force = false): AnalysisJob {
   ).get(idempotencyKey) as AnalysisJob | undefined;
   if (existing) return existing;
 
+  const userId = memo.user_id || DEFAULT_OWNER_USER_ID;
   const id = uuidv4();
   db.prepare(`
     INSERT INTO analysis_jobs (
-      id, type, entity_id, idempotency_key, payload, status,
+      id, user_id, type, entity_id, idempotency_key, payload, status,
       attempts, max_attempts, run_after, created_at, updated_at
-    ) VALUES (?, 'memory.link', ?, ?, ?, 'pending', 0, 3, ?, ?, ?)
+    ) VALUES (?, ?, 'memory.link', ?, ?, ?, 'pending', 0, 3, ?, ?, ?)
   `).run(
     id,
+    userId,
     memoId,
     idempotencyKey,
     JSON.stringify({ memo_id: memoId, content_hash: contentHash, prompt_version: MEMORY_PROMPT_VERSION }),
@@ -124,14 +129,16 @@ export function enqueueMemoEmbedding(memoId: string, force = false): AnalysisJob
   ).get(idempotencyKey) as AnalysisJob | undefined;
   if (existing) return existing;
 
+  const userId = memo.user_id || DEFAULT_OWNER_USER_ID;
   const id = uuidv4();
   db.prepare(`
     INSERT INTO analysis_jobs (
-      id, type, entity_id, idempotency_key, payload, status,
+      id, user_id, type, entity_id, idempotency_key, payload, status,
       attempts, max_attempts, run_after, created_at, updated_at
-    ) VALUES (?, 'memo.embed', ?, ?, ?, 'pending', 0, 3, ?, ?, ?)
+    ) VALUES (?, ?, 'memo.embed', ?, ?, ?, 'pending', 0, 3, ?, ?, ?)
   `).run(
     id,
+    userId,
     memoId,
     idempotencyKey,
     JSON.stringify({ memo_id: memoId, content_hash: contentHash, embedding_version: version }),
@@ -149,7 +156,7 @@ export function getAnalysisJob(id: string): AnalysisJob | null {
   return row ?? null;
 }
 
-export function claimNextAnalysisJob(types?: AnalysisJobType[]): AnalysisJob | null {
+export function claimNextAnalysisJob(types?: AnalysisJobType[], userId?: string): AnalysisJob | null {
   const db = getDb();
   const now = new Date().toISOString();
   const allowedTypes = types?.length ? types : ['memo.extract', 'memo.embed', 'memory.link'];
@@ -162,9 +169,10 @@ export function claimNextAnalysisJob(types?: AnalysisJobType[]): AnalysisJob | n
         AND run_after <= ?
         AND attempts < max_attempts
         AND type IN (${typePlaceholders})
+        ${userId ? 'AND user_id = ?' : ''}
       ORDER BY created_at ASC
       LIMIT 1
-    `).get(now, ...allowedTypes) as { id: string } | undefined;
+    `).get(...(userId ? [now, ...allowedTypes, userId] : [now, ...allowedTypes])) as { id: string } | undefined;
     if (!candidate) return null;
 
     const result = db.prepare(`
@@ -181,7 +189,7 @@ export function claimNextAnalysisJob(types?: AnalysisJobType[]): AnalysisJob | n
   return claim();
 }
 
-export function enqueueAnalysisBackfill(batchSize = 500): {
+export function enqueueAnalysisBackfill(batchSize = 500, userId?: string): {
   scanned: number;
   memo_extract_enqueued: number;
   memo_embed_enqueued: number;
@@ -203,6 +211,7 @@ export function enqueueAnalysisBackfill(batchSize = 500): {
       ) AS chunks_processed
     FROM memos m
     WHERE m.privacy_level = 'normal'
+      ${userId ? 'AND m.user_id = @userId' : ''}
       AND (
         m.analysis_status IN ('pending', 'analyzing', 'failed')
         OR m.embedding IS NULL
@@ -223,8 +232,8 @@ export function enqueueAnalysisBackfill(batchSize = 500): {
         )
       )
     ORDER BY m.created_at ASC
-    LIMIT ?
-  `).all(Math.max(1, Math.min(5000, batchSize))) as Array<{
+    LIMIT @limit
+  `).all({ userId, limit: Math.max(1, Math.min(5000, batchSize)) }) as Array<{
     id: string;
     analysis_status: string;
     embedding: string | null;
@@ -262,8 +271,10 @@ export function enqueueAnalysisBackfill(batchSize = 500): {
   };
 }
 
-export function getAnalysisBackfillStats(): AnalysisBackfillStats {
+export function getAnalysisBackfillStats(userId?: string): AnalysisBackfillStats {
   const db = getDb();
+  const memoWhere = userId ? 'WHERE user_id = @userId' : '';
+  const jobWhere = userId ? 'WHERE user_id = @userId' : '';
   const memoStats = db.prepare(`
     SELECT
       COUNT(*) AS memos_total,
@@ -285,9 +296,11 @@ export function getAnalysisBackfillStats(): AnalysisBackfillStats {
         SELECT COUNT(DISTINCT entity_id)
         FROM analysis_jobs
         WHERE type = 'memory.link' AND status = 'succeeded'
+          ${userId ? 'AND user_id = @userId' : ''}
       ) AS memos_memory_processed
     FROM memos
-  `).get() as Omit<AnalysisBackfillStats,
+    ${memoWhere}
+  `).get(userId ? { userId } : {}) as Omit<AnalysisBackfillStats,
     'jobs_pending' | 'jobs_running' | 'jobs_failed' | 'jobs_dead' | 'jobs_succeeded'>;
   const jobStats = db.prepare(`
     SELECT
@@ -297,7 +310,8 @@ export function getAnalysisBackfillStats(): AnalysisBackfillStats {
       SUM(CASE WHEN status = 'dead' THEN 1 ELSE 0 END) AS jobs_dead,
       SUM(CASE WHEN status = 'succeeded' THEN 1 ELSE 0 END) AS jobs_succeeded
     FROM analysis_jobs
-  `).get() as Pick<AnalysisBackfillStats,
+    ${jobWhere}
+  `).get(userId ? { userId } : {}) as Pick<AnalysisBackfillStats,
     'jobs_pending' | 'jobs_running' | 'jobs_failed' | 'jobs_dead' | 'jobs_succeeded'>;
   return Object.fromEntries(
     Object.entries({ ...memoStats, ...jobStats }).map(([key, value]) => [key, Number(value) || 0]),

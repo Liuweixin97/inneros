@@ -154,6 +154,7 @@ function toUsage(usage?: ProviderUsage): LLMUsage | null {
 
 function recordRun(input: {
   runId: string;
+  userId?: string;
   task: LLMTask;
   model: string;
   status: 'succeeded' | 'failed';
@@ -167,12 +168,13 @@ function recordRun(input: {
     const usage = input.usage;
     getDb().prepare(`
       INSERT INTO llm_runs (
-        id, task, model, thinking_mode, status, latency_ms,
+        id, user_id, task, model, thinking_mode, status, latency_ms,
         prompt_tokens, completion_tokens, total_tokens,
         cache_hit_tokens, cache_miss_tokens, error_message, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       input.runId,
+      input.userId,
       input.task,
       input.model,
       input.thinking ?? 'disabled',
@@ -293,6 +295,7 @@ export async function complete(request: CompletionRequest): Promise<LLMCompletio
     recordRun({
       runId,
       task: request.task,
+      userId: request.userId,
       model: result.model,
       status: 'succeeded',
       startedAt,
@@ -304,6 +307,7 @@ export async function complete(request: CompletionRequest): Promise<LLMCompletio
     recordRun({
       runId,
       task: request.task,
+      userId: request.userId,
       model: config.model,
       status: 'failed',
       startedAt,
@@ -369,6 +373,7 @@ export async function streamEvents(
       recordRun({
         runId,
         task: request.task,
+        userId: request.userId,
         model: config.model,
         status,
         startedAt,
@@ -425,6 +430,7 @@ export async function streamEvents(
     recordRun({
       runId,
       task: request.task,
+      userId: request.userId,
       model: config.model,
       status: 'failed',
       startedAt,

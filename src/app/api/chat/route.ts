@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server';
 import { generateRAGResponse } from '@/lib/ai/rag';
 import { normalizeKnowledgeReferences } from '@/lib/ai/memo-references';
 import type { ConversationMode } from '@/types';
+import { getCurrentUser } from '@/lib/auth';
 
 interface ChatRequestBody {
   message: string;
@@ -17,6 +18,9 @@ interface ChatRequestBody {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) return Response.json({ error: '未登录' }, { status: 401 });
+    if (user.isGuest) return Response.json({ error: '游客只读，请登录后使用 AI 对话' }, { status: 403 });
     const body: ChatRequestBody = await request.json();
 
     // --- Validate request ---
@@ -39,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (conversationId) {
       // Verify conversation exists
-      const existing = getConversationById(conversationId);
+      const existing = getConversationById(conversationId, user.id);
       if (!existing) {
         return Response.json(
           { error: '对话不存在' },
@@ -50,7 +54,8 @@ export async function POST(request: NextRequest) {
       // Create new conversation
       const newConv = createConversation(
         body.message.slice(0, 50),
-        'unified'
+        'unified',
+        user.id,
       );
       conversationId = newConv.id;
     }
@@ -66,7 +71,7 @@ export async function POST(request: NextRequest) {
     });
 
     // --- Build conversation history from existing messages ---
-    const convData = getConversationById(conversationId);
+    const convData = getConversationById(conversationId, user.id);
     const previousMessages = convData?.messages || [];
     // Use last 20 messages as history (excluding the latest user message we just added)
     const history = previousMessages
@@ -84,6 +89,7 @@ export async function POST(request: NextRequest) {
       'unified',
       body.memo_id,
       body.thinking ? 'enabled' : 'disabled',
+      user.id,
     );
 
     // --- Build SSE stream ---

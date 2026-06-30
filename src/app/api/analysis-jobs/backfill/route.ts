@@ -4,12 +4,16 @@ import {
   getAnalysisBackfillStats,
 } from '@/lib/db/analysis-jobs';
 import { drainBackfillJobs } from '@/lib/ai/job-runner';
+import { getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function GET() {
-  return NextResponse.json(getAnalysisBackfillStats());
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+  if (user.isGuest) return NextResponse.json({ error: '游客只读' }, { status: 403 });
+  return NextResponse.json(getAnalysisBackfillStats(user.id));
 }
 
 export async function POST(request: NextRequest) {
@@ -22,20 +26,24 @@ export async function POST(request: NextRequest) {
     embedding_limit?: number;
     embedding_concurrency?: number;
   };
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+  if (user.isGuest) return NextResponse.json({ error: '游客只读' }, { status: 403 });
   const enqueued = enqueueAnalysisBackfill(
     Math.max(1, Math.min(5000, Number(body.enqueue_limit) || 500)),
+    user.id,
   );
   const processed = await drainBackfillJobs({
-    extractLimit: Number(body.extract_limit) || 100,
-    extractConcurrency: Number(body.extract_concurrency) || 16,
-    memoryLimit: Number(body.memory_limit) || 100,
-    memoryConcurrency: Number(body.memory_concurrency) || 4,
-    embeddingLimit: Number(body.embedding_limit) || 100,
-    embeddingConcurrency: Number(body.embedding_concurrency) || 6,
-  });
+    extractLimit: Number(body.extract_limit) || 50,
+    extractConcurrency: Number(body.extract_concurrency) || 4,
+    memoryLimit: Number(body.memory_limit) || 50,
+    memoryConcurrency: Number(body.memory_concurrency) || 2,
+    embeddingLimit: Number(body.embedding_limit) || 50,
+    embeddingConcurrency: Number(body.embedding_concurrency) || 3,
+  }, user.id);
   return NextResponse.json({
     enqueued,
     processed,
-    stats: getAnalysisBackfillStats(),
+    stats: getAnalysisBackfillStats(user.id),
   });
 }
