@@ -469,7 +469,7 @@ export function getDb(): Database.Database {
   `);
 
   ensureColumn(db, 'game_worlds', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
-  db.prepare('UPDATE game_worlds SET user_id = ? WHERE user_id IS NULL OR user_id = ""').run(DEFAULT_OWNER_USER_ID);
+  db.prepare("UPDATE game_worlds SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
   db.exec('CREATE INDEX IF NOT EXISTS idx_game_worlds_user_visit ON game_worlds(user_id, last_visited_at)');
 
   return db;
