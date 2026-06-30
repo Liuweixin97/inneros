@@ -1,0 +1,232 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="841mm" height="1089mm" viewBox="0 0 841 1089">
+  <defs>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#121826"/>
+      <stop offset="1" stop-color="#243244"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#42D9B6"/>
+      <stop offset="1" stop-color="#0E9F7C"/>
+    </linearGradient>
+    <linearGradient id="warm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFF5D7"/>
+      <stop offset="1" stop-color="#FFE2B2"/>
+    </linearGradient>
+    <pattern id="dotGrid" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.2" fill="#D3D8D4"/>
+    </pattern>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#16A085"/>
+    </marker>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#182532" flood-opacity=".10"/>
+    </filter>
+    <style>
+      .sans{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif}
+      .mono{font-family:"SF Mono","Menlo","Consolas",monospace}
+      .h1{font-size:44px;font-weight:800;letter-spacing:0;fill:#121826}
+      .h2{font-size:17px;font-weight:800;fill:#121826}
+      .h3{font-size:12px;font-weight:800;fill:#121826}
+      .body{font-size:9.3px;line-height:1.55;fill:#3E4A59}
+      .small{font-size:7.5px;fill:#687385}
+      .tiny{font-size:6.3px;fill:#7C8796}
+      .label{font-size:7.3px;font-weight:700;fill:#0E9F7C}
+      .section{fill:#FFFFFF;stroke:#E1E6E2;stroke-width:1}
+      .placeholder{fill:#F6F7F4;stroke:#AAB5AE;stroke-width:1.2;stroke-dasharray:7 6}
+      .placeholderText{font-size:8.5px;font-weight:700;fill:#7B857E}
+      .pillText{font-size:7.2px;font-weight:800;fill:#0A7C63}
+      .darkText{fill:#FFFFFF}
+    </style>
+  </defs>
+
+  <rect width="841" height="1089" fill="#FAFAF6"/>
+  <rect width="841" height="1089" fill="url(#dotGrid)" opacity=".42"/>
+  <circle cx="778" cy="114" r="190" fill="#DFF8EF" opacity=".75"/>
+  <circle cx="36" cy="1018" r="170" fill="#FFE8C6" opacity=".55"/>
+
+  <!-- Header -->
+  <g transform="translate(38 34)">
+    <g transform="translate(0 2)">
+      <rect width="42" height="42" rx="12" fill="url(#mint)"/>
+      <path d="M13 16c8-8 18-4 18 5 0 8-7 14-18 11 6-2 10-6 10-11 0-4-4-6-10-5z" fill="#fff"/>
+      <circle cx="17" cy="24" r="3" fill="#42D9B6"/>
+      <text x="53" y="17" class="sans" font-size="16" font-weight="800" fill="#121826">InnerOS</text>
+      <text x="53" y="34" class="mono tiny" letter-spacing="1.2">LOCAL FIRST MEMORY SYSTEM</text>
+    </g>
+    <g transform="translate(575 2)">
+      <rect width="190" height="32" rx="16" fill="#E6FBF3" stroke="#B8EBD9"/>
+      <text x="95" y="20" text-anchor="middle" class="sans pillText">主赛道 B · 服务与系统</text>
+    </g>
+
+    <text x="0" y="112" class="sans h1">InnerOS：个人记忆操作系统</text>
+    <text x="2" y="143" class="sans" font-size="17" font-weight="700" fill="#465365">从碎片记录到自我理解的本地优先服务系统</text>
+    <text x="2" y="171" class="sans body">InnerOS 把日常笔记、感受、摘录和对话保存为可追溯的原始记录，再通过 AI 分析、语义检索、主题时间线与林间世界交互，帮助用户看见反复出现的问题、变化轨迹与可验证的下一步。</text>
+    <text x="2" y="190" class="sans body">系统形成“记录-理解-回看-对话-验证”的服务闭环：AI 只基于用户授权记录回应，并区分原文事实与模型推断，让解释权始终回到用户手中。</text>
+  </g>
+
+  <!-- Big screen placeholder -->
+  <g transform="translate(38 248)" filter="url(#softShadow)">
+    <rect width="472" height="268" rx="18" fill="url(#ink)"/>
+    <rect x="16" y="16" width="440" height="236" rx="13" class="placeholder"/>
+    <line x1="34" y1="34" x2="438" y2="234" stroke="#CAD0CA" stroke-width="1"/>
+    <line x1="438" y1="34" x2="34" y2="234" stroke="#CAD0CA" stroke-width="1"/>
+    <text x="236" y="124" text-anchor="middle" class="sans placeholderText">产品主界面截图占位</text>
+    <text x="236" y="141" text-anchor="middle" class="sans tiny">建议放：今日页 / 记录页 / 洞察页组合截图</text>
+    <g transform="translate(31 219)">
+      <rect width="96" height="20" rx="10" fill="#FFFFFF" opacity=".92"/>
+      <text x="48" y="13" text-anchor="middle" class="sans label">真实记录入口</text>
+      <rect x="110" width="96" height="20" rx="10" fill="#FFFFFF" opacity=".92"/>
+      <text x="158" y="13" text-anchor="middle" class="sans label">AI 引用证据</text>
+      <rect x="220" width="96" height="20" rx="10" fill="#FFFFFF" opacity=".92"/>
+      <text x="268" y="13" text-anchor="middle" class="sans label">长期变化回看</text>
+      <rect x="330" width="80" height="20" rx="10" fill="#FFFFFF" opacity=".92"/>
+      <text x="370" y="13" text-anchor="middle" class="sans label">本地优先</text>
+    </g>
+  </g>
+
+  <!-- Problem / insight -->
+  <g transform="translate(530 248)">
+    <rect width="273" height="126" rx="16" class="section"/>
+    <text x="18" y="30" class="sans h2">01 背景痛点</text>
+    <text x="18" y="55" class="sans body">我们持续记录，却很少真正回到记录里。</text>
+    <text x="18" y="73" class="sans body">传统工具解决“存下来”，没有解决“重新理解自己”。</text>
+    <text x="18" y="91" class="sans body">心理类产品又容易替用户下结论，削弱主体性。</text>
+    <text x="18" y="111" class="sans label">设计机会：在记录与判断之间，补上一套可信的记忆服务。</text>
+  </g>
+  <g transform="translate(530 390)">
+    <rect width="273" height="126" rx="16" class="section"/>
+    <text x="18" y="30" class="sans h2">02 用户洞察</text>
+    <g transform="translate(18 50)">
+      <circle cx="7" cy="6" r="4" fill="#16A085"/><text x="20" y="9" class="sans body">找到反复出现的问题。</text>
+      <circle cx="7" cy="32" r="4" fill="#2F80ED"/><text x="20" y="35" class="sans body">看见想法和状态的变化。</text>
+      <circle cx="7" cy="58" r="4" fill="#F2994A"/><text x="20" y="61" class="sans body">在证据不足时保留不确定。</text>
+    </g>
+  </g>
+
+  <!-- Service loop -->
+  <g transform="translate(38 542)">
+    <rect width="765" height="138" rx="18" class="section"/>
+    <text x="20" y="31" class="sans h2">03 服务流程闭环</text>
+    <text x="20" y="51" class="sans small">真实记录进入本地数据库，AI 只作为理解层与索引层；用户通过多个触点回看、对话，并将行动结果回流到记忆系统。</text>
+
+    <g transform="translate(26 76)">
+      <g>
+        <rect width="92" height="42" rx="12" fill="#EAFBF5" stroke="#AEEBD7"/>
+        <text x="46" y="18" text-anchor="middle" class="sans h3">记录进入</text>
+        <text x="46" y="32" text-anchor="middle" class="sans tiny">笔记 / 摘录 / 对话</text>
+      </g>
+      <line x1="98" y1="21" x2="136" y2="21" stroke="#16A085" stroke-width="2" marker-end="url(#arrow)"/>
+      <g transform="translate(142 0)">
+        <rect width="92" height="42" rx="12" fill="#EEF4FF" stroke="#BFD5FF"/>
+        <text x="46" y="18" text-anchor="middle" class="sans h3">后台理解</text>
+        <text x="46" y="32" text-anchor="middle" class="sans tiny">主题 / 情绪 / 关键问题</text>
+      </g>
+      <line x1="240" y1="21" x2="278" y2="21" stroke="#16A085" stroke-width="2" marker-end="url(#arrow)"/>
+      <g transform="translate(284 0)">
+        <rect width="92" height="42" rx="12" fill="#FFF3DD" stroke="#FFD396"/>
+        <text x="46" y="18" text-anchor="middle" class="sans h3">关系建立</text>
+        <text x="46" y="32" text-anchor="middle" class="sans tiny">新增 / 更新 / 反驳</text>
+      </g>
+      <line x1="382" y1="21" x2="420" y2="21" stroke="#16A085" stroke-width="2" marker-end="url(#arrow)"/>
+      <g transform="translate(426 0)">
+        <rect width="92" height="42" rx="12" fill="#F4EEFF" stroke="#D7C4FF"/>
+        <text x="46" y="18" text-anchor="middle" class="sans h3">多入口回看</text>
+        <text x="46" y="32" text-anchor="middle" class="sans tiny">时间线 / 林间世界</text>
+      </g>
+      <line x1="524" y1="21" x2="562" y2="21" stroke="#16A085" stroke-width="2" marker-end="url(#arrow)"/>
+      <g transform="translate(568 0)">
+        <rect width="92" height="42" rx="12" fill="#FFEDEF" stroke="#FFC6CD"/>
+        <text x="46" y="18" text-anchor="middle" class="sans h3">授权对话</text>
+        <text x="46" y="32" text-anchor="middle" class="sans tiny">引用证据 / 标注推断</text>
+      </g>
+      <path d="M614 49 C535 76, 230 76, 72 49" fill="none" stroke="#16A085" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#arrow)"/>
+      <text x="338" y="69" text-anchor="middle" class="sans tiny">后续记录验证行动结果，并改变下一次理解</text>
+    </g>
+  </g>
+
+  <!-- Two columns -->
+  <g transform="translate(38 706)">
+    <rect width="366" height="176" rx="18" class="section"/>
+    <text x="18" y="31" class="sans h2">04 服务蓝图</text>
+    <g transform="translate(18 52)">
+      <text x="0" y="0" class="sans label">前台触点</text>
+      <rect x="0" y="10" width="330" height="28" rx="10" fill="#F6F7F4"/>
+      <text x="12" y="28" class="sans small">今日记录 · 记录筛选 · 主题页 · 时间线 · 洞察页 · 对话页 · 林间世界</text>
+      <text x="0" y="65" class="sans label">后台能力</text>
+      <rect x="0" y="75" width="330" height="28" rx="10" fill="#F6F7F4"/>
+      <text x="12" y="93" class="sans small">SQLite · 异步分析任务 · 记忆链接 · 语义检索 · 重排 · 引用生成</text>
+      <text x="0" y="130" class="sans label">服务原则</text>
+      <text x="70" y="130" class="sans small">原文优先 / 推断标注 / 用户授权 / 本地保存 / 可导出 / 可撤回</text>
+    </g>
+  </g>
+
+  <g transform="translate(426 706)">
+    <rect width="377" height="176" rx="18" class="section"/>
+    <text x="18" y="31" class="sans h2">05 AI 与数据边界</text>
+    <g transform="translate(22 54)">
+      <rect width="95" height="86" rx="14" fill="#121826"/>
+      <text x="47.5" y="28" text-anchor="middle" class="sans" font-size="11" font-weight="800" fill="#fff">原始记录</text>
+      <text x="47.5" y="48" text-anchor="middle" class="sans tiny darkText">事实层</text>
+      <text x="47.5" y="65" text-anchor="middle" class="sans tiny darkText">始终保留</text>
+      <line x1="111" y1="43" x2="145" y2="43" stroke="#16A085" stroke-width="2" marker-end="url(#arrow)"/>
+      <rect x="154" width="95" height="86" rx="14" fill="#EAFBF5" stroke="#AEEBD7"/>
+      <text x="201.5" y="28" text-anchor="middle" class="sans" font-size="11" font-weight="800" fill="#121826">AI 理解</text>
+      <text x="201.5" y="48" text-anchor="middle" class="sans tiny">索引层</text>
+      <text x="201.5" y="65" text-anchor="middle" class="sans tiny">不可覆盖事实</text>
+      <line x1="265" y1="43" x2="299" y2="43" stroke="#16A085" stroke-width="2" marker-end="url(#arrow)"/>
+      <rect x="308" width="45" height="86" rx="14" fill="#FFF3DD" stroke="#FFD396"/>
+      <text x="330.5" y="33" text-anchor="middle" class="sans" font-size="10" font-weight="800" fill="#121826">用户</text>
+      <text x="330.5" y="52" text-anchor="middle" class="sans tiny">确认</text>
+      <text x="330.5" y="68" text-anchor="middle" class="sans tiny">解释</text>
+      <text x="0" y="118" class="sans small">篝火对话最多主动带入 3 段记忆；静水池塘文字不会发送给 AI。</text>
+    </g>
+  </g>
+
+  <!-- Forest world screenshots -->
+  <g transform="translate(38 905)">
+    <rect width="765" height="122" rx="18" class="section"/>
+    <text x="20" y="31" class="sans h2">06 林间世界：把回看变成低压力体验</text>
+    <text x="20" y="52" class="sans small">同一套记忆数据，既能在工作台中高效管理，也能在像素化空间中被重新遇见、放下、共同确认。</text>
+    <g transform="translate(22 68)">
+      <g>
+        <rect width="112" height="38" rx="10" class="placeholder"/>
+        <text x="56" y="18" text-anchor="middle" class="sans placeholderText">截图占位 01</text>
+        <text x="56" y="31" text-anchor="middle" class="sans tiny">记忆花园</text>
+      </g>
+      <g transform="translate(126 0)">
+        <rect width="112" height="38" rx="10" class="placeholder"/>
+        <text x="56" y="18" text-anchor="middle" class="sans placeholderText">截图占位 02</text>
+        <text x="56" y="31" text-anchor="middle" class="sans tiny">篝火地对话</text>
+      </g>
+      <g transform="translate(252 0)">
+        <rect width="112" height="38" rx="10" class="placeholder"/>
+        <text x="56" y="18" text-anchor="middle" class="sans placeholderText">截图占位 03</text>
+        <text x="56" y="31" text-anchor="middle" class="sans tiny">静水池塘</text>
+      </g>
+      <g transform="translate(378 0)">
+        <rect width="112" height="38" rx="10" class="placeholder"/>
+        <text x="56" y="18" text-anchor="middle" class="sans placeholderText">截图占位 04</text>
+        <text x="56" y="31" text-anchor="middle" class="sans tiny">共居工坊</text>
+      </g>
+      <g transform="translate(520 -2)">
+        <rect width="176" height="42" rx="12" fill="#121826"/>
+        <text x="16" y="18" class="sans" font-size="9" font-weight="800" fill="#fff">核心体验模块</text>
+        <text x="16" y="33" class="sans tiny darkText">木屋 / 花园 / 篝火 / 池塘 / 循光寻迹 / 工坊</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Bottom impact and business -->
+  <g transform="translate(38 1044)">
+    <rect width="224" height="1.2" fill="#CBD3CD"/>
+    <text x="0" y="21" class="sans label">价值</text>
+    <text x="38" y="21" class="sans tiny">减少碎片记录的沉没成本，让长期自我理解有证据、有边界、可回看。</text>
+
+    <text x="0" y="43" class="sans label">商业模式</text>
+    <text x="56" y="43" class="sans tiny">本地基础版 + 可选 AI 服务 + 加密同步增值服务 + 专业复盘模板。</text>
+  </g>
+  <g transform="translate(638 1038)">
+    <rect width="165" height="38" rx="19" fill="#121826"/>
+    <text x="82.5" y="24" text-anchor="middle" class="sans" font-size="10" font-weight="800" fill="#fff">SERVICE SYSTEM DESIGN</text>
+  </g>
+</svg>
