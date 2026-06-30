@@ -392,6 +392,7 @@ export default function GameShell({ onExit }: GameShellProps) {
                 playerY={playerY}
                 memos={memos}
                 bagMemoIds={authorizedMemoIds}
+                events={journeyEvents}
                 onRemoveFromBag={(memoId) => handleAuthorizeMemos(
                   authorizedMemoIds.filter((id) => id !== memoId),
                 )}
@@ -491,6 +492,11 @@ export default function GameShell({ onExit }: GameShellProps) {
               onRemoveFromBag={(memoId) => handleAuthorizeMemos(
                 authorizedMemoIds.filter((id) => id !== memoId),
               )}
+              onJourneyEvent={(text, memoIds) => addJourneyEvent({
+                type: 'pond_release',
+                text,
+                sourceMemoIds: memoIds,
+              })}
               onClose={handleCloseAll}
             />
           )}

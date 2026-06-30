@@ -3705,3 +3705,382 @@ body {
   font-size: 1rem;
   line-height: 1.9;
 }
+
+/* ============================================================
+   林间世界 V3 — 纸面闭环
+   ============================================================ */
+
+.game-world-brief {
+  position: absolute;
+  left: 24px;
+  bottom: 88px;
+  width: min(320px, calc(100vw - 48px));
+  border: 2px solid rgba(92, 62, 34, 0.28);
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(253, 246, 227, 0.96), rgba(244, 232, 204, 0.96));
+  box-shadow:
+    0 10px 32px rgba(20, 12, 5, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+  padding: 14px 15px;
+  color: var(--game-ink);
+}
+
+.game-world-brief h3 {
+  margin-top: 5px;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.game-world-brief p {
+  margin-top: 7px;
+  color: rgba(59, 46, 42, 0.68);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.game-world-brief > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.game-world-brief span {
+  border: 1px solid rgba(107, 63, 26, 0.12);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.34);
+  padding: 4px 6px;
+  color: rgba(59, 46, 42, 0.58);
+  font-size: 10px;
+}
+
+.game-world-brief button {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid rgba(74, 124, 47, 0.34);
+  border-radius: 3px;
+  background: rgba(74, 124, 47, 0.12);
+  padding: 8px 10px;
+  color: #2d5016;
+  font-size: 12px;
+}
+
+.game-world-brief button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.game-kicker {
+  color: rgba(92, 62, 34, 0.58);
+  letter-spacing: 0.08em;
+}
+
+.game-icon-button {
+  border-radius: 3px;
+  border-color: rgba(107, 63, 26, 0.18);
+  background: rgba(255, 255, 255, 0.34);
+  color: var(--game-ink);
+}
+
+.fireside-panel,
+.workshop-panel,
+.pond-panel-v2,
+.companion-bench,
+.cabin-panel,
+.light-trail-panel,
+.object-detail-panel {
+  border: 2px solid rgba(92, 62, 34, 0.38);
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(253, 246, 227, 0.98), rgba(244, 232, 204, 0.98));
+  box-shadow:
+    0 22px 72px rgba(10, 4, 2, 0.36),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.36),
+    inset 0 -18px 42px rgba(107, 63, 26, 0.06);
+  color: var(--game-ink);
+}
+
+.fireside-header h2,
+.workshop-panel h2,
+.pond-panel-v2 h2,
+.companion-bench h2,
+.cabin-panel h2,
+.light-trail-panel h2,
+.object-detail-panel h2 {
+  color: var(--game-ink);
+  text-shadow: none;
+}
+
+.fireside-memory-context,
+.fireside-composer,
+.pond-lantern-off {
+  border-color: rgba(107, 63, 26, 0.14);
+}
+
+.fireside-memory-summary,
+.fireside-memory-summary__copy strong,
+.fireside-memory-picker__header strong,
+.fireside-message > span,
+.workshop-step > p,
+.pond-panel-v2 > header button,
+.light-trail-panel > header button,
+.companion-bench__choices button,
+.cabin-panel > footer button {
+  color: rgba(59, 46, 42, 0.68);
+}
+
+.fireside-memory-summary__copy small,
+.fireside-memory-picker__header small,
+.fireside-memory-picker__header > span,
+.fireside-memory-picker small,
+.workshop-memory-list small,
+.pond-choices span,
+.pond-lantern-off p,
+.pond-release > p,
+.pond-release__bag small,
+.pond-reflection__empty,
+.light-trail-question p,
+.light-trail-name p,
+.companion-bench__choices span,
+.cabin-panel__grid p,
+.cabin-echo__empty {
+  color: rgba(59, 46, 42, 0.5);
+}
+
+.fireside-memory-picker label,
+.fireside-message p,
+.fireside-local-note,
+.workshop-memory-list button,
+.workshop-question-list button,
+.workshop-carriers button,
+.workshop-boards article,
+.pond-choices button,
+.pond-release__bag article,
+.pond-reflection article,
+.light-trail-excerpt,
+.companion-bench__choices button,
+.companion-bench__ledger,
+.cabin-panel__grid article,
+.cabin-echo,
+.cabin-echo__list article,
+.cabin-route,
+.workshop-empty-material {
+  border: 1px solid rgba(107, 63, 26, 0.16);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.32);
+  color: var(--game-ink);
+}
+
+.fireside-message.user p {
+  background: rgba(74, 124, 47, 0.12);
+}
+
+.fireside-message p,
+.pond-reflection article p,
+.pond-sit p,
+.light-trail-excerpt blockquote,
+.companion-bench__choices strong,
+.cabin-panel__grid strong,
+.cabin-echo__list p {
+  color: var(--game-ink);
+}
+
+.fireside-modes button,
+.fireside-ending > div button,
+.fireside-memory-picker__footer button,
+.workshop-progress span,
+.workshop-decisions button,
+.pond-release__actions button,
+.pond-release__done button,
+.light-trail-question button,
+.cabin-panel > footer button {
+  border-radius: 3px;
+}
+
+.fireside-modes button {
+  border-color: rgba(107, 63, 26, 0.14);
+  color: rgba(59, 46, 42, 0.62);
+}
+
+.fireside-modes button.is-active,
+.workshop-memory-list button.is-selected,
+.workshop-question-list button.is-selected,
+.workshop-carriers button.is-selected,
+.companion-bench__choices button.is-selected,
+.companion-bench__choices button:hover,
+.pond-choices button:hover {
+  border-color: rgba(74, 124, 47, 0.38);
+  background: rgba(74, 124, 47, 0.12);
+  color: #2d5016;
+}
+
+.fireside-composer textarea,
+.fireside-ending textarea,
+.fireside-local-note textarea,
+.workshop-step > input,
+.workshop-step > textarea,
+.workshop-writing textarea,
+.pond-release textarea,
+.light-trail-name input {
+  border: 1px solid rgba(107, 63, 26, 0.18);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.42);
+  color: var(--game-ink);
+}
+
+.fireside-composer button,
+.fireside-ending__leave,
+.fireside-local-note__actions button:first-child,
+.workshop-primary,
+.light-trail-primary,
+.pond-release__actions button,
+.pond-release__done button,
+.cabin-panel > footer button:nth-child(2) {
+  border: 1px solid rgba(74, 124, 47, 0.34);
+  border-radius: 3px;
+  background: rgba(74, 124, 47, 0.14);
+  color: #2d5016;
+}
+
+.fireside-local-note {
+  margin: 22px 26px 26px;
+  padding: 18px;
+}
+
+.fireside-local-note h3,
+.cabin-route h3 {
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.fireside-local-note p,
+.cabin-route p,
+.workshop-empty-material p {
+  margin-top: 8px;
+  color: rgba(59, 46, 42, 0.62);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.fireside-local-note textarea {
+  width: 100%;
+  margin-top: 13px;
+  resize: none;
+  padding: 11px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.fireside-local-note__materials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.fireside-local-note__materials span {
+  border: 1px solid rgba(107, 63, 26, 0.13);
+  border-radius: 3px;
+  padding: 4px 7px;
+  color: rgba(59, 46, 42, 0.56);
+  font-size: 10px;
+}
+
+.fireside-local-note__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.fireside-local-note__actions button {
+  min-height: 36px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.fireside-local-note__actions button:last-child {
+  border: 1px solid rgba(107, 63, 26, 0.16);
+  color: rgba(59, 46, 42, 0.62);
+}
+
+.fireside-local-note small {
+  display: block;
+  margin-top: 9px;
+  color: rgba(74, 124, 47, 0.78);
+  font-size: 11px;
+}
+
+.companion-bench__ledger,
+.cabin-route,
+.workshop-empty-material {
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.companion-bench__ledger ul,
+.cabin-route ol {
+  margin-top: 10px;
+  padding-left: 18px;
+  color: rgba(59, 46, 42, 0.66);
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.workshop-empty-material small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(59, 46, 42, 0.48);
+  font-size: 11px;
+}
+
+.workshop-empty-material button {
+  margin-top: 12px;
+  border: 1px solid rgba(74, 124, 47, 0.28);
+  border-radius: 3px;
+  padding: 8px 10px;
+  color: #2d5016;
+}
+
+.light-trail-empty {
+  display: grid;
+  min-height: 230px;
+  place-items: center;
+  padding: 28px;
+  text-align: center;
+}
+
+.light-trail-empty p {
+  max-width: 360px;
+  color: rgba(59, 46, 42, 0.62);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+@media (max-width: 768px) {
+  .game-world-brief {
+    right: 14px;
+    bottom: max(136px, calc(env(safe-area-inset-bottom) + 128px));
+    left: 14px;
+    width: auto;
+  }
+
+  .fireside-panel,
+  .workshop-panel,
+  .pond-panel-v2,
+  .companion-bench,
+  .cabin-panel,
+  .light-trail-panel {
+    max-height: 88vh;
+    border-radius: 4px 4px 0 0;
+  }
+
+  .fireside-local-note__actions,
+  .companion-bench__choices,
+  .cabin-panel__grid,
+  .cabin-echo__list {
+    grid-template-columns: 1fr;
+  }
+}

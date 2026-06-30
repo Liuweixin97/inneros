@@ -323,6 +323,8 @@ export function getDb(): Database.Database {
     WHERE username IS NULL OR username = ''
   `).run(DEFAULT_OWNER_USER_ID, DEFAULT_OWNER_USER_ID);
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+  ensureColumn(db, 'memos', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
+  db.prepare("UPDATE memos SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
   const now = new Date().toISOString();
   db.prepare(`
     INSERT OR IGNORE INTO users (id, name, username, email, password_hash, created_at, updated_at)
@@ -470,7 +472,18 @@ export function getDb(): Database.Database {
 
   ensureColumn(db, 'game_worlds', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
   db.prepare("UPDATE game_worlds SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
-  db.exec('CREATE INDEX IF NOT EXISTS idx_game_worlds_user_visit ON game_worlds(user_id, last_visited_at)');
+  ensureColumn(db, 'world_objects', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
+  ensureColumn(db, 'companion_sessions', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
+  ensureColumn(db, 'shared_memory_drafts', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
+  db.prepare("UPDATE world_objects SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
+  db.prepare("UPDATE companion_sessions SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
+  db.prepare("UPDATE shared_memory_drafts SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_game_worlds_user_visit ON game_worlds(user_id, last_visited_at);
+    CREATE INDEX IF NOT EXISTS idx_world_objects_user_world ON world_objects(user_id, world_id, hidden);
+    CREATE INDEX IF NOT EXISTS idx_companion_sessions_user_world ON companion_sessions(user_id, world_id, started_at);
+    CREATE INDEX IF NOT EXISTS idx_shared_drafts_user_session ON shared_memory_drafts(user_id, session_id);
+  `);
 
   return db;
 }

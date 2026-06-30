@@ -65,6 +65,15 @@ export default function CompanionBench({
             <span>两名角色在同一块屏幕里行走。</span>
           </button>
         </div>
+
+        <aside className="companion-bench__ledger">
+          <p className="game-kicker">同行边界</p>
+          <ul>
+            <li>一个人走：不会调用 AI，也不会读取行囊。</li>
+            <li>苔灯同行：只看你本次放进行囊的记录。</li>
+            <li>同屏双人：工坊需要双方靠近后才会开启。</li>
+          </ul>
+        </aside>
       </section>
     </div>
   );

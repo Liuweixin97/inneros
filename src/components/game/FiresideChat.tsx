@@ -51,6 +51,8 @@ export default function FiresideChat({
   const [ending, setEnding] = useState(false);
   const [endingText, setEndingText] = useState('');
   const [endingType, setEndingType] = useState<'fireside_note' | 'left_question' | 'nothing'>('nothing');
+  const [localNote, setLocalNote] = useState('');
+  const [localSaved, setLocalSaved] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const authorizedMemos = useMemo(
@@ -76,6 +78,12 @@ export default function FiresideChat({
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
+    if (companionType !== 'llm') {
+      onSaveJourneyEvent('fireside_note', text, authorizedMemoIds);
+      setInput('');
+      setLocalSaved(true);
+      return;
+    }
     setInput('');
     setError('');
     setLoading(true);
@@ -129,6 +137,14 @@ export default function FiresideChat({
       return;
     }
     onClose();
+  };
+
+  const saveLocalNote = () => {
+    const text = localNote.trim();
+    if (!text) return;
+    onSaveJourneyEvent('fireside_note', text, authorizedMemoIds);
+    setLocalNote('');
+    setLocalSaved(true);
   };
 
   return (
@@ -291,6 +307,39 @@ export default function FiresideChat({
               >
                 离开火边
               </button>
+            </section>
+          ) : companionType !== 'llm' && !showMemoryPicker ? (
+            <section className="fireside-local-note">
+              <p className="game-kicker">独自坐着</p>
+              <h3>这张纸不会交给苔灯</h3>
+              <p>
+                你可以只把此刻的说法放在火边。它会成为本次旅程回声，但不会请求 AI。
+              </p>
+              {authorizedMemos.length > 0 && (
+                <div className="fireside-local-note__materials">
+                  {authorizedMemos.map((memo) => (
+                    <span key={memo.id}>{memo.ai_title || memo.plain_text.slice(0, 20) || '未命名记录'}</span>
+                  ))}
+                </div>
+              )}
+              <textarea
+                value={localNote}
+                onChange={(event) => {
+                  setLocalNote(event.target.value);
+                  setLocalSaved(false);
+                }}
+                rows={6}
+                placeholder="只写下你愿意确认的一句话……"
+              />
+              <div className="fireside-local-note__actions">
+                <button type="button" disabled={!localNote.trim()} onClick={saveLocalNote}>
+                  放在火边
+                </button>
+                <button type="button" onClick={() => onCompanionTypeChange('llm')}>
+                  邀请苔灯回应
+                </button>
+              </div>
+              {localSaved && <small>已放在本次旅程回声里。</small>}
             </section>
           ) : !showMemoryPicker && (
             <>

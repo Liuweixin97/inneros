@@ -1,7 +1,7 @@
 'use client';
 
-import { ArrowLeft, Flame, Flower2, Hammer, Home, Settings, Trees, Waves } from 'lucide-react';
-import type { CompanionType, GamePhase, GameWorld, Memo } from '@/types';
+import { Armchair, ArrowLeft, Flame, Flower2, Hammer, Home, Settings, Trees, Waves } from 'lucide-react';
+import type { CompanionType, GamePhase, GameWorld, JourneyEvent, Memo, MapLocation } from '@/types';
 import { getPlayerLocation, getRegion } from '@/lib/game/map';
 import BagHUD from './BagHUD';
 
@@ -13,6 +13,7 @@ interface WorldHUDProps {
   playerY: number;
   memos: Memo[];
   bagMemoIds: string[];
+  events: JourneyEvent[];
   onRemoveFromBag: (memoId: string) => void;
   onOpenFireside: () => void;
   onOpenLightTrail: () => void;
@@ -27,6 +28,7 @@ export default function WorldHUD({
   playerY,
   memos,
   bagMemoIds,
+  events,
   onRemoveFromBag,
   onOpenFireside,
   onOpenLightTrail,
@@ -37,6 +39,8 @@ export default function WorldHUD({
   const region = locationId ? getRegion(locationId) : null;
   const RegionIcon = region?.id === 'cabin'
     ? Home
+    : region?.id === 'bench'
+      ? Armchair
     : region?.id === 'garden'
       ? Flower2
       : region?.id === 'fireside'
@@ -46,6 +50,7 @@ export default function WorldHUD({
           : region?.id === 'workshop'
             ? Hammer
             : Trees;
+  const guide = getPlaceGuide(region?.id ?? null, bagMemoIds.length, events);
 
   return (
     <div className={`game-hud ${phase === 'pond' ? 'is-quiet' : ''}`}>
@@ -100,6 +105,25 @@ export default function WorldHUD({
         <span><kbd>Esc</kbd> 设置</span>
       </div>
 
+      <section className="game-world-brief" aria-label="当前地点的工作流">
+        <p className="game-kicker">今日闭环</p>
+        <h3>{guide.title}</h3>
+        <p>{guide.body}</p>
+        <div>
+          <span>{memos.length} 段近期记录</span>
+          <span>{bagMemoIds.length} 段在行囊</span>
+          <span>{events.length} 次旅程回声</span>
+        </div>
+        {guide.action === 'trail' && (
+          <button type="button" disabled={bagMemoIds.length < 2} onClick={onOpenLightTrail}>
+            {bagMemoIds.length < 2 ? '至少带上两段记忆' : '循光命名一条路'}
+          </button>
+        )}
+        {guide.action === 'fireside' && (
+          <button type="button" onClick={onOpenFireside}>去火边整理一句话</button>
+        )}
+      </section>
+
       <BagHUD
         memos={memos}
         memoIds={bagMemoIds}
@@ -110,4 +134,55 @@ export default function WorldHUD({
       />
     </div>
   );
+}
+
+function getPlaceGuide(location: MapLocation | null, bagCount: number, events: JourneyEvent[]) {
+  const hasQuestion = events.some((event) => event.type === 'left_question');
+  if (location === 'garden') {
+    return {
+      title: '花园负责让记忆现身',
+      body: '走近一段近期记录，读完后只带走今天愿意再看一眼的部分。',
+      action: null,
+    };
+  }
+  if (location === 'bench') {
+    return {
+      title: '长椅只决定怎样同行',
+      body: '一个人、同屏双人、或邀请苔灯。选择同行方式不等于开放全部笔记。',
+      action: null,
+    };
+  }
+  if (location === 'fireside') {
+    return {
+      title: '火边把此刻说法放到光里',
+      body: bagCount > 0 ? '你已经带了材料，可以独自写一句，也可以让苔灯只看行囊。' : '没有材料也可以坐下；有材料时，回应会更贴近真实记录。',
+      action: 'fireside' as const,
+    };
+  }
+  if (location === 'pond') {
+    return {
+      title: '池塘负责放下，不负责解释',
+      body: '这里不会调用 AI。可以移出行囊、写临时漂流瓶，或看本次旅程的倒影。',
+      action: null,
+    };
+  }
+  if (location === 'workshop') {
+    return {
+      title: '工坊让两个版本并存',
+      body: '它不合成正确答案，只让差异以并排、相交、留缝或收回的方式留下。',
+      action: null,
+    };
+  }
+  if (location === 'forest') {
+    return {
+      title: '小径只在你确认后留下',
+      body: bagCount >= 2 ? '苔灯可以提出相似线索，但是否同路由你判断。' : '带上至少两段记忆后，可以来这里判断它们是否真的有关。',
+      action: 'trail' as const,
+    };
+  }
+  return {
+    title: hasQuestion ? '今天已有一个问题在木屋等你' : '先从一段真实记录开始',
+    body: '林间世界不是建议机器；它把你写过、带过、确认过的东西摆回你面前。',
+    action: null,
+  };
 }

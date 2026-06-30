@@ -10,7 +10,7 @@ import type {
   SharedMemoryDraft,
   GameSeason,
 } from '@/types';
-import { getDb } from './index';
+import { DEFAULT_OWNER_USER_ID, getDb } from './index';
 
 // ---- 内部解析 ----
 
@@ -72,11 +72,11 @@ function parseSharedDraft(row: Record<string, unknown>): SharedMemoryDraft {
 
 // ---- GameWorld CRUD ----
 
-export function getOrCreateWorld(): GameWorld {
+export function getOrCreateWorld(userId = DEFAULT_OWNER_USER_ID): GameWorld {
   const db = getDb();
   const existing = db
-    .prepare("SELECT * FROM game_worlds WHERE owner_user_id = 'local' LIMIT 1")
-    .get() as Record<string, unknown> | undefined;
+    .prepare('SELECT * FROM game_worlds WHERE user_id = ? ORDER BY last_visited_at DESC LIMIT 1')
+    .get(userId) as Record<string, unknown> | undefined;
 
   if (existing) {
     return parseWorld(existing);
@@ -85,49 +85,54 @@ export function getOrCreateWorld(): GameWorld {
   const now = new Date().toISOString();
   const id = uuidv4();
   db.prepare(`
-    INSERT INTO game_worlds (id, owner_user_id, display_name, created_at, last_visited_at, season, player_x, player_y, settings)
-    VALUES (?, 'local', '林间世界', ?, ?, 'spring', 345, 245, '{"muted":false,"reducedMotion":false}')
-  `).run(id, now, now);
+    INSERT INTO game_worlds (id, owner_user_id, user_id, display_name, created_at, last_visited_at, season, player_x, player_y, settings)
+    VALUES (?, ?, ?, '林间世界', ?, ?, 'spring', 345, 245, '{"muted":false,"reducedMotion":false}')
+  `).run(id, userId, userId, now, now);
 
   const row = db.prepare('SELECT * FROM game_worlds WHERE id = ?').get(id) as Record<string, unknown>;
   return parseWorld(row);
 }
 
-export function updateWorldVisit(worldId: string, playerX: number, playerY: number): void {
+export function updateWorldVisit(worldId: string, userId: string, playerX: number, playerY: number): void {
   const db = getDb();
   db.prepare(`
-    UPDATE game_worlds SET last_visited_at = ?, player_x = ?, player_y = ? WHERE id = ?
-  `).run(new Date().toISOString(), playerX, playerY, worldId);
+    UPDATE game_worlds SET last_visited_at = ?, player_x = ?, player_y = ? WHERE id = ? AND user_id = ?
+  `).run(new Date().toISOString(), playerX, playerY, worldId, userId);
 }
 
-export function updateWorldSettings(worldId: string, settings: Partial<GameWorldSettings>): GameWorld | null {
+export function updateWorldSettings(worldId: string, userId: string, settings: Partial<GameWorldSettings>): GameWorld | null {
   const db = getDb();
-  const row = db.prepare('SELECT settings FROM game_worlds WHERE id = ?').get(worldId) as Record<string, unknown> | undefined;
+  const row = db.prepare('SELECT settings FROM game_worlds WHERE id = ? AND user_id = ?').get(worldId, userId) as Record<string, unknown> | undefined;
   if (!row) return null;
   const current = JSON.parse(row.settings as string) as GameWorldSettings;
   const next = { ...current, ...settings };
-  db.prepare('UPDATE game_worlds SET settings = ? WHERE id = ?').run(JSON.stringify(next), worldId);
-  const updated = db.prepare('SELECT * FROM game_worlds WHERE id = ?').get(worldId) as Record<string, unknown>;
+  db.prepare('UPDATE game_worlds SET settings = ? WHERE id = ? AND user_id = ?').run(JSON.stringify(next), worldId, userId);
+  const updated = db.prepare('SELECT * FROM game_worlds WHERE id = ? AND user_id = ?').get(worldId, userId) as Record<string, unknown>;
   return parseWorld(updated);
 }
 
-export function updateWorldSeason(worldId: string, season: GameSeason): void {
+export function updateWorldSeason(worldId: string, userId: string, season: GameSeason): void {
   const db = getDb();
-  db.prepare('UPDATE game_worlds SET season = ? WHERE id = ?').run(season, worldId);
+  db.prepare('UPDATE game_worlds SET season = ? WHERE id = ? AND user_id = ?').run(season, worldId, userId);
 }
 
 // ---- WorldObject CRUD ----
 
-export function getWorldObjects(worldId: string): WorldObject[] {
+export function getWorldObjects(worldId: string, userId?: string): WorldObject[] {
   const db = getDb();
   const rows = db
-    .prepare('SELECT * FROM world_objects WHERE world_id = ? AND hidden = 0 ORDER BY created_at ASC')
-    .all(worldId) as Record<string, unknown>[];
+    .prepare(`
+      SELECT * FROM world_objects
+      WHERE world_id = ? AND hidden = 0 ${userId ? 'AND user_id = ?' : ''}
+      ORDER BY created_at ASC
+    `)
+    .all(...(userId ? [worldId, userId] : [worldId])) as Record<string, unknown>[];
   return rows.map(parseWorldObject);
 }
 
 export function createWorldObject(input: {
   worldId: string;
+  userId: string;
   type: WorldObjectType;
   x: number;
   y: number;
@@ -143,12 +148,13 @@ export function createWorldObject(input: {
   const now = new Date().toISOString();
   db.prepare(`
     INSERT INTO world_objects
-      (id, world_id, type, x, y, layer, source_memo_ids, source_session_id,
+      (id, world_id, user_id, type, x, y, layer, source_memo_ids, source_session_id,
        user_confirmed, hidden, annotation, metadata, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
   `).run(
     id,
     input.worldId,
+    input.userId,
     input.type,
     input.x,
     input.y,
@@ -166,10 +172,11 @@ export function createWorldObject(input: {
 
 export function updateWorldObject(
   id: string,
+  userId: string,
   updates: Partial<Pick<WorldObject, 'x' | 'y' | 'hidden' | 'annotation' | 'userConfirmed'>>,
 ): WorldObject | null {
   const db = getDb();
-  const existing = db.prepare('SELECT * FROM world_objects WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  const existing = db.prepare('SELECT * FROM world_objects WHERE id = ? AND user_id = ?').get(id, userId) as Record<string, unknown> | undefined;
   if (!existing) return null;
 
   const sets: string[] = [];
@@ -183,22 +190,24 @@ export function updateWorldObject(
 
   if (sets.length > 0) {
     params.push(id);
-    db.prepare(`UPDATE world_objects SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    params.push(userId);
+    db.prepare(`UPDATE world_objects SET ${sets.join(', ')} WHERE id = ? AND user_id = ?`).run(...params);
   }
 
-  const row = db.prepare('SELECT * FROM world_objects WHERE id = ?').get(id) as Record<string, unknown>;
+  const row = db.prepare('SELECT * FROM world_objects WHERE id = ? AND user_id = ?').get(id, userId) as Record<string, unknown>;
   return parseWorldObject(row);
 }
 
-export function hideWorldObject(id: string): void {
+export function hideWorldObject(id: string, userId: string): void {
   const db = getDb();
-  db.prepare('UPDATE world_objects SET hidden = 1 WHERE id = ?').run(id);
+  db.prepare('UPDATE world_objects SET hidden = 1 WHERE id = ? AND user_id = ?').run(id, userId);
 }
 
 // ---- CompanionSession CRUD ----
 
 export function createCompanionSession(input: {
   worldId: string;
+  userId: string;
   companionType: CompanionType;
   dialogueMode?: DialogueMode;
   authorizedMemoIds?: string[];
@@ -207,11 +216,12 @@ export function createCompanionSession(input: {
   const id = uuidv4();
   const now = new Date().toISOString();
   db.prepare(`
-    INSERT INTO companion_sessions (id, world_id, companion_type, dialogue_mode, authorized_memo_ids, started_at)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO companion_sessions (id, world_id, user_id, companion_type, dialogue_mode, authorized_memo_ids, started_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     input.worldId,
+    input.userId,
     input.companionType,
     input.dialogueMode ?? 'listen',
     JSON.stringify(input.authorizedMemoIds ?? []),
@@ -221,30 +231,37 @@ export function createCompanionSession(input: {
   return parseCompanionSession(row);
 }
 
-export function endCompanionSession(sessionId: string): void {
+export function endCompanionSession(sessionId: string, userId?: string): void {
   const db = getDb();
-  db.prepare('UPDATE companion_sessions SET ended_at = ? WHERE id = ?').run(new Date().toISOString(), sessionId);
+  db.prepare(`
+    UPDATE companion_sessions SET ended_at = ?
+    WHERE id = ? ${userId ? 'AND user_id = ?' : ''}
+  `).run(...(userId ? [new Date().toISOString(), sessionId, userId] : [new Date().toISOString(), sessionId]));
 }
 
-export function updateSessionDialogueMode(sessionId: string, mode: DialogueMode): void {
+export function updateSessionDialogueMode(sessionId: string, userId: string, mode: DialogueMode): void {
   const db = getDb();
-  db.prepare('UPDATE companion_sessions SET dialogue_mode = ? WHERE id = ?').run(mode, sessionId);
+  db.prepare('UPDATE companion_sessions SET dialogue_mode = ? WHERE id = ? AND user_id = ?').run(mode, sessionId, userId);
 }
 
-export function updateSessionAuthorizedMemos(sessionId: string, memoIds: string[]): void {
+export function updateSessionAuthorizedMemos(sessionId: string, userId: string, memoIds: string[]): void {
   const db = getDb();
-  db.prepare('UPDATE companion_sessions SET authorized_memo_ids = ? WHERE id = ?').run(JSON.stringify(memoIds), sessionId);
+  db.prepare('UPDATE companion_sessions SET authorized_memo_ids = ? WHERE id = ? AND user_id = ?').run(JSON.stringify(memoIds), sessionId, userId);
 }
 
-export function getCompanionSession(sessionId: string): CompanionSession | null {
+export function getCompanionSession(sessionId: string, userId?: string): CompanionSession | null {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM companion_sessions WHERE id = ?').get(sessionId) as Record<string, unknown> | undefined;
+  const row = db.prepare(`
+    SELECT * FROM companion_sessions
+    WHERE id = ? ${userId ? 'AND user_id = ?' : ''}
+  `).get(...(userId ? [sessionId, userId] : [sessionId])) as Record<string, unknown> | undefined;
   return row ? parseCompanionSession(row) : null;
 }
 
 // ---- SharedMemoryDraft CRUD ----
 
 export function createSharedDraft(input: {
+  userId: string;
   sessionId: string;
   memoId?: string;
 }): SharedMemoryDraft {
@@ -252,15 +269,16 @@ export function createSharedDraft(input: {
   const id = uuidv4();
   const now = new Date().toISOString();
   db.prepare(`
-    INSERT INTO shared_memory_drafts (id, session_id, memo_id, save_decision, created_at)
-    VALUES (?, ?, ?, 'pending', ?)
-  `).run(id, input.sessionId, input.memoId ?? null, now);
+    INSERT INTO shared_memory_drafts (id, user_id, session_id, memo_id, save_decision, created_at)
+    VALUES (?, ?, ?, ?, 'pending', ?)
+  `).run(id, input.userId, input.sessionId, input.memoId ?? null, now);
   const row = db.prepare('SELECT * FROM shared_memory_drafts WHERE id = ?').get(id) as Record<string, unknown>;
   return parseSharedDraft(row);
 }
 
 export function updateSharedDraft(
   id: string,
+  userId: string,
   updates: Partial<Pick<SharedMemoryDraft, 'playerOneText' | 'playerTwoText' | 'jointText' | 'saveDecision'>>,
 ): SharedMemoryDraft | null {
   const db = getDb();
@@ -274,23 +292,31 @@ export function updateSharedDraft(
 
   if (sets.length > 0) {
     params.push(id);
-    db.prepare(`UPDATE shared_memory_drafts SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    params.push(userId);
+    db.prepare(`UPDATE shared_memory_drafts SET ${sets.join(', ')} WHERE id = ? AND user_id = ?`).run(...params);
   }
 
-  const row = db.prepare('SELECT * FROM shared_memory_drafts WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  const row = db.prepare('SELECT * FROM shared_memory_drafts WHERE id = ? AND user_id = ?').get(id, userId) as Record<string, unknown> | undefined;
   return row ? parseSharedDraft(row) : null;
 }
 
-export function getDraftsBySession(sessionId: string): SharedMemoryDraft[] {
+export function getDraftsBySession(sessionId: string, userId?: string): SharedMemoryDraft[] {
   const db = getDb();
   const rows = db
-    .prepare('SELECT * FROM shared_memory_drafts WHERE session_id = ? ORDER BY created_at ASC')
-    .all(sessionId) as Record<string, unknown>[];
+    .prepare(`
+      SELECT * FROM shared_memory_drafts
+      WHERE session_id = ? ${userId ? 'AND user_id = ?' : ''}
+      ORDER BY created_at ASC
+    `)
+    .all(...(userId ? [sessionId, userId] : [sessionId])) as Record<string, unknown>[];
   return rows.map(parseSharedDraft);
 }
 
-export function getSharedDraft(id: string): SharedMemoryDraft | null {
+export function getSharedDraft(id: string, userId?: string): SharedMemoryDraft | null {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM shared_memory_drafts WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  const row = db.prepare(`
+    SELECT * FROM shared_memory_drafts
+    WHERE id = ? ${userId ? 'AND user_id = ?' : ''}
+  `).get(...(userId ? [id, userId] : [id])) as Record<string, unknown> | undefined;
   return row ? parseSharedDraft(row) : null;
 }

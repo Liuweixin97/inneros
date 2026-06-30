@@ -74,6 +74,7 @@ export interface MemoFilters {
   dateFrom?: string;
   dateTo?: string;
   analysisStatus?: Memo['analysis_status'];
+  privacyLevel?: Memo['privacy_level'];
   limit?: number;
   offset?: number;
 }
@@ -375,6 +376,7 @@ export type JourneyEventType =
   | 'named_path'
   | 'fireside_note'
   | 'left_question'
+  | 'pond_release'
   | 'placed_object';
 
 export interface JourneyEvent {
@@ -467,6 +469,7 @@ export interface CompanionResponse {
 // 地图区域标识
 export type MapLocation =
   | 'cabin'       // 亮灯木屋
+  | 'bench'       // 门前长椅
   | 'garden'      // 记忆花园
   | 'fireside'    // 篝火地
   | 'pond'        // 静水池塘

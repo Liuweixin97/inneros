@@ -16,6 +16,29 @@ export default function LightTrailPanel({ memos, onConfirm, onClose }: LightTrai
   const [name, setName] = useState('');
   const connection = useMemo(() => findConnection(memos), [memos]);
 
+  if (memos.length < 2) {
+    return (
+      <div className="game-focus-layer game-focus-layer--soft" role="dialog" aria-label="循光寻迹">
+        <section className="light-trail-panel">
+          <header>
+            <div>
+              <p className="game-kicker">苔灯 · 照见</p>
+              <h2>光路还没有形成</h2>
+            </div>
+            <button type="button" className="game-icon-button" onClick={onClose} aria-label="离开光路">
+              <X size={17} />
+            </button>
+          </header>
+          <div className="light-trail-empty">
+            <Lamp size={22} />
+            <p>至少带上两段你愿意放在一起看的记忆，苔灯才会提出一条可能的线索。</p>
+            <button type="button" className="light-trail-primary" onClick={onClose}>回到花园找材料</button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="game-focus-layer game-focus-layer--soft" role="dialog" aria-label="循光寻迹">
       <section className="light-trail-panel">

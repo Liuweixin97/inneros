@@ -15,6 +15,7 @@ import type { LLMMessage } from '@/lib/ai/gateway';
 
 const LOCATION_NAMES: Record<MapLocation, string> = {
   cabin: '亮灯木屋',
+  bench: '门前长椅',
   garden: '记忆花园',
   fireside: '篝火地',
   pond: '静水池塘',

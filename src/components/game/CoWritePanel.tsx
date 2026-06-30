@@ -160,7 +160,13 @@ export default function CoWritePanel({
                   <small>{new Date(memo.created_at).toLocaleDateString('zh-CN')}</small>
                 </button>
               ))}
-              {availableMemos.length === 0 && <p>行囊里还没有可以放上工作台的记忆。</p>}
+              {availableMemos.length === 0 && (
+                <div className="workshop-empty-material">
+                  <p>行囊里还没有可以放上工作台的记忆。</p>
+                  <small>先去记忆花园带走一段双方都愿意看的记录，再回到工坊。</small>
+                  <button type="button" onClick={onClose}>回到地图找材料</button>
+                </div>
+              )}
             </div>
             {selectedMemo && <blockquote>“{selectedMemo.plain_text.slice(0, 150)}”</blockquote>}
             {error && <p className="fireside-error">{error}</p>}

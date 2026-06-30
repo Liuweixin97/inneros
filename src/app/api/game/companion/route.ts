@@ -9,11 +9,15 @@ import {
   updateSessionAuthorizedMemos,
   updateSessionDialogueMode,
 } from '@/lib/db/game';
+import { getCurrentUser } from '@/lib/auth';
 import type { DialogueMode, MapLocation, Memo } from '@/types';
 
 // POST /api/game/companion — AI 同行者对话（流式响应）
 export async function POST(req: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    if (user.isGuest) return NextResponse.json({ error: '游客只读，请登录后使用苔灯' }, { status: 403 });
     const body = await req.json() as {
       message: string;
       worldId?: string;
@@ -29,29 +33,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '消息不能为空' }, { status: 400 });
     }
 
-    const world = getOrCreateWorld();
+    const world = getOrCreateWorld(user.id);
 
     // 获取授权 Memo，并将本次明确授权写回会话。
     const authorizedMemoIds = body.authorizedMemoIds ?? [];
-    let session = body.sessionId ? getCompanionSession(body.sessionId) : null;
+    let session = body.sessionId ? getCompanionSession(body.sessionId, user.id) : null;
 
     if (!session) {
       session = createCompanionSession({
         worldId: world.id,
+        userId: user.id,
         companionType: 'llm',
         dialogueMode: body.dialogueMode ?? 'listen',
         authorizedMemoIds,
       });
     } else {
-      updateSessionDialogueMode(session.id, body.dialogueMode ?? session.dialogueMode);
-      updateSessionAuthorizedMemos(session.id, authorizedMemoIds);
+      updateSessionDialogueMode(session.id, user.id, body.dialogueMode ?? session.dialogueMode);
+      updateSessionAuthorizedMemos(session.id, user.id, authorizedMemoIds);
     }
 
     // 加载 Memo 内容（最多 5 条，避免 context 过大）
     const authorizedMemos = authorizedMemoIds
       .slice(0, 5)
       .map((id) => getMemoById(id))
-      .filter((m): m is Memo => m !== null && m.privacy_level === 'normal');
+      .filter((m): m is Memo => m !== null && m.privacy_level === 'normal' && m.user_id === user.id);
 
     // 构建消息列表
     const messages = buildCompanionMessages(body.message, {
@@ -68,6 +73,7 @@ export async function POST(req: Request) {
     // 流式响应
     const stream = await streamText({
       task: 'chat.respond',
+      userId: user.id,
       messages,
       temperature: 0.7,
       maxTokens: 300, // 控制回复长度

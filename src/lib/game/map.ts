@@ -56,6 +56,17 @@ export const MAP_REGIONS: MapRegion[] = [
     icon: 'cabin',
   },
   {
+    id: 'bench',
+    name: '门前长椅',
+    subtitle: '怎样同行',
+    cx: 165,
+    cy: 326,
+    rx: 58,
+    ry: 38,
+    color: '#E0BA83',
+    icon: 'bench',
+  },
+  {
     id: 'garden',
     name: '记忆花园',
     subtitle: '曾经发生过',

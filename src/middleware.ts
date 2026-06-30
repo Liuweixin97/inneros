@@ -21,6 +21,8 @@ export function middleware(request: NextRequest) {
       '/api/insights',
       '/api/conversations',
       '/api/auth/me',
+      '/api/game/world',
+      '/api/game/memos',
     ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
     if (!guestReadable) return NextResponse.json({ error: '未登录' }, { status: 401 });
   }

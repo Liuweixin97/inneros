@@ -106,6 +106,11 @@ export function getMemos(filters: MemoFilters = {}): { memos: Memo[]; total: num
     params.analysisStatus = filters.analysisStatus;
   }
 
+  if (filters.privacyLevel) {
+    conditions.push('privacy_level = @privacyLevel');
+    params.privacyLevel = filters.privacyLevel;
+  }
+
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   // Count total

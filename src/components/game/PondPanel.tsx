@@ -9,6 +9,7 @@ interface PondPanelProps {
   bagMemoIds: string[];
   events: JourneyEvent[];
   onRemoveFromBag: (memoId: string) => void;
+  onJourneyEvent: (text: string, memoIds: string[]) => void;
   onClose: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function PondPanel({
   bagMemoIds,
   events,
   onRemoveFromBag,
+  onJourneyEvent,
   onClose,
 }: PondPanelProps) {
   const [mode, setMode] = useState<PondMode>('choose');
@@ -35,6 +37,7 @@ export default function PondPanel({
   const releaseNote = () => {
     if (!note.trim()) return;
     sessionStorage.setItem('inneros-pond-note-v2', note.trim());
+    onJourneyEvent('放下了一句不需要解释的话', []);
     setReleased(true);
   };
 
@@ -93,7 +96,15 @@ export default function PondPanel({
                       <strong>{memo.ai_title || memo.plain_text.slice(0, 30) || '未命名记录'}</strong>
                       <small>从本次行囊移出，不删除原记录</small>
                     </span>
-                    <button type="button" onClick={() => onRemoveFromBag(memo.id)}>暂时放下</button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onRemoveFromBag(memo.id);
+                        onJourneyEvent(`暂时放下「${memo.ai_title || memo.plain_text.slice(0, 20) || '一段记忆'}」`, [memo.id]);
+                      }}
+                    >
+                      暂时放下
+                    </button>
                   </article>
                 ))}
               </div>

@@ -48,6 +48,10 @@ export async function GET() {
       WHERE m.user_id = ?
       ORDER BY r.created_at DESC
     `).all(user.id);
+    const gameWorlds = db.prepare('SELECT * FROM game_worlds WHERE user_id = ? ORDER BY last_visited_at DESC').all(user.id);
+    const worldObjects = db.prepare('SELECT * FROM world_objects WHERE user_id = ? ORDER BY created_at DESC').all(user.id);
+    const companionSessions = db.prepare('SELECT * FROM companion_sessions WHERE user_id = ? ORDER BY started_at DESC').all(user.id);
+    const sharedMemoryDrafts = db.prepare('SELECT * FROM shared_memory_drafts WHERE user_id = ? ORDER BY created_at DESC').all(user.id);
 
     const exportData = {
       version: '1.0',
@@ -60,6 +64,10 @@ export async function GET() {
         memories,
         memory_evidence: memoryEvidence,
         memory_relations: memoryRelations,
+        game_worlds: gameWorlds,
+        world_objects: worldObjects,
+        companion_sessions: companionSessions,
+        shared_memory_drafts: sharedMemoryDrafts,
       },
     };
 
