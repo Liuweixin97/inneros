@@ -1,25 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConversations, createConversation } from '@/lib/db/conversations';
 import type { ConversationMode } from '@/types';
-import { backfillConversationSummaries, conversationNeedsSummary } from '@/lib/ai/conversation-summarizer';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, getCurrentUserOrGuest } from '@/lib/auth';
 
 export async function GET() {
   try {
-    const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
-    let conversations = getConversations(user.id);
-    const pendingIds = conversations
-      .filter((conversation) => (
-        conversation.summary_status !== 'generating'
-        && conversationNeedsSummary(conversation.message_count, conversation.summarized_message_count)
-      ))
-      .slice(0, 12)
-      .map((conversation) => conversation.id);
-    if (pendingIds.length > 0) {
-      await backfillConversationSummaries(pendingIds);
-      conversations = getConversations(user.id);
-    }
+    const user = await getCurrentUserOrGuest();
+    const conversations = getConversations(user.id);
     return NextResponse.json(conversations);
   } catch (error) {
     console.error('GET /api/conversations error:', error);

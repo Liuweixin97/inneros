@@ -10,10 +10,12 @@ import {
   Clock,
   BrainCircuit,
   Settings,
+  UserRound,
   PenLine,
   Sparkles,
   ArrowUpRight,
 } from 'lucide-react';
+import UserBadge from './UserBadge';
 
 interface NavItem {
   id: string;
@@ -152,6 +154,21 @@ export default function Sidebar() {
           <Settings className="w-[18px] h-[18px]" />
           <span>设置</span>
         </Link>
+        <Link
+          href="/settings/profile"
+          className={`
+            flex items-center gap-3 px-3 py-2.5 rounded-xl
+            text-[13px] font-medium
+            transition-all duration-200
+            ${isActive('/settings/profile')
+              ? 'bg-[var(--color-primary-light)] text-[var(--color-primary-dark)]'
+              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
+            }
+          `}
+        >
+          <UserRound className="w-[18px] h-[18px]" />
+          <span>个人信息</span>
+        </Link>
       </div>
 
       <div className="px-3 pb-3">
@@ -174,24 +191,7 @@ export default function Sidebar() {
 
       {/* User Avatar */}
       <div className="px-4 pb-4">
-        <div className="flex items-center gap-3 px-2 py-2">
-          <div className="
-            w-8 h-8 rounded-full
-            bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)]
-            flex items-center justify-center
-            text-white text-xs font-bold
-          ">
-            W
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-medium text-[var(--color-text-primary)] truncate">
-              炜鑫
-            </p>
-            <p className="text-[10px] text-[var(--color-text-muted)] truncate">
-              本地模式
-            </p>
-          </div>
-        </div>
+        <UserBadge />
       </div>
     </aside>
   );

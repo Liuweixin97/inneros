@@ -4,6 +4,7 @@ import fs from 'fs';
 
 let db: Database.Database | null = null;
 export const DEFAULT_OWNER_USER_ID = 'liuweixin';
+export const GUEST_USER_ID = 'guest';
 
 function ensureColumn(database: Database.Database, table: string, column: string, definition: string): void {
   const columns = database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
@@ -32,7 +33,8 @@ export function getDb(): Database.Database {
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
+      username TEXT NOT NULL UNIQUE,
+      email TEXT,
       password_hash TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -308,6 +310,68 @@ export function getDb(): Database.Database {
   const messageColumnNames = new Set(messageColumns.map((column) => column.name));
   if (!messageColumnNames.has('reasoning_content')) {
     db.exec("ALTER TABLE messages ADD COLUMN reasoning_content TEXT NOT NULL DEFAULT ''");
+  }
+
+  ensureColumn(db, 'users', 'username', 'TEXT');
+  db.prepare(`
+    UPDATE users
+    SET username = CASE
+      WHEN id = ? THEN ?
+      WHEN email IS NOT NULL AND email != '' THEN lower(substr(email, 1, instr(email, '@') - 1))
+      ELSE lower(id)
+    END
+    WHERE username IS NULL OR username = ''
+  `).run(DEFAULT_OWNER_USER_ID, DEFAULT_OWNER_USER_ID);
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT OR IGNORE INTO users (id, name, username, email, password_hash, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(GUEST_USER_ID, '游客', 'guest', 'guest@inneros.local', 'guest-disabled', now, now);
+  const { guestMemoCount } = db.prepare('SELECT COUNT(*) as guestMemoCount FROM memos WHERE user_id = ?')
+    .get(GUEST_USER_ID) as { guestMemoCount: number };
+  if (guestMemoCount === 0) {
+    const sampleMemos = [
+      {
+        id: 'guest-sample-001',
+        raw_content: '#示例\\n今天把三个分散的想法归到同一个主题下：注意力、长期项目和身体状态其实会互相影响。',
+        plain_text: '今天把三个分散的想法归到同一个主题下：注意力、长期项目和身体状态其实会互相影响。',
+        ai_title: '注意力与长期项目',
+        ai_summary: '注意力、长期项目和身体状态之间存在相互影响。',
+        ai_topics: JSON.stringify(['注意力管理', '长期项目']),
+        ai_emotions: JSON.stringify(['平静']),
+      },
+      {
+        id: 'guest-sample-002',
+        raw_content: '#复盘\\n如果一个任务连续两天都没有推进，问题通常不是执行力，而是下一步没有被拆到足够小。',
+        plain_text: '如果一个任务连续两天都没有推进，问题通常不是执行力，而是下一步没有被拆到足够小。',
+        ai_title: '任务推进粒度',
+        ai_summary: '连续停滞的任务需要重新拆解下一步。',
+        ai_topics: JSON.stringify(['行动系统', '复盘']),
+        ai_emotions: JSON.stringify(['有力量']),
+      },
+    ];
+    const insertSample = db.prepare(`
+      INSERT OR IGNORE INTO memos (
+        id, user_id, raw_content, plain_text, created_at, updated_at, source,
+        import_fingerprint, original_tags, ai_title, ai_summary, ai_category,
+        ai_topics, ai_emotions, ai_people, ai_projects, ai_actions, ai_key_questions,
+        embedding, analysis_status, privacy_level
+      ) VALUES (
+        @id, @user_id, @raw_content, @plain_text, @created_at, @updated_at, 'manual',
+        NULL, '["示例"]', @ai_title, @ai_summary, '方法论',
+        @ai_topics, @ai_emotions, '[]', '[]', '[]', '[]',
+        NULL, 'done', 'normal'
+      )
+    `);
+    for (const sample of sampleMemos) {
+      insertSample.run({
+        ...sample,
+        user_id: GUEST_USER_ID,
+        created_at: now,
+        updated_at: now,
+      });
+    }
   }
   db.prepare("UPDATE conversations SET mode = 'unified' WHERE mode != 'unified'").run();
   db.prepare(`

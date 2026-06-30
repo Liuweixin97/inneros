@@ -64,16 +64,17 @@ export default function SettingsPage() {
 
   const load = async () => {
     setLoading(true);
-    const [statsResponse, aiStatusResponse] = await Promise.all([
-      fetch('/api/stats'),
-      fetch('/api/settings/ai-status'),
-    ]);
+    const statsResponse = await fetch('/api/stats');
     if (statsResponse.ok) {
       const data = await statsResponse.json();
       setStats({ total_memos: data.total_memos ?? 0, total_topics: data.total_topics ?? 0, total_conversations: data.total_conversations ?? 0, total_insights: data.total_insights ?? 0 });
     }
-    if (aiStatusResponse.ok) setAiStatus(await aiStatusResponse.json());
     setLoading(false);
+  };
+
+  const refreshAiStatus = async () => {
+    const response = await fetch('/api/settings/ai-status');
+    if (response.ok) setAiStatus(await response.json());
   };
 
   useEffect(() => {
@@ -96,6 +97,7 @@ export default function SettingsPage() {
     if (response.ok) {
       setConfirmText('');
       await load();
+      await refreshAiStatus();
     }
     setClearing(false);
   };
@@ -391,7 +393,7 @@ export default function SettingsPage() {
             <div className="mb-4 flex items-center gap-2">
               <BrainCircuit className="h-5 w-5 text-[var(--color-primary)]" />
               <h2 className="font-semibold text-[var(--color-text-strong)]">智能分析与长期记忆</h2>
-              <button className="btn-ghost ml-auto px-2 py-1 text-xs" type="button" onClick={load}>
+              <button className="btn-ghost ml-auto px-2 py-1 text-xs" type="button" onClick={refreshAiStatus}>
                 <RefreshCw className="h-3.5 w-3.5" />刷新
               </button>
             </div>

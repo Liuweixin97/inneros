@@ -10,7 +10,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -22,7 +22,7 @@ function LoginForm() {
     const response = await fetch(`/api/auth/${mode}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, username, password }),
     });
     const data = await response.json().catch(() => ({}));
     setSubmitting(false);
@@ -32,6 +32,10 @@ function LoginForm() {
     }
     router.replace(searchParams.get('next') || '/');
     router.refresh();
+  }
+
+  function enterGuest() {
+    router.replace('/?guest=1');
   }
 
   return (
@@ -54,8 +58,8 @@ function LoginForm() {
           </label>
         )}
         <label className="block mb-3">
-          <span className="block text-xs text-[var(--color-text-muted)] mb-1">邮箱</span>
-          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]" />
+          <span className="block text-xs text-[var(--color-text-muted)] mb-1">账户名</span>
+          <input value={username} onChange={(event) => setUsername(event.target.value)} className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]" />
         </label>
         <label className="block mb-4">
           <span className="block text-xs text-[var(--color-text-muted)] mb-1">密码</span>
@@ -70,6 +74,9 @@ function LoginForm() {
 
         <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="w-full mt-3 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
           {mode === 'login' ? '没有账户？注册' : '已有账户？登录'}
+        </button>
+        <button type="button" onClick={enterGuest} className="w-full mt-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
+          游客访问
         </button>
       </form>
     </main>

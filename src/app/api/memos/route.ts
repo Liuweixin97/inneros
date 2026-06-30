@@ -4,7 +4,7 @@ import { getMemos, createMemo } from '@/lib/db/memos';
 import { enqueueMemoAnalysis } from '@/lib/db/analysis-jobs';
 import { drainAnalysisJobs } from '@/lib/ai/job-runner';
 import type { MemoFilters, MemoCreateInput } from '@/types';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, getCurrentUserOrGuest } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -12,8 +12,7 @@ export const maxDuration = 300;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    const user = await getCurrentUserOrGuest();
 
     const filters: MemoFilters = { userId: user.id };
 

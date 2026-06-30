@@ -2,13 +2,12 @@ import { NextResponse } from 'next/server';
 import { getMemoStats, getRecentMemos } from '@/lib/db/memos';
 import { getDb } from '@/lib/db/index';
 import { rebuildTopicsFromMemos } from '@/lib/db/topics';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUserOrGuest } from '@/lib/auth';
 
 export async function GET() {
   try {
     const db = getDb();
-    const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    const user = await getCurrentUserOrGuest();
     const stats = getMemoStats(user.id);
     const recentMemos = getRecentMemos(6, user.id);
 

@@ -3,7 +3,7 @@ import { chatCompletion } from '@/lib/ai/client';
 import { INSIGHT_PROMPT } from '@/lib/ai/prompts';
 import { createInsight, getInsights } from '@/lib/db/insights';
 import type { InsightType } from '@/types';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, getCurrentUserOrGuest } from '@/lib/auth';
 
 const VALID_TYPES: InsightType[] = ['recurring_question', 'methodology', 'emotion_cycle', 'strength', 'risk_pattern', 'growth_evidence'];
 
@@ -25,8 +25,7 @@ function extractJSON(text: string) {
 
 export async function GET() {
   try {
-    const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    const user = await getCurrentUserOrGuest();
     return NextResponse.json(getInsights(user.id));
   } catch (error) {
     console.error('GET /api/insights error:', error);

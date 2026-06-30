@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getMemosForTopicName, getTopics, rebuildTopicsFromMemos, updateTopic } from '@/lib/db/topics';
 import { summarizeTopic } from '@/lib/ai/topic-summarizer';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, getCurrentUserOrGuest } from '@/lib/auth';
 
 async function fillMissingSummaries(userId: string) {
   const topics = getTopics(userId);
@@ -23,8 +23,7 @@ async function fillMissingSummaries(userId: string) {
 
 export async function GET() {
   try {
-    const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    const user = await getCurrentUserOrGuest();
     let topics = getTopics(user.id);
     if (topics.length === 0) topics = rebuildTopicsFromMemos(user.id);
     return NextResponse.json(topics);
