@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Topic } from '@/types';
-import { getDb, TOPIC_JSON_FIELDS, parseJsonFields, stringifyJsonFields } from './index';
+import { DEFAULT_OWNER_USER_ID, getDb, TOPIC_JSON_FIELDS, parseJsonFields, stringifyJsonFields } from './index';
 
 function parseTopicRow(row: Record<string, unknown>): Topic {
   return parseJsonFields(row, TOPIC_JSON_FIELDS) as unknown as Topic;
@@ -87,7 +87,7 @@ export function rebuildTopicsFromMemos(userId?: string): Topic[] {
     else db.prepare('DELETE FROM topics').run();
     const insert = db.prepare(`INSERT INTO topics (id, user_id, name, memo_count, first_seen_at, last_seen_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
     for (const [name, meta] of topicMap.entries()) {
-      insert.run(uuidv4(), userId || 'liuweixin', name, meta.count, meta.first, meta.last, now, now);
+      insert.run(uuidv4(), userId || DEFAULT_OWNER_USER_ID, name, meta.count, meta.first, meta.last, now, now);
     }
   });
   transaction();

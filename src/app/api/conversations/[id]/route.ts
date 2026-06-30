@@ -18,6 +18,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   const { id } = await context.params;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    if (user.isGuest) return NextResponse.json({ error: '游客只读，请登录后操作' }, { status: 403 });
   const deleted = deleteConversation(id, user.id);
   if (!deleted) return NextResponse.json({ error: '对话不存在' }, { status: 404 });
   return NextResponse.json({ success: true });

@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser, setSessionCookie, updateUserPassword, updateUserProfile } from '@/lib/auth';
+import { getCurrentUserOrGuest, setSessionCookie, updateUserPassword, updateUserProfile } from '@/lib/auth';
 
 export async function GET() {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserOrGuest();
   return NextResponse.json({ user });
 }
 
 export async function PATCH(request: Request) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+  const user = await getCurrentUserOrGuest();
+  if (user.isGuest) return NextResponse.json({ error: '游客不能修改账户' }, { status: 403 });
 
   const body = await request.json().catch(() => ({}));
   const name = String(body.name || '').trim();

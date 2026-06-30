@@ -57,7 +57,7 @@ export default function CabinPanel({
           <article className="cabin-panel__mailbox">
             <span className="cabin-panel__icon"><Mail size={18} /></span>
             <div>
-              <small>邮箱</small>
+              <small>信箱</small>
               <strong>{lastQuestion ? '一只纸鸟在等你' : '没有催促你的来信'}</strong>
               <p>{lastQuestion?.text ?? '只有你主动留下的问题，才会在这里出现。'}</p>
             </div>

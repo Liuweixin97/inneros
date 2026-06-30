@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Memo, MemoCreateInput, MemoFilters } from '@/types';
 import { createFlomoFingerprint } from '@/lib/import/flomo-dedup';
-import { getDb, MEMO_JSON_FIELDS, parseJsonFields, stringifyJsonFields } from './index';
+import { DEFAULT_OWNER_USER_ID, getDb, MEMO_JSON_FIELDS, parseJsonFields, stringifyJsonFields } from './index';
 
 // ---- Internal helpers ----
 
@@ -146,7 +146,7 @@ export function createMemo(input: MemoCreateInput): Memo {
 
   const memo: Record<string, unknown> = {
     id,
-    user_id: input.user_id || 'liuweixin',
+    user_id: input.user_id || DEFAULT_OWNER_USER_ID,
     raw_content: input.content,
     plain_text: plainText,
     created_at: now,
@@ -251,7 +251,7 @@ export function createMemosBatch(inputs: MemoCreateInput[]): CreateMemosBatchRes
 
     const memo: Record<string, unknown> = {
       id,
-      user_id: input.user_id || 'liuweixin',
+      user_id: input.user_id || DEFAULT_OWNER_USER_ID,
       raw_content: input.content,
       plain_text: plainText,
       created_at: now,

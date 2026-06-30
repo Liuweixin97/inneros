@@ -50,6 +50,7 @@ function cleanAnchorTitle(value: string): string {
 }
 
 export default function TodayPage() {
+  const [user, setUser] = useState<{ name: string; isGuest?: boolean } | null>(null);
   const [digest, setDigest] = useState<TodayDigest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -75,7 +76,13 @@ export default function TodayPage() {
     }
   }, []);
 
-  useEffect(() => { loadDigest(); }, [loadDigest]);
+  useEffect(() => {
+    loadDigest();
+    fetch('/api/auth/me')
+      .then((response) => response.json())
+      .then((data) => setUser(data.user))
+      .catch(() => setUser(null));
+  }, [loadDigest]);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('compose') === 'true') {
@@ -103,6 +110,10 @@ export default function TodayPage() {
     const html = editorRef.current?.innerHTML.trim() ?? '';
     const text = editorRef.current?.innerText.trim() ?? '';
     if (!text || saving) return;
+    if (user?.isGuest) {
+      setError('游客可以浏览示例，登录后可以记录自己的内容。');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -144,10 +155,10 @@ export default function TodayPage() {
           <div>
             <p className="mb-1 text-[13px] text-[var(--color-text-muted)]">{formatDate()}</p>
             <h1 className="text-[28px] font-semibold tracking-tight text-[var(--color-text-strong)] md:text-[34px]">
-              {getGreeting()}，炜鑫
+              {getGreeting()}，{user?.name || '你好'}
             </h1>
             <p className="mt-1.5 text-[13px] text-[var(--color-text-secondary)]">
-              先留下真实发生的，再看看最近的自己。
+              {user?.isGuest ? '这里是示例空间，登录后进入你的个人记录。' : '先留下真实发生的，再看看最近的自己。'}
             </p>
           </div>
           <button className="btn-ghost px-2 py-1.5 text-xs" type="button" onClick={() => loadDigest(true)} disabled={loading}>
@@ -327,8 +338,15 @@ export default function TodayPage() {
               <p className="text-[11px] font-medium text-[var(--color-primary-dark)]">记下此刻</p>
               <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">不用整理，先写真实发生的事和感受</p>
             </div>
-            <span className="hidden text-[10px] text-[var(--color-text-muted)] sm:inline">⌘ / Ctrl + Enter 保存</span>
+            {!user?.isGuest && <span className="hidden text-[10px] text-[var(--color-text-muted)] sm:inline">⌘ / Ctrl + Enter 保存</span>}
           </div>
+          {user?.isGuest ? (
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-[var(--color-bg-secondary)] px-4 py-3">
+              <p className="text-sm text-[var(--color-text-secondary)]">登录后开始记录你的个人内容。</p>
+              <Link href="/login" className="btn-primary shrink-0 px-4 py-2 text-sm">登录</Link>
+            </div>
+          ) : (
+            <>
           {composerFocused && (
             <div className="mb-2 flex items-center gap-1">
               <FormatButton label="加粗" onClick={() => applyFormat('bold')}><Bold className="h-3.5 w-3.5" /></FormatButton>
@@ -371,6 +389,8 @@ export default function TodayPage() {
               </button>
             </div>
           </div>
+            </>
+          )}
         </section>
       </div>
     </div>

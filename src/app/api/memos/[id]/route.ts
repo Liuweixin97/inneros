@@ -27,6 +27,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    if (user.isGuest) return NextResponse.json({ error: '游客只读，请登录后操作' }, { status: 403 });
     const existing = getMemoById(id);
     if (existing && existing.user_id !== user.id) return NextResponse.json({ error: '笔记不存在' }, { status: 404 });
     const body = (await request.json()) as Partial<Memo>;
@@ -52,6 +53,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    if (user.isGuest) return NextResponse.json({ error: '游客只读，请登录后操作' }, { status: 403 });
   const existing = getMemoById(id);
   if (existing && existing.user_id !== user.id) return NextResponse.json({ error: '笔记不存在' }, { status: 404 });
   const deleted = deleteMemo(id);

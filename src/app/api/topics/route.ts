@@ -40,6 +40,7 @@ export async function POST() {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    if (user.isGuest) return NextResponse.json({ error: '游客只读，请登录后操作' }, { status: 403 });
     rebuildTopicsFromMemos(user.id);
     await fillMissingSummaries(user.id);
     return NextResponse.json({ success: true, topics: getTopics(user.id) });

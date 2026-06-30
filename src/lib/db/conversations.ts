@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Conversation, ConversationMode, ChatMessage } from '@/types';
-import { getDb, MESSAGE_JSON_FIELDS, parseJsonFields } from './index';
+import { DEFAULT_OWNER_USER_ID, getDb, MESSAGE_JSON_FIELDS, parseJsonFields } from './index';
 
 // ---- Internal helpers ----
 
@@ -60,7 +60,7 @@ export function getConversationById(
 export function createConversation(
   title: string,
   mode: ConversationMode = 'unified',
-  userId = 'liuweixin',
+  userId = DEFAULT_OWNER_USER_ID,
 ): Conversation {
   const db = getDb();
   const id = uuidv4();

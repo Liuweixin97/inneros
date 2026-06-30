@@ -17,6 +17,13 @@ export interface AuthUser {
   isGuest?: boolean;
 }
 
+export const GUEST_USER: AuthUser = {
+  id: GUEST_USER_ID,
+  name: '游客',
+  username: 'guest',
+  isGuest: true,
+};
+
 function sessionSecret(): Uint8Array {
   const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
   if (!secret || secret.length < 32) {
@@ -60,7 +67,7 @@ export async function createUser(input: { name: string; username: string; passwo
 }
 
 export async function setSessionCookie(user: AuthUser): Promise<void> {
-  const token = await new SignJWT({ name: user.name, username: user.username })
+  const token = await new SignJWT({ name: user.name, username: user.username, isGuest: Boolean(user.isGuest) })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(user.id)
     .setIssuedAt()
@@ -93,7 +100,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       return null;
     }
     const username = typeof payload.username === 'string' ? payload.username : payload.sub;
-    return { id: payload.sub, name: payload.name, username };
+    return { id: payload.sub, name: payload.name, username, isGuest: payload.sub === GUEST_USER_ID || payload.isGuest === true };
   } catch {
     return null;
   }
@@ -101,7 +108,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
 export async function getCurrentUserOrGuest(): Promise<AuthUser> {
   const user = await getCurrentUser();
-  return user || { id: GUEST_USER_ID, name: '游客', username: 'guest', isGuest: true };
+  return user || GUEST_USER;
 }
 
 export function updateUserProfile(userId: string, input: { name: string; username: string }): AuthUser | null {

@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
     } = {};
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    if (user.isGuest) return NextResponse.json({ error: '游客只读，请登录后操作' }, { status: 403 });
 
     try {
       body = await request.json();

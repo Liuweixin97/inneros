@@ -34,8 +34,17 @@ function LoginForm() {
     router.refresh();
   }
 
-  function enterGuest() {
-    router.replace('/?guest=1');
+  async function enterGuest() {
+    setSubmitting(true);
+    setError('');
+    const response = await fetch('/api/auth/guest', { method: 'POST' });
+    setSubmitting(false);
+    if (!response.ok) {
+      setError('进入游客模式失败');
+      return;
+    }
+    router.replace('/');
+    router.refresh();
   }
 
   return (
