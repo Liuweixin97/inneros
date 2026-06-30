@@ -10,9 +10,11 @@ function parseInsightRow(row: Record<string, unknown>): Insight {
   } as unknown as Insight;
 }
 
-export function getInsights(): Insight[] {
+export function getInsights(userId?: string): Insight[] {
   const db = getDb();
-  const rows = db.prepare('SELECT * FROM insights ORDER BY created_at DESC').all() as Record<string, unknown>[];
+  const rows = (userId
+    ? db.prepare('SELECT * FROM insights WHERE user_id = ? ORDER BY created_at DESC').all(userId)
+    : db.prepare('SELECT * FROM insights ORDER BY created_at DESC').all()) as Record<string, unknown>[];
   return rows.map(parseInsightRow);
 }
 
@@ -30,15 +32,16 @@ export function createInsight(input: {
   confidence: 'high' | 'medium' | 'low';
   evidence_memo_ids: string[];
   saved_as_principle?: boolean;
+  user_id?: string;
 }): Insight {
   const db = getDb();
   const id = uuidv4();
   const now = new Date().toISOString();
   const saved = input.saved_as_principle ? 1 : 0;
   db.prepare(
-    `INSERT INTO insights (id, title, content, type, confidence, evidence_memo_ids, created_at, saved_as_principle)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(id, input.title, input.content, input.type, input.confidence, JSON.stringify(input.evidence_memo_ids), now, saved);
+    `INSERT INTO insights (id, user_id, title, content, type, confidence, evidence_memo_ids, created_at, saved_as_principle)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, input.user_id || 'liuweixin', input.title, input.content, input.type, input.confidence, JSON.stringify(input.evidence_memo_ids), now, saved);
   return getInsightById(id)!;
 }
 

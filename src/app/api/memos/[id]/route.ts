@@ -4,6 +4,7 @@ import { deleteMemo, getMemoById, updateMemo } from '@/lib/db/memos';
 import { enqueueMemoAnalysis } from '@/lib/db/analysis-jobs';
 import { drainAnalysisJobs } from '@/lib/ai/job-runner';
 import type { Memo } from '@/types';
+import { getCurrentUser } from '@/lib/auth';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -14,7 +15,10 @@ export const maxDuration = 300;
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
   const memo = getMemoById(id);
+  if (memo && memo.user_id !== user.id) return NextResponse.json({ error: '笔记不存在' }, { status: 404 });
   if (!memo) return NextResponse.json({ error: '笔记不存在' }, { status: 404 });
   return NextResponse.json(memo);
 }
@@ -22,6 +26,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    const existing = getMemoById(id);
+    if (existing && existing.user_id !== user.id) return NextResponse.json({ error: '笔记不存在' }, { status: 404 });
     const body = (await request.json()) as Partial<Memo>;
     const contentChanged = typeof body.raw_content === 'string' || typeof body.plain_text === 'string';
     if (contentChanged) {
@@ -43,6 +51,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+  const existing = getMemoById(id);
+  if (existing && existing.user_id !== user.id) return NextResponse.json({ error: '笔记不存在' }, { status: 404 });
   const deleted = deleteMemo(id);
   if (!deleted) return NextResponse.json({ error: '笔记不存在' }, { status: 404 });
   return NextResponse.json({ success: true });

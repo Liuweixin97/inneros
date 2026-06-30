@@ -26,6 +26,7 @@ export type EmotionType =
 
 export interface Memo {
   id: string;
+  user_id?: string;
   raw_content: string;
   plain_text: string;
   created_at: string;
@@ -55,6 +56,7 @@ export interface Memo {
 }
 
 export interface MemoCreateInput {
+  user_id?: string;
   content: string;
   tags?: string[];
   source?: Memo['source'];
@@ -63,6 +65,7 @@ export interface MemoCreateInput {
 }
 
 export interface MemoFilters {
+  userId?: string;
   query?: string;
   tag?: string;
   category?: MemoCategory;

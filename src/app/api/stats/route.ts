@@ -2,33 +2,36 @@ import { NextResponse } from 'next/server';
 import { getMemoStats, getRecentMemos } from '@/lib/db/memos';
 import { getDb } from '@/lib/db/index';
 import { rebuildTopicsFromMemos } from '@/lib/db/topics';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET() {
   try {
     const db = getDb();
-    const stats = getMemoStats();
-    const recentMemos = getRecentMemos(6);
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    const stats = getMemoStats(user.id);
+    const recentMemos = getRecentMemos(6, user.id);
 
     let { total_topics } = db
-      .prepare('SELECT COUNT(*) as total_topics FROM topics')
-      .get() as { total_topics: number };
+      .prepare('SELECT COUNT(*) as total_topics FROM topics WHERE user_id = ?')
+      .get(user.id) as { total_topics: number };
 
     if (total_topics === 0) {
-      total_topics = rebuildTopicsFromMemos().length;
+      total_topics = rebuildTopicsFromMemos(user.id).length;
     }
 
     const { total_conversations } = db
-      .prepare('SELECT COUNT(*) as total_conversations FROM conversations')
-      .get() as { total_conversations: number };
+      .prepare('SELECT COUNT(*) as total_conversations FROM conversations WHERE user_id = ?')
+      .get(user.id) as { total_conversations: number };
 
     const { total_insights } = db
-      .prepare('SELECT COUNT(*) as total_insights FROM insights')
-      .get() as { total_insights: number };
+      .prepare('SELECT COUNT(*) as total_insights FROM insights WHERE user_id = ?')
+      .get(user.id) as { total_insights: number };
 
     // Get recent topic names
     const recentTopicRows = db
-      .prepare('SELECT name FROM topics ORDER BY updated_at DESC LIMIT 5')
-      .all() as { name: string }[];
+      .prepare('SELECT name FROM topics WHERE user_id = ? ORDER BY updated_at DESC LIMIT 5')
+      .all(user.id) as { name: string }[];
 
     return NextResponse.json({
       total_memos: stats.total,

@@ -4,6 +4,7 @@ import { getMemos, createMemo } from '@/lib/db/memos';
 import { enqueueMemoAnalysis } from '@/lib/db/analysis-jobs';
 import { drainAnalysisJobs } from '@/lib/ai/job-runner';
 import type { MemoFilters, MemoCreateInput } from '@/types';
+import { getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -11,8 +12,10 @@ export const maxDuration = 300;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
 
-    const filters: MemoFilters = {};
+    const filters: MemoFilters = { userId: user.id };
 
     const query = searchParams.get('query');
     if (query) filters.query = query;
@@ -59,6 +62,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as MemoCreateInput;
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
 
     if (!body.content || typeof body.content !== 'string' || body.content.trim() === '') {
       return NextResponse.json(
@@ -67,7 +72,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const memo = createMemo(body);
+    const memo = createMemo({ ...body, user_id: user.id });
     enqueueMemoAnalysis(memo.id);
     after(() => drainAnalysisJobs(5, 2));
 

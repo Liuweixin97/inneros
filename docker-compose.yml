@@ -1,0 +1,32 @@
+services:
+  inneros:
+    image: ghcr.io/liuweixin97/inneros:latest
+    container_name: inneros-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /app/.data/inneros.db
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    volumes:
+      - /opt/inneros/data:/app/.data
+    networks:
+      - traefik-network
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-network
+      - traefik.http.routers.inneros.rule=Host(`${INNEROS_DOMAIN}`)
+      - traefik.http.routers.inneros.entrypoints=websecure
+      - traefik.http.routers.inneros.tls.certresolver=letsencrypt
+      - traefik.http.services.inneros.loadbalancer.server.port=3000
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: "0.75"
+
+networks:
+  traefik-network:
+    external: true

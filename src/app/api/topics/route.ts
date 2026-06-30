@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getMemosForTopicName, getTopics, rebuildTopicsFromMemos, updateTopic } from '@/lib/db/topics';
 import { summarizeTopic } from '@/lib/ai/topic-summarizer';
+import { getCurrentUser } from '@/lib/auth';
 
-async function fillMissingSummaries() {
-  const topics = getTopics();
+async function fillMissingSummaries(userId: string) {
+  const topics = getTopics(userId);
   const missing = topics.filter((topic) => !topic.summary).slice(0, 6);
 
   const promises = missing.map(async (topic) => {
@@ -22,8 +23,10 @@ async function fillMissingSummaries() {
 
 export async function GET() {
   try {
-    let topics = getTopics();
-    if (topics.length === 0) topics = rebuildTopicsFromMemos();
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    let topics = getTopics(user.id);
+    if (topics.length === 0) topics = rebuildTopicsFromMemos(user.id);
     return NextResponse.json(topics);
   } catch (error) {
     console.error('GET /api/topics error:', error);
@@ -36,9 +39,11 @@ export async function GET() {
 
 export async function POST() {
   try {
-    rebuildTopicsFromMemos();
-    await fillMissingSummaries();
-    return NextResponse.json({ success: true, topics: getTopics() });
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    rebuildTopicsFromMemos(user.id);
+    await fillMissingSummaries(user.id);
+    return NextResponse.json({ success: true, topics: getTopics(user.id) });
   } catch (error) {
     console.error('POST /api/topics error:', error);
     return NextResponse.json(

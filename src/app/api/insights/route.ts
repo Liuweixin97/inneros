@@ -3,6 +3,7 @@ import { chatCompletion } from '@/lib/ai/client';
 import { INSIGHT_PROMPT } from '@/lib/ai/prompts';
 import { createInsight, getInsights } from '@/lib/db/insights';
 import type { InsightType } from '@/types';
+import { getCurrentUser } from '@/lib/auth';
 
 const VALID_TYPES: InsightType[] = ['recurring_question', 'methodology', 'emotion_cycle', 'strength', 'risk_pattern', 'growth_evidence'];
 
@@ -24,7 +25,9 @@ function extractJSON(text: string) {
 
 export async function GET() {
   try {
-    return NextResponse.json(getInsights());
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    return NextResponse.json(getInsights(user.id));
   } catch (error) {
     console.error('GET /api/insights error:', error);
     return NextResponse.json({ error: '获取洞察列表失败' }, { status: 500 });
@@ -42,6 +45,8 @@ export async function POST(request: NextRequest) {
       content?: string;
       saved_as_principle?: boolean;
     } = {};
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
 
     try {
       body = await request.json();
@@ -58,6 +63,7 @@ export async function POST(request: NextRequest) {
         confidence: 'high',
         evidence_memo_ids: [],
         saved_as_principle: true,
+        user_id: user.id,
       });
       return NextResponse.json({ success: true, insight: created }, { status: 201 });
     }
@@ -80,6 +86,7 @@ export async function POST(request: NextRequest) {
     const { memos: filteredMemos } = getMemos({
       dateFrom,
       limit: 100, // retrieve more so we can filter by tags/topics
+      userId: user.id,
     });
 
     let resultMemos = filteredMemos.filter((memo) => memo.privacy_level === 'normal');
@@ -159,7 +166,7 @@ export async function POST(request: NextRequest) {
     }).slice(0, 6);
     if (validInsights.length === 0) return NextResponse.json({ error: 'AI 没有返回可用洞察' }, { status: 502 });
 
-    const created = validInsights.map((item) => createInsight(item));
+    const created = validInsights.map((item) => createInsight({ ...item, user_id: user.id }));
 
     return NextResponse.json({ success: true, insights: created }, { status: 201 });
   } catch (error) {

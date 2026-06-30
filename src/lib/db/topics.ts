@@ -6,15 +6,19 @@ function parseTopicRow(row: Record<string, unknown>): Topic {
   return parseJsonFields(row, TOPIC_JSON_FIELDS) as unknown as Topic;
 }
 
-export function getTopics(): Topic[] {
+export function getTopics(userId?: string): Topic[] {
   const db = getDb();
-  const rows = db.prepare('SELECT * FROM topics ORDER BY last_seen_at DESC').all() as Record<string, unknown>[];
+  const rows = (userId
+    ? db.prepare('SELECT * FROM topics WHERE user_id = ? ORDER BY last_seen_at DESC').all(userId)
+    : db.prepare('SELECT * FROM topics ORDER BY last_seen_at DESC').all()) as Record<string, unknown>[];
   return rows.map(parseTopicRow);
 }
 
-export function getTopicById(id: string): Topic | null {
+export function getTopicById(id: string, userId?: string): Topic | null {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM topics WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  const row = (userId
+    ? db.prepare('SELECT * FROM topics WHERE id = ? AND user_id = ?').get(id, userId)
+    : db.prepare('SELECT * FROM topics WHERE id = ?').get(id)) as Record<string, unknown> | undefined;
   if (!row) return null;
   return parseTopicRow(row);
 }
@@ -55,7 +59,7 @@ export function upsertTopic(name: string): Topic {
   return getTopicById(id)!;
 }
 
-export function rebuildTopicsFromMemos(): Topic[] {
+export function rebuildTopicsFromMemos(userId?: string): Topic[] {
   const db = getDb();
   const rows = db.prepare(`
     SELECT id, created_at, ai_topics
@@ -63,7 +67,8 @@ export function rebuildTopicsFromMemos(): Topic[] {
     WHERE ai_topics IS NOT NULL
       AND analysis_status = 'done'
       AND privacy_level = 'normal'
-  `).all() as { id: string; created_at: string; ai_topics: string }[];
+      ${userId ? 'AND user_id = @userId' : ''}
+  `).all(userId ? { userId } : {}) as { id: string; created_at: string; ai_topics: string }[];
   const now = new Date().toISOString();
   const topicMap = new Map<string, { count: number; first: string; last: string }>();
 
@@ -78,14 +83,15 @@ export function rebuildTopicsFromMemos(): Topic[] {
   });
 
   const transaction = db.transaction(() => {
-    db.prepare('DELETE FROM topics').run();
-    const insert = db.prepare(`INSERT INTO topics (id, name, memo_count, first_seen_at, last_seen_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+    if (userId) db.prepare('DELETE FROM topics WHERE user_id = ?').run(userId);
+    else db.prepare('DELETE FROM topics').run();
+    const insert = db.prepare(`INSERT INTO topics (id, user_id, name, memo_count, first_seen_at, last_seen_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
     for (const [name, meta] of topicMap.entries()) {
-      insert.run(uuidv4(), name, meta.count, meta.first, meta.last, now, now);
+      insert.run(uuidv4(), userId || 'liuweixin', name, meta.count, meta.first, meta.last, now, now);
     }
   });
   transaction();
-  return getTopics();
+  return getTopics(userId);
 }
 
 export function getMemosForTopicName(name: string, limit: number = 30) {

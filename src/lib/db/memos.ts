@@ -66,6 +66,11 @@ export function getMemos(filters: MemoFilters = {}): { memos: Memo[]; total: num
     params.query = `%${filters.query}%`;
   }
 
+  if (filters.userId) {
+    conditions.push('user_id = @userId');
+    params.userId = filters.userId;
+  }
+
   if (filters.tag) {
     conditions.push("original_tags LIKE @tag");
     params.tag = `%"${filters.tag}"%`;
@@ -141,6 +146,7 @@ export function createMemo(input: MemoCreateInput): Memo {
 
   const memo: Record<string, unknown> = {
     id,
+    user_id: input.user_id || 'liuweixin',
     raw_content: input.content,
     plain_text: plainText,
     created_at: now,
@@ -183,12 +189,12 @@ export function createMemosBatch(inputs: MemoCreateInput[]): CreateMemosBatchRes
 
   const insertStmt = db.prepare(`
     INSERT OR IGNORE INTO memos (
-      id, raw_content, plain_text, created_at, updated_at, source, import_fingerprint, original_tags,
-      ai_title, ai_summary, ai_category, ai_topics, ai_emotions, ai_people,
+    id, raw_content, plain_text, created_at, updated_at, source, import_fingerprint, original_tags,
+      user_id, ai_title, ai_summary, ai_category, ai_topics, ai_emotions, ai_people,
       ai_projects, ai_actions, ai_key_questions, embedding, analysis_status, privacy_level
     ) VALUES (
       @id, @raw_content, @plain_text, @created_at, @updated_at, @source, @import_fingerprint, @original_tags,
-      @ai_title, @ai_summary, @ai_category, @ai_topics, @ai_emotions, @ai_people,
+      @user_id, @ai_title, @ai_summary, @ai_category, @ai_topics, @ai_emotions, @ai_people,
       @ai_projects, @ai_actions, @ai_key_questions, @embedding, @analysis_status, @privacy_level
     )
   `);
@@ -245,6 +251,7 @@ export function createMemosBatch(inputs: MemoCreateInput[]): CreateMemosBatchRes
 
     const memo: Record<string, unknown> = {
       id,
+      user_id: input.user_id || 'liuweixin',
       raw_content: input.content,
       plain_text: plainText,
       created_at: now,
@@ -317,7 +324,7 @@ export function deleteMemo(id: string): boolean {
   return result.changes > 0;
 }
 
-export function getMemoStats(): {
+export function getMemoStats(userId?: string): {
   total: number;
   today: number;
   thisWeek: number;
@@ -325,23 +332,26 @@ export function getMemoStats(): {
 } {
   const db = getDb();
 
-  const { total } = db.prepare('SELECT COUNT(*) as total FROM memos').get() as { total: number };
+  const userWhere = userId ? 'WHERE user_id = @userId' : '';
+  const andUser = userId ? 'AND user_id = @userId' : '';
+  const params = userId ? { userId } : {};
+  const { total } = db.prepare(`SELECT COUNT(*) as total FROM memos ${userWhere}`).get(params) as { total: number };
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const { today } = db
-    .prepare('SELECT COUNT(*) as today FROM memos WHERE created_at >= ?')
-    .get(todayStart.toISOString()) as { today: number };
+    .prepare(`SELECT COUNT(*) as today FROM memos WHERE created_at >= @date ${andUser}`)
+    .get({ date: todayStart.toISOString(), ...params }) as { today: number };
 
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
   weekStart.setHours(0, 0, 0, 0);
   const { thisWeek } = db
-    .prepare('SELECT COUNT(*) as thisWeek FROM memos WHERE created_at >= ?')
-    .get(weekStart.toISOString()) as { thisWeek: number };
+    .prepare(`SELECT COUNT(*) as thisWeek FROM memos WHERE created_at >= @date ${andUser}`)
+    .get({ date: weekStart.toISOString(), ...params }) as { thisWeek: number };
 
   // Aggregate top tags from all memos
-  const allMemos = db.prepare('SELECT original_tags FROM memos').all() as { original_tags: string }[];
+  const allMemos = db.prepare(`SELECT original_tags FROM memos ${userWhere}`).all(params) as { original_tags: string }[];
   const tagCounts: Record<string, number> = {};
   for (const row of allMemos) {
     try {
@@ -361,11 +371,11 @@ export function getMemoStats(): {
   return { total, today, thisWeek, topTags };
 }
 
-export function getRecentMemos(limit: number = 10): Memo[] {
+export function getRecentMemos(limit: number = 10, userId?: string): Memo[] {
   const db = getDb();
   const rows = db
-    .prepare('SELECT * FROM memos ORDER BY created_at DESC LIMIT ?')
-    .all(limit) as Record<string, unknown>[];
+    .prepare(`SELECT * FROM memos ${userId ? 'WHERE user_id = @userId' : ''} ORDER BY created_at DESC LIMIT @limit`)
+    .all(userId ? { userId, limit } : { limit }) as Record<string, unknown>[];
   return rows.map(parseMemoRow);
 }
 

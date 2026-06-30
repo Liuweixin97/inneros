@@ -3,6 +3,14 @@ import path from 'path';
 import fs from 'fs';
 
 let db: Database.Database | null = null;
+export const DEFAULT_OWNER_USER_ID = 'liuweixin';
+
+function ensureColumn(database: Database.Database, table: string, column: string, definition: string): void {
+  const columns = database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (!columns.some((item) => item.name === column)) {
+    database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
 
 export function getDb(): Database.Database {
   if (db) return db;
@@ -21,6 +29,15 @@ export function getDb(): Database.Database {
 
   // Create tables
   db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS memos (
       id TEXT PRIMARY KEY,
       raw_content TEXT NOT NULL,
@@ -300,6 +317,34 @@ export function getDb(): Database.Database {
     )
   `).run();
 
+  const userScopedTables = [
+    'memos',
+    'topics',
+    'conversations',
+    'insights',
+    'action_feedback',
+    'ai_cache',
+    'llm_runs',
+    'analysis_jobs',
+    'memory_items',
+    'memo_chunks',
+    'retrieval_runs',
+    'memory_rebuild_runs',
+  ];
+  for (const table of userScopedTables) {
+    ensureColumn(db, table, 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
+    db.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id IS NULL OR user_id = ''`).run(DEFAULT_OWNER_USER_ID);
+  }
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_memos_user_created_at ON memos(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_topics_user_last_seen ON topics(user_id, last_seen_at);
+    CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at);
+    CREATE INDEX IF NOT EXISTS idx_insights_user_created ON insights(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_memory_items_user_type_status ON memory_items(user_id, type, status);
+    CREATE INDEX IF NOT EXISTS idx_analysis_jobs_user_ready ON analysis_jobs(user_id, status, run_after, created_at);
+  `);
+
   // ---- 林间世界游戏表 ----
   db.exec(`
     CREATE TABLE IF NOT EXISTS game_worlds (
@@ -358,6 +403,10 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_companion_sessions_world ON companion_sessions(world_id, started_at);
     CREATE INDEX IF NOT EXISTS idx_shared_drafts_session ON shared_memory_drafts(session_id);
   `);
+
+  ensureColumn(db, 'game_worlds', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
+  db.prepare('UPDATE game_worlds SET user_id = ? WHERE user_id IS NULL OR user_id = ""').run(DEFAULT_OWNER_USER_ID);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_game_worlds_user_visit ON game_worlds(user_id, last_visited_at)');
 
   return db;
 }

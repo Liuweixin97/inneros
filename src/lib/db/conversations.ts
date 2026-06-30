@@ -14,22 +14,24 @@ function parseMessageRow(row: Record<string, unknown>): ChatMessage {
 
 // ---- Public API ----
 
-export function getConversations(): Conversation[] {
+export function getConversations(userId?: string): Conversation[] {
   const db = getDb();
   const rows = db
     .prepare(
       `SELECT c.*, COUNT(m.id) as message_count
        FROM conversations c
        LEFT JOIN messages m ON m.conversation_id = c.id
+       ${userId ? 'WHERE c.user_id = @userId' : ''}
        GROUP BY c.id
        ORDER BY c.updated_at DESC`
     )
-    .all() as Record<string, unknown>[];
+    .all(userId ? { userId } : {}) as Record<string, unknown>[];
   return rows.map(parseConversationRow);
 }
 
 export function getConversationById(
-  id: string
+  id: string,
+  userId?: string,
 ): { conversation: Conversation; messages: ChatMessage[] } | null {
   const db = getDb();
 
@@ -38,10 +40,10 @@ export function getConversationById(
       `SELECT c.*, COUNT(m.id) as message_count
        FROM conversations c
        LEFT JOIN messages m ON m.conversation_id = c.id
-       WHERE c.id = ?
+       WHERE c.id = ? ${userId ? 'AND c.user_id = ?' : ''}
        GROUP BY c.id`
     )
-    .get(id) as Record<string, unknown> | undefined;
+    .get(...(userId ? [id, userId] : [id])) as Record<string, unknown> | undefined;
 
   if (!convRow) return null;
 
@@ -57,15 +59,16 @@ export function getConversationById(
 
 export function createConversation(
   title: string,
-  mode: ConversationMode = 'unified'
+  mode: ConversationMode = 'unified',
+  userId = 'liuweixin',
 ): Conversation {
   const db = getDb();
   const id = uuidv4();
   const now = new Date().toISOString();
 
   db.prepare(
-    'INSERT INTO conversations (id, title, mode, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
-  ).run(id, title, mode, now, now);
+    'INSERT INTO conversations (id, user_id, title, mode, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(id, userId, title, mode, now, now);
 
   return {
     id,
@@ -148,8 +151,10 @@ export function addMessage(
   };
 }
 
-export function deleteConversation(id: string): boolean {
+export function deleteConversation(id: string, userId?: string): boolean {
   const db = getDb();
-  const result = db.prepare('DELETE FROM conversations WHERE id = ?').run(id);
+  const result = userId
+    ? db.prepare('DELETE FROM conversations WHERE id = ? AND user_id = ?').run(id, userId)
+    : db.prepare('DELETE FROM conversations WHERE id = ?').run(id);
   return result.changes > 0;
 }
