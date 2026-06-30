@@ -2,7 +2,7 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache python3 make g++ sqlite
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install
 
 FROM node:22-alpine AS builder
 WORKDIR /app
@@ -25,4 +25,3 @@ COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlit
 RUN mkdir -p /app/.data
 EXPOSE 3000
 CMD ["node", "server.js"]
-
