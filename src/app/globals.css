@@ -4598,3 +4598,542 @@ body {
     margin: 0 0 max(12px, env(safe-area-inset-bottom));
   }
 }
+
+/* Forest visual stability overrides: keep this as the last forest layer. */
+.game-hud.has-panel-open .game-world-brief,
+.game-hud.has-panel-open .game-bag,
+.game-hud.has-panel-open .game-bag__trigger,
+.game-hud.has-panel-open .game-control-legend {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.game-hud.has-panel-open .game-hud-identity,
+.game-hud.has-panel-open .game-hud-actions {
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.game-focus-layer--porch,
+.game-focus-layer--fireside,
+.game-focus-layer--workshop,
+.game-focus-layer--trail {
+  box-sizing: border-box;
+  min-height: 0;
+  padding: clamp(18px, 3vw, 32px);
+}
+
+.game-focus-layer--porch {
+  place-items: center start;
+}
+
+.game-focus-layer--fireside {
+  place-items: center end;
+}
+
+.game-focus-layer--workshop,
+.game-focus-layer--trail {
+  place-items: center;
+}
+
+.cabin-panel,
+.fireside-panel,
+.workshop-panel,
+.light-trail-panel,
+.pond-focus-layer--immersive .pond-panel-v2 {
+  box-sizing: border-box;
+  max-height: calc(100dvh - 56px);
+  border-radius: 4px;
+  scrollbar-gutter: stable;
+}
+
+.cabin-panel,
+.fireside-panel,
+.workshop-panel,
+.light-trail-panel {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cabin-panel {
+  width: min(560px, calc(100vw - 56px));
+  margin: 0;
+  padding: 22px 26px 18px;
+}
+
+.cabin-panel > header,
+.cabin-panel > footer,
+.fireside-header,
+.workshop-panel > header,
+.light-trail-panel > header,
+.pond-panel-v2 > header {
+  flex: 0 0 auto;
+}
+
+.cabin-panel > footer {
+  position: sticky;
+  bottom: -18px;
+  z-index: 2;
+  margin: 16px -6px -18px;
+  border-top: 1px solid rgba(107, 63, 26, 0.12);
+  background:
+    linear-gradient(180deg, rgba(244, 232, 204, 0.82), rgba(244, 232, 204, 0.98));
+  padding: 12px 6px 14px;
+}
+
+.cabin-panel > footer button {
+  min-height: 36px;
+  color: rgba(59, 46, 42, 0.72);
+}
+
+.fireside-panel {
+  width: min(600px, calc(100vw - 56px));
+  margin-right: 0;
+  padding-bottom: 18px;
+}
+
+.fireside-header {
+  padding: 20px 24px 12px;
+}
+
+.fireside-header h2 {
+  max-width: 430px;
+  font-size: clamp(20px, 2.25vw, 26px);
+  line-height: 1.28;
+}
+
+.fireside-header .game-hud-btn {
+  border-color: rgba(107, 63, 26, 0.2) !important;
+  background: rgba(255, 252, 242, 0.62) !important;
+  box-shadow: none !important;
+  color: #5b4636 !important;
+}
+
+.fireside-setup {
+  margin: 0 24px 10px;
+  padding: 12px;
+}
+
+.fireside-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  overflow: visible;
+}
+
+.fireside-modes button {
+  min-height: 56px;
+  border-color: rgba(107, 63, 26, 0.18);
+  background: rgba(255, 252, 242, 0.36);
+  color: rgba(59, 46, 42, 0.7);
+}
+
+.fireside-modes button.is-active {
+  border-color: rgba(74, 124, 47, 0.38);
+  background: rgba(74, 124, 47, 0.14);
+  color: #2d5016;
+}
+
+.fireside-modes button strong {
+  font-size: 12px;
+}
+
+.fireside-modes button span {
+  color: rgba(59, 46, 42, 0.58);
+  font-size: 10.5px;
+}
+
+.fireside-memory-context {
+  width: auto;
+  margin: 0 24px;
+}
+
+.fireside-memory-summary {
+  padding: 10px 0;
+}
+
+.fireside-memory-picker {
+  min-height: 0;
+  padding: 2px 0 10px;
+}
+
+.fireside-memory-picker__list {
+  max-height: clamp(112px, 20vh, 162px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding-right: 2px;
+}
+
+.fireside-memory-picker label {
+  min-height: 46px;
+  border: 1px solid rgba(107, 63, 26, 0.12);
+  background: rgba(255, 252, 242, 0.3);
+}
+
+.fireside-start {
+  display: block;
+  width: calc(100% - 48px);
+  min-height: 42px;
+  margin: 10px 24px 0;
+  border-color: rgba(74, 124, 47, 0.36);
+  background: rgba(74, 124, 47, 0.16);
+  color: #254b16;
+  font-weight: 650;
+}
+
+.fireside-body {
+  min-height: 0;
+}
+
+.fireside-messages {
+  max-height: min(32vh, 260px);
+  min-height: 160px;
+  padding: 16px 24px;
+}
+
+.fireside-composer {
+  margin: 0 24px;
+  padding: 12px 0 0;
+}
+
+.fireside-keepsake {
+  margin: 12px 24px 0;
+  padding: 12px;
+}
+
+.fireside-keepsake textarea {
+  min-height: 58px;
+}
+
+.pond-focus-layer--immersive {
+  align-items: center;
+  padding: clamp(16px, 3vw, 28px);
+}
+
+.pond-focus-layer--immersive .pond-panel-v2 {
+  width: min(760px, calc(100vw - 56px));
+  max-height: calc(100dvh - 56px);
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.pond-panel-v2 > header {
+  padding-bottom: 12px;
+}
+
+.pond-panel-v2 h2 {
+  font-size: clamp(22px, 2.6vw, 30px);
+  line-height: 1.25;
+}
+
+.pond-water {
+  min-height: clamp(180px, 31vh, 236px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 22px;
+}
+
+.pond-water > p {
+  font-size: clamp(16px, 1.7vw, 19px);
+}
+
+.pond-water > small {
+  margin-top: 0;
+}
+
+.pond-floating-reflection,
+.pond-returned-bottle {
+  max-width: min(420px, 92%);
+}
+
+.pond-lantern-off {
+  margin-top: 12px;
+}
+
+.pond-corner {
+  margin-top: 12px;
+}
+
+.pond-corner > button {
+  min-width: 128px;
+  border-color: rgba(45, 80, 77, 0.25);
+  background: rgba(45, 80, 77, 0.08);
+}
+
+.pond-corner__sheet {
+  width: min(430px, 100%);
+  padding: 10px;
+}
+
+.pond-corner__sheet textarea {
+  min-height: 92px;
+  max-height: 120px;
+}
+
+.pond-corner__sheet div {
+  margin-top: 8px;
+}
+
+.pond-corner__sheet button {
+  min-height: 34px;
+}
+
+.workshop-panel {
+  width: min(820px, calc(100vw - 56px));
+  padding: 24px 26px;
+}
+
+.workshop-panel h2 {
+  max-width: 640px;
+  color: var(--game-ink);
+  font-size: clamp(22px, 2.5vw, 29px);
+  line-height: 1.28;
+}
+
+.workshop-progress {
+  grid-template-columns: repeat(6, minmax(72px, 1fr));
+  gap: 6px;
+  overflow-x: auto;
+  margin: 18px 0 16px;
+  padding-bottom: 3px;
+}
+
+.workshop-progress span {
+  min-height: 32px;
+  border: 1px solid rgba(107, 63, 26, 0.14);
+  border-top: 3px solid rgba(107, 63, 26, 0.18);
+  border-radius: 3px;
+  background: rgba(255, 252, 242, 0.34);
+  padding: 6px 7px;
+  color: rgba(59, 46, 42, 0.56);
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.workshop-progress span.is-active {
+  border-color: rgba(74, 124, 47, 0.34);
+  border-top-color: rgba(74, 124, 47, 0.72);
+  background: rgba(74, 124, 47, 0.12);
+  color: #2d5016;
+}
+
+.workshop-memory-list {
+  max-height: clamp(130px, 24vh, 230px);
+  gap: 8px;
+}
+
+.workshop-memory-list button,
+.workshop-question-list button,
+.workshop-carriers button {
+  border-radius: 4px;
+  background: rgba(255, 252, 242, 0.36);
+  color: rgba(59, 46, 42, 0.72);
+}
+
+.workshop-memory-list strong,
+.workshop-carriers strong {
+  color: var(--game-ink);
+  font-size: 12px;
+}
+
+.workshop-memory-list small,
+.workshop-carriers span {
+  color: rgba(59, 46, 42, 0.55);
+  font-size: 10px;
+}
+
+.workshop-step blockquote {
+  color: rgba(59, 46, 42, 0.72);
+}
+
+.light-trail-panel {
+  width: min(800px, calc(100vw - 56px));
+  padding: 24px 26px;
+}
+
+.light-trail-panel h2 {
+  max-width: 640px;
+  font-size: clamp(22px, 2.45vw, 29px);
+  line-height: 1.3;
+}
+
+.light-trail-claim {
+  margin-top: 14px;
+  color: rgba(59, 46, 42, 0.72);
+}
+
+.light-trail-board {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  align-items: stretch;
+  gap: 12px;
+  margin: 18px 0 20px;
+}
+
+.light-trail-board article {
+  min-height: 150px;
+  padding: 14px;
+}
+
+.light-trail-board article blockquote {
+  font-size: 13px;
+  line-height: 1.68;
+}
+
+.light-trail-board > span {
+  display: none;
+}
+
+.light-trail-question,
+.light-trail-name {
+  border: 1px solid rgba(107, 63, 26, 0.12);
+  border-radius: 4px;
+  background: rgba(255, 252, 242, 0.38);
+  padding: 14px;
+}
+
+.light-trail-question h3 {
+  color: var(--game-ink);
+  font-size: 18px;
+}
+
+.light-trail-question p,
+.light-trail-name p {
+  color: rgba(59, 46, 42, 0.62);
+}
+
+.light-trail-question > div {
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.light-trail-question button,
+.light-trail-primary {
+  min-height: 38px;
+  border: 1px solid rgba(74, 124, 47, 0.34);
+  border-radius: 3px;
+  background: rgba(74, 124, 47, 0.14);
+  color: #2d5016;
+  font-weight: 650;
+}
+
+.light-trail-question button:last-child {
+  border-color: rgba(107, 63, 26, 0.2);
+  background: rgba(107, 63, 26, 0.06);
+  color: rgba(59, 46, 42, 0.76);
+}
+
+@media (max-width: 768px) {
+  .game-focus-layer--porch,
+  .game-focus-layer--fireside,
+  .game-focus-layer--workshop,
+  .game-focus-layer--trail,
+  .pond-focus-layer--immersive {
+    place-items: end center;
+    align-items: end;
+    padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .cabin-panel,
+  .fireside-panel,
+  .workshop-panel,
+  .light-trail-panel,
+  .pond-focus-layer--immersive .pond-panel-v2 {
+    width: calc(100vw - 20px);
+    max-height: min(82dvh, calc(100dvh - 24px));
+    margin: 0;
+    padding: 18px;
+  }
+
+  .game-hud.has-panel-open .game-hud-identity,
+  .game-hud.has-panel-open .game-hud-actions {
+    opacity: 0;
+  }
+
+  .cabin-panel > footer {
+    position: static;
+    margin: 18px 0 0;
+    background: transparent;
+    flex-wrap: wrap;
+    border-top: 1px solid rgba(107, 63, 26, 0.12);
+    padding: 14px 0 0;
+  }
+
+  .cabin-panel > footer button {
+    flex: 1 1 120px;
+    justify-content: center;
+  }
+
+  .fireside-header,
+  .workshop-panel > header,
+  .light-trail-panel > header,
+  .pond-panel-v2 > header {
+    gap: 12px;
+    padding: 0 0 12px;
+  }
+
+  .fireside-header h2,
+  .workshop-panel h2,
+  .light-trail-panel h2,
+  .pond-panel-v2 h2 {
+    font-size: 21px;
+  }
+
+  .fireside-header > div:last-child {
+    flex-direction: column;
+    align-items: end;
+  }
+
+  .fireside-setup,
+  .fireside-memory-context,
+  .fireside-start,
+  .fireside-composer,
+  .fireside-keepsake {
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .fireside-modes,
+  .fireside-memory-picker__list,
+  .workshop-memory-list,
+  .light-trail-question > div {
+    grid-template-columns: 1fr;
+  }
+
+  .fireside-modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fireside-modes button {
+    min-height: 64px;
+    padding: 8px;
+  }
+
+  .fireside-memory-picker__list {
+    max-height: 96px;
+  }
+
+  .pond-water {
+    min-height: 260px;
+    gap: 14px;
+    padding: 20px 14px;
+  }
+
+  .pond-corner,
+  .pond-corner__sheet {
+    width: 100%;
+  }
+
+  .pond-corner__sheet textarea {
+    min-height: 84px;
+  }
+
+  .light-trail-board {
+    grid-template-columns: 1fr;
+  }
+}

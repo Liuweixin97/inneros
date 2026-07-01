@@ -49,6 +49,16 @@ interface GameShellProps {
   onExit: () => void;
 }
 
+function getDebugStartPosition() {
+  if (process.env.NODE_ENV === 'production' || typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('forestDebug') !== '1') return null;
+  const x = Number(params.get('x'));
+  const y = Number(params.get('y'));
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { x, y };
+}
+
 export default function GameShell({ onExit }: GameShellProps) {
   // ---- 游戏阶段状态机 ----
   const [phase, setPhase] = useState<GamePhase>('portal');
@@ -62,8 +72,9 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [canvasFailed, setCanvasFailed] = useState(false);
 
   // ---- 玩家状态 ----
-  const [playerX, setPlayerX] = useState(345);
-  const [playerY, setPlayerY] = useState(245);
+  const debugStartPosition = getDebugStartPosition();
+  const [playerX, setPlayerX] = useState(debugStartPosition?.x ?? 345);
+  const [playerY, setPlayerY] = useState(debugStartPosition?.y ?? 245);
   const [playerChar, setPlayerChar] = useState(getDefaultCharacter());
   const [secondPlayerChar] = useState(getCharacterById('drifter'));
 
@@ -168,6 +179,21 @@ export default function GameShell({ onExit }: GameShellProps) {
   const handlePortalComplete = useCallback(() => {
     setPhase('explore');
     initWorld();
+  }, [initWorld]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('forestDebug') !== '1') return;
+    setPhase('explore');
+    void initWorld().then(() => {
+      const debugX = Number(params.get('x'));
+      const debugY = Number(params.get('y'));
+      if (Number.isFinite(debugX) && Number.isFinite(debugY)) {
+        setPlayerX(debugX);
+        setPlayerY(debugY);
+      }
+    });
   }, [initWorld]);
 
   // 从设置面板更新角色
@@ -350,6 +376,12 @@ export default function GameShell({ onExit }: GameShellProps) {
       object.sourceMemoIds.some((memoId) => memos.some((memo) => memo.id === memoId))
     )) ?? null;
   }, [activeObject, memoryEncounterObjects, memos]);
+  const panelOpen = phase !== 'explore'
+    || showSettings
+    || cabinOpen
+    || benchOpen
+    || lightTrailOpen
+    || Boolean(activePlacedObject);
 
   // ---- 渲染 ----
   return (
@@ -408,6 +440,7 @@ export default function GameShell({ onExit }: GameShellProps) {
                 onOpenLightTrail={() => setLightTrailOpen(true)}
                 onOpenSettings={() => setShowSettings(true)}
                 onExit={handleExit}
+                panelOpen={panelOpen}
               />
             </>
           )}

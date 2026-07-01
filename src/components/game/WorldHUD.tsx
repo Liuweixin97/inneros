@@ -19,6 +19,7 @@ interface WorldHUDProps {
   onOpenLightTrail: () => void;
   onOpenSettings: () => void;
   onExit: () => void;
+  panelOpen?: boolean;
 }
 
 export default function WorldHUD({
@@ -34,6 +35,7 @@ export default function WorldHUD({
   onOpenLightTrail,
   onOpenSettings,
   onExit,
+  panelOpen = false,
 }: WorldHUDProps) {
   const locationId = getPlayerLocation(playerX, playerY);
   const region = locationId ? getRegion(locationId) : null;
@@ -53,7 +55,7 @@ export default function WorldHUD({
   const guide = getPlaceGuide(region?.id ?? null, bagMemoIds.length, events);
 
   return (
-    <div className={`game-hud ${phase === 'pond' ? 'is-quiet' : ''}`}>
+    <div className={`game-hud ${phase === 'pond' ? 'is-quiet' : ''} ${panelOpen ? 'has-panel-open' : ''}`}>
       {/* 左上：区域标识 */}
       <div className="game-hud-identity">
         <span className="game-hud-mark">
