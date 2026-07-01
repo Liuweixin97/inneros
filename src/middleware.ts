@@ -18,6 +18,7 @@ export function middleware(request: NextRequest) {
       '/api/memos',
       '/api/stats',
       '/api/topics',
+      '/api/today',
       '/api/insights',
       '/api/conversations',
       '/api/auth/me',

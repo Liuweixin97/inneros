@@ -1,3 +1,4 @@
+@import url("https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/style.css");
 @import "tailwindcss";
 
 /* ============================================================
@@ -34,6 +35,7 @@
 
   /* Semantic surfaces */
   --color-hero: #111827;
+  --color-hero-accent: #0D9373;
   --color-danger-bg: #FEF2F2;
   --color-danger-border: #FECACA;
   --color-danger-text: #B91C1C;
@@ -47,7 +49,8 @@
   --shadow-xl: 0 16px 48px rgba(0,0,0,0.1);
 
   /* Typography */
-  --font-sans: 'PingFang SC', 'Microsoft YaHei UI', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', 'Source Han Sans SC', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei UI', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-notebook: 'LXGW WenKai Screen', 'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
   --font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
 
   /* Spacing & Layout */
@@ -66,6 +69,7 @@
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
+  --radius-2xl: 28px;
   --radius-full: 9999px;
 }
 
@@ -93,7 +97,8 @@
   --color-border-light: #1F2228;
   --color-border-strong: #3B3F4A;
 
-  --color-hero: #111827;
+  --color-hero: #0d2a2e;
+  --color-hero-accent: #34D8AD;
   --color-danger-bg: #2A171B;
   --color-danger-border: #5B252C;
   --color-danger-text: #FDA4AF;
@@ -129,6 +134,10 @@ body {
   line-height: 1.7;
   margin: 0;
   overflow: hidden;
+}
+
+.font-notebook {
+  font-family: var(--font-notebook);
 }
 
 /* Smooth scrollbars */
@@ -470,6 +479,13 @@ body {
   border-color: var(--color-border);
 }
 
+.today-hero-card {
+  background:
+    radial-gradient(circle at 82% 4%, color-mix(in srgb, var(--color-hero-accent) 34%, transparent) 0%, transparent 36%),
+    linear-gradient(145deg, color-mix(in srgb, var(--color-hero) 92%, #ffffff 8%) 0%, var(--color-hero) 58%, #071b1d 100%);
+  border-color: color-mix(in srgb, var(--color-hero-accent) 18%, transparent);
+}
+
 .card-selected {
   border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 1px var(--color-primary), var(--shadow-md) !important;
@@ -636,6 +652,420 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   InnerOS Forest World V4 — spatial, paper-like workflows
+   ============================================================ */
+
+.game-focus-layer--porch,
+.game-focus-layer--fireside,
+.game-focus-layer--workshop,
+.game-focus-layer--trail {
+  place-items: end start;
+  background:
+    linear-gradient(90deg, rgba(11, 22, 18, 0.42), transparent 58%),
+    rgba(8, 12, 10, 0.18);
+  padding: 28px;
+}
+
+.game-focus-layer--fireside {
+  place-items: center end;
+  background:
+    radial-gradient(circle at 76% 44%, rgba(255, 147, 63, 0.13), transparent 36%),
+    rgba(10, 7, 5, 0.26);
+}
+
+.game-focus-layer--workshop,
+.game-focus-layer--trail {
+  place-items: center;
+}
+
+.cabin-panel,
+.fireside-panel,
+.workshop-panel,
+.light-trail-panel,
+.pond-panel-v2 {
+  border-radius: 4px;
+  font-family: var(--font-notebook);
+}
+
+.cabin-panel {
+  width: min(520px, calc(100vw - 56px));
+  max-height: min(76vh, 640px);
+  margin: 0 0 84px 0;
+  overflow-y: auto;
+}
+
+.cabin-arrival {
+  margin: 8px 0 16px;
+  border: 1px solid rgba(107, 63, 26, 0.16);
+  background: rgba(255, 255, 255, 0.3);
+  padding: 16px;
+}
+
+.cabin-arrival span,
+.cabin-route__mark {
+  color: rgba(107, 63, 26, 0.56);
+  font-size: 11px;
+}
+
+.cabin-arrival p {
+  margin-top: 8px;
+  color: rgba(59, 46, 42, 0.82);
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+.cabin-route {
+  position: relative;
+}
+
+.cabin-route__mark {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.fireside-panel {
+  width: min(560px, calc(100vw - 56px));
+  max-height: calc(100vh - 56px);
+  margin-right: 8px;
+}
+
+.fireside-setup {
+  margin: 0 26px 12px;
+  border: 1px solid rgba(107, 63, 26, 0.14);
+  background: rgba(255, 255, 255, 0.23);
+  padding: 14px;
+}
+
+.fireside-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 10px 0 0;
+}
+
+.fireside-modes button {
+  min-width: 0;
+  white-space: normal;
+  border-radius: 3px;
+  padding: 10px;
+  text-align: left;
+}
+
+.fireside-modes button strong,
+.fireside-modes button span {
+  display: block;
+}
+
+.fireside-modes button span {
+  margin-top: 4px;
+  color: rgba(59, 46, 42, 0.48);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.fireside-fixed-mode {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  margin: 0 26px 12px;
+  border: 1px solid rgba(107, 63, 26, 0.13);
+  background: rgba(255, 255, 255, 0.24);
+  padding: 10px 12px;
+}
+
+.fireside-fixed-mode span {
+  color: #6b3f1a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fireside-fixed-mode p {
+  color: rgba(59, 46, 42, 0.58);
+  font-size: 12px;
+}
+
+.fireside-start {
+  margin: 14px 26px 0;
+  border: 1px solid rgba(74, 124, 47, 0.28);
+  border-radius: 3px;
+  background: rgba(74, 124, 47, 0.12);
+  padding: 10px 14px;
+  color: #2d5016;
+  font-size: 13px;
+}
+
+.fireside-keepsake {
+  margin: 0 26px 24px;
+  border: 1px dashed rgba(107, 63, 26, 0.2);
+  background: rgba(255, 252, 242, 0.42);
+  padding: 13px;
+}
+
+.fireside-keepsake__types {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.fireside-keepsake__types button,
+.fireside-keepsake > button {
+  border: 1px solid rgba(107, 63, 26, 0.15);
+  border-radius: 3px;
+  padding: 6px 9px;
+  color: rgba(59, 46, 42, 0.62);
+  font-size: 11px;
+}
+
+.fireside-keepsake__types button.is-selected {
+  background: rgba(107, 63, 26, 0.1);
+  color: #3b2e2a;
+}
+
+.fireside-keepsake textarea {
+  width: 100%;
+  margin-top: 10px;
+  resize: none;
+  border: 1px solid rgba(107, 63, 26, 0.12);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.36);
+  padding: 9px;
+  color: #3b2e2a;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.fireside-keepsake > button {
+  margin-top: 8px;
+}
+
+.fireside-keepsake > button:disabled {
+  opacity: 0.45;
+}
+
+.fireside-keepsake__notes {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.fireside-keepsake__notes span {
+  border-left: 2px solid rgba(107, 63, 26, 0.22);
+  padding-left: 8px;
+  color: rgba(59, 46, 42, 0.62);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.pond-focus-layer--immersive {
+  align-items: end;
+  background:
+    radial-gradient(circle at 46% 70%, rgba(91, 172, 195, 0.16), transparent 34%),
+    rgba(2, 10, 12, 0.14);
+  padding: 0;
+}
+
+.pond-focus-layer--immersive .pond-panel-v2 {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(78vh, 680px);
+  margin: 0 auto 22px;
+  overflow-y: auto;
+}
+
+.pond-water {
+  position: relative;
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid rgba(78, 116, 112, 0.18);
+  background:
+    radial-gradient(ellipse at 50% 58%, rgba(92, 151, 156, 0.24), transparent 52%),
+    linear-gradient(180deg, rgba(218, 232, 210, 0.38), rgba(163, 199, 189, 0.18));
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  text-align: center;
+}
+
+.pond-water.is-settled .pond-ripples i {
+  animation-duration: 11s;
+  opacity: 0.22;
+}
+
+.pond-water > p {
+  color: rgba(34, 55, 54, 0.72);
+  font-size: 18px;
+}
+
+.pond-water > small {
+  margin-top: -32px;
+  color: rgba(34, 55, 54, 0.45);
+  font-size: 11px;
+}
+
+.pond-floating-reflection,
+.pond-returned-bottle {
+  width: min(420px, 100%);
+  border: 1px solid rgba(45, 80, 77, 0.16);
+  background: rgba(255, 252, 242, 0.5);
+  padding: 12px;
+  color: rgba(34, 55, 54, 0.72);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.pond-returned-bottle span {
+  color: rgba(34, 55, 54, 0.52);
+  font-size: 11px;
+}
+
+.pond-returned-bottle button,
+.pond-corner button {
+  margin-top: 8px;
+  border: 1px solid rgba(45, 80, 77, 0.18);
+  border-radius: 3px;
+  padding: 7px 10px;
+  color: rgba(34, 55, 54, 0.72);
+  font-size: 12px;
+}
+
+.pond-corner {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.pond-corner__sheet {
+  margin-left: auto;
+  width: min(360px, 100%);
+  border: 1px solid rgba(45, 80, 77, 0.14);
+  background: rgba(255, 252, 242, 0.52);
+  padding: 12px;
+  text-align: left;
+}
+
+.pond-corner__sheet textarea {
+  width: 100%;
+  resize: none;
+  border: 1px solid rgba(45, 80, 77, 0.12);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.38);
+  padding: 9px;
+  color: rgba(34, 55, 54, 0.82);
+  font-size: 12px;
+}
+
+.pond-corner__sheet div {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.pond-corner small {
+  display: block;
+  margin-top: 8px;
+  color: rgba(34, 55, 54, 0.5);
+  font-size: 11px;
+}
+
+.light-trail-panel {
+  width: min(760px, calc(100vw - 56px));
+}
+
+.light-trail-claim {
+  margin-top: 18px;
+  color: rgba(59, 46, 42, 0.62);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.light-trail-board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.light-trail-board article {
+  min-height: 170px;
+  border: 1px solid rgba(107, 63, 26, 0.16);
+  background: rgba(255, 252, 242, 0.62);
+  padding: 14px;
+}
+
+.light-trail-board article small {
+  color: rgba(107, 63, 26, 0.5);
+  font-size: 11px;
+}
+
+.light-trail-board article blockquote {
+  margin-top: 10px;
+  color: rgba(59, 46, 42, 0.78);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.light-trail-board > span {
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  transform: translateX(-50%);
+  color: rgba(107, 63, 26, 0.36);
+}
+
+.light-trail-board.is-separated article:nth-child(2) {
+  transform: translateY(10px) rotate(1.5deg) !important;
+}
+
+.light-trail-board.is-separated article:nth-child(3) {
+  transform: translateY(-8px) rotate(-1deg) !important;
+}
+
+.workshop-writing blockquote {
+  margin: 12px 0;
+  border-left: 2px solid rgba(107, 63, 26, 0.2);
+  padding-left: 12px;
+  color: rgba(59, 46, 42, 0.62);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.workshop-confirm > div {
+  justify-content: flex-start;
+}
+
+.workshop-confirm > div span {
+  border-radius: 3px;
+}
+
+@media (max-width: 768px) {
+  .game-focus-layer--porch,
+  .game-focus-layer--fireside,
+  .game-focus-layer--workshop,
+  .game-focus-layer--trail {
+    place-items: end center;
+    padding: 12px;
+  }
+
+  .cabin-panel,
+  .fireside-panel,
+  .workshop-panel,
+  .light-trail-panel,
+  .pond-focus-layer--immersive .pond-panel-v2 {
+    width: calc(100vw - 24px);
+    max-height: 82vh;
+    margin: 0 0 max(12px, env(safe-area-inset-bottom));
+  }
+
+  .fireside-modes,
+  .light-trail-board {
+    grid-template-columns: 1fr;
+  }
+
+  .pond-water {
+    min-height: 220px;
   }
 }
 
@@ -4082,5 +4512,89 @@ body {
   .cabin-panel__grid,
   .cabin-echo__list {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Final forest workflow overrides: keep these after legacy game styles. */
+.game-focus-layer--porch,
+.game-focus-layer--fireside,
+.game-focus-layer--workshop,
+.game-focus-layer--trail {
+  background:
+    linear-gradient(90deg, rgba(11, 22, 18, 0.42), transparent 58%),
+    rgba(8, 12, 10, 0.18);
+  padding: 28px;
+}
+
+.game-focus-layer--porch {
+  place-items: end start;
+}
+
+.game-focus-layer--fireside {
+  place-items: center end;
+  background:
+    radial-gradient(circle at 76% 44%, rgba(255, 147, 63, 0.13), transparent 36%),
+    rgba(10, 7, 5, 0.26);
+}
+
+.cabin-panel {
+  width: min(520px, calc(100vw - 56px));
+  max-height: min(76vh, 640px);
+  margin: 0 0 84px 0;
+  overflow-y: auto;
+}
+
+.fireside-panel {
+  width: min(560px, calc(100vw - 56px));
+  max-height: calc(100vh - 56px);
+  margin-right: 8px;
+}
+
+.pond-focus-layer--immersive {
+  align-items: end;
+  background:
+    radial-gradient(circle at 46% 70%, rgba(91, 172, 195, 0.16), transparent 34%),
+    rgba(2, 10, 12, 0.14);
+  padding: 0;
+}
+
+.pond-focus-layer--immersive .pond-panel-v2 {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(78vh, 680px);
+  margin: 0 auto 22px;
+  overflow-y: auto;
+}
+
+.light-trail-panel {
+  width: min(760px, calc(100vw - 56px));
+}
+
+.cabin-arrival,
+.fireside-setup,
+.fireside-fixed-mode,
+.fireside-keepsake,
+.pond-water,
+.pond-corner__sheet,
+.light-trail-board article {
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .game-focus-layer--porch,
+  .game-focus-layer--fireside,
+  .game-focus-layer--workshop,
+  .game-focus-layer--trail {
+    place-items: end center;
+    padding: 12px;
+  }
+
+  .cabin-panel,
+  .fireside-panel,
+  .workshop-panel,
+  .light-trail-panel,
+  .pond-focus-layer--immersive .pond-panel-v2 {
+    width: calc(100vw - 24px);
+    max-height: 82vh;
+    margin: 0 0 max(12px, env(safe-area-inset-bottom));
   }
 }

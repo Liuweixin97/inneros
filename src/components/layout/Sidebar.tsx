@@ -39,9 +39,10 @@ export default function Sidebar() {
 
   if (isCoCreate) return null;
 
-  const isActive = (href: string) => {
+  const isActive = (href: string, exact = false) => {
     if (href === '/') return pathname === '/';
     if (href === '/insights' && pathname.startsWith('/topics')) return true;
+    if (exact) return pathname === href;
     return pathname.startsWith(href);
   };
 
@@ -145,7 +146,7 @@ export default function Sidebar() {
             flex items-center gap-3 px-3 py-2.5 rounded-xl
             text-[13px] font-medium
             transition-all duration-200
-            ${isActive('/settings')
+            ${isActive('/settings', true)
               ? 'bg-[var(--color-primary-light)] text-[var(--color-primary-dark)]'
               : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
             }

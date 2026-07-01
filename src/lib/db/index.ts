@@ -465,9 +465,21 @@ export function getDb(): Database.Database {
       FOREIGN KEY (session_id) REFERENCES companion_sessions(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS journey_events (
+      id TEXT PRIMARY KEY,
+      world_id TEXT NOT NULL,
+      user_id TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}',
+      type TEXT NOT NULL,
+      text TEXT NOT NULL,
+      source_memo_ids TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (world_id) REFERENCES game_worlds(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_world_objects_world_id ON world_objects(world_id, hidden);
     CREATE INDEX IF NOT EXISTS idx_companion_sessions_world ON companion_sessions(world_id, started_at);
     CREATE INDEX IF NOT EXISTS idx_shared_drafts_session ON shared_memory_drafts(session_id);
+    CREATE INDEX IF NOT EXISTS idx_journey_events_world_created ON journey_events(world_id, created_at);
   `);
 
   ensureColumn(db, 'game_worlds', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
@@ -475,14 +487,17 @@ export function getDb(): Database.Database {
   ensureColumn(db, 'world_objects', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
   ensureColumn(db, 'companion_sessions', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
   ensureColumn(db, 'shared_memory_drafts', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
+  ensureColumn(db, 'journey_events', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
   db.prepare("UPDATE world_objects SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
   db.prepare("UPDATE companion_sessions SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
   db.prepare("UPDATE shared_memory_drafts SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
+  db.prepare("UPDATE journey_events SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_game_worlds_user_visit ON game_worlds(user_id, last_visited_at);
     CREATE INDEX IF NOT EXISTS idx_world_objects_user_world ON world_objects(user_id, world_id, hidden);
     CREATE INDEX IF NOT EXISTS idx_companion_sessions_user_world ON companion_sessions(user_id, world_id, started_at);
     CREATE INDEX IF NOT EXISTS idx_shared_drafts_user_session ON shared_memory_drafts(user_id, session_id);
+    CREATE INDEX IF NOT EXISTS idx_journey_events_user_world ON journey_events(user_id, world_id, created_at);
   `);
 
   return db;

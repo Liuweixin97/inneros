@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Lightbulb, Mail, Settings, X } from 'lucide-react';
+import { ArrowLeft, Footprints, Settings, X } from 'lucide-react';
 import type { JourneyEvent, Memo } from '@/types';
 
 interface CabinPanelProps {
@@ -30,46 +30,34 @@ export default function CabinPanel({
 }: CabinPanelProps) {
   const recentEvents = events.slice(-3).reverse();
   const lastQuestion = [...events].reverse().find((event) => event.type === 'left_question');
-  const repeatedTopic = findRepeatedTopic(memos);
   const route = buildRouteHint(memos.length, events);
+  const arrivalMemo = memos[0] ?? null;
+  const arrivalLine = arrivalMemo
+    ? (arrivalMemo.ai_summary || arrivalMemo.plain_text.replace(/\s+/g, ' ').slice(0, 72))
+    : '今晚的林间没有催促。先留下一段真实记录，再回来看看它会长成什么。';
 
   return (
-    <div className="game-focus-layer game-focus-layer--soft" role="dialog" aria-label="亮灯木屋">
+    <div className="game-focus-layer game-focus-layer--porch" role="dialog" aria-label="亮灯木屋">
       <section className="cabin-panel">
         <header>
           <div>
-            <p className="game-kicker">亮灯木屋 · 此刻的锚点</p>
-            <h2>我今天带着什么来到这里？</h2>
+            <p className="game-kicker">亮灯木屋 · 门廊</p>
+            <h2>今晚带着什么来？</h2>
           </div>
           <button type="button" className="game-icon-button" onClick={onClose} aria-label="离开门廊">
             <X size={17} />
           </button>
         </header>
 
-        <div className="cabin-panel__grid">
-          <article className="cabin-panel__window">
-            <span className="cabin-panel__icon"><Lightbulb size={18} /></span>
-            <div>
-              <small>窗边的线索</small>
-              <strong>{repeatedTopic ? `你最近反复写到「${repeatedTopic}」` : '窗边今晚很安静'}</strong>
-              <p>{lastQuestion?.text ?? '这里不会替你总结，只展示你亲自留下的线索。'}</p>
-            </div>
-          </article>
-
-          <article className="cabin-panel__mailbox">
-            <span className="cabin-panel__icon"><Mail size={18} /></span>
-            <div>
-              <small>信箱</small>
-              <strong>{lastQuestion ? '一只纸鸟在等你' : '没有催促你的来信'}</strong>
-              <p>{lastQuestion?.text ?? '只有你主动留下的问题，才会在这里出现。'}</p>
-            </div>
-          </article>
-        </div>
+        <blockquote className="cabin-arrival">
+          <span>{arrivalMemo ? '来自最近一段记录' : '门廊上的纸条'}</span>
+          <p>{arrivalLine}</p>
+        </blockquote>
 
         <section className="cabin-echo">
           <div>
-            <p className="game-kicker">旅程回声</p>
-            <h3>这里只记录真实发生过的事</h3>
+            <p className="game-kicker">上次与这次的足迹</p>
+            <h3>{lastQuestion ? '有一个问题还在门边等你' : '这里只记录你亲自留下的事'}</h3>
           </div>
           {recentEvents.length > 0 ? (
             <div className="cabin-echo__list">
@@ -81,12 +69,13 @@ export default function CabinPanel({
               ))}
             </div>
           ) : (
-            <p className="cabin-echo__empty">今天还没有留下变化。直接出去走走也可以。</p>
+            <p className="cabin-echo__empty">还没有足迹。出门、靠近一段记忆、带走或放下，都算。</p>
           )}
         </section>
 
         <section className="cabin-route">
           <p className="game-kicker">今日路线</p>
+          <span className="cabin-route__mark"><Footprints size={16} /></span>
           <h3>{route.title}</h3>
           <p>{route.body}</p>
           <ol>
@@ -148,23 +137,4 @@ function buildRouteHint(memoCount: number, events: JourneyEvent[]) {
     body: '可以去池边放下一点不必解释的东西，或回到地图看看新增的痕迹。',
     steps: ['查看旅程回声', '让水面散开一条确认过的话', '回到 InnerOS 继续日常'],
   };
-}
-
-function findRepeatedTopic(memos: Memo[]): string | null {
-  const counts = new Map<string, number>();
-  memos.slice(0, 8).forEach((memo) => {
-    [...(memo.ai_topics ?? []), ...memo.original_tags].forEach((topic) => {
-      const normalized = topic.trim();
-      if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
-    });
-  });
-  let result: string | null = null;
-  let max = 1;
-  counts.forEach((count, topic) => {
-    if (count > max) {
-      max = count;
-      result = topic;
-    }
-  });
-  return result;
 }

@@ -13,6 +13,8 @@ import type {
   DialogueMode,
   CompanionSession,
   GameWorldSettings,
+  JourneyEvent,
+  JourneyEventType,
   MapLocation,
 } from '@/types';
 import { suggestPlacementPosition } from './memo-mapper';
@@ -34,11 +36,11 @@ let cache: WorldStateCache = {
 
 // ---- 世界加载 ----
 
-export async function loadWorld(): Promise<{ world: GameWorld; objects: WorldObject[] }> {
+export async function loadWorld(): Promise<{ world: GameWorld; objects: WorldObject[]; journeyEvents?: JourneyEvent[] }> {
   try {
     const res = await fetch('/api/game/world');
     if (!res.ok) throw new Error('API error');
-    const data = await res.json() as { world: GameWorld; objects: WorldObject[] };
+    const data = await res.json() as { world: GameWorld; objects: WorldObject[]; journeyEvents?: JourneyEvent[] };
     cache.world = data.world;
     cache.objects = data.objects;
     cache.pendingSync = false;
@@ -49,6 +51,30 @@ export async function loadWorld(): Promise<{ world: GameWorld; objects: WorldObj
       return { world: cache.world, objects: cache.objects };
     }
     throw error;
+  }
+}
+
+export async function recordJourneyEvent(input: {
+  id?: string;
+  type: JourneyEventType;
+  text: string;
+  sourceMemoIds?: string[];
+  createdAt?: string;
+}): Promise<JourneyEvent | null> {
+  try {
+    const res = await fetch('/api/game/world', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'record_journey_event',
+        event: input,
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { event: JourneyEvent };
+    return data.event;
+  } catch {
+    return null;
   }
 }
 

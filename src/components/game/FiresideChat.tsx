@@ -47,12 +47,13 @@ export default function FiresideChat({
   const [sessionId, setSessionId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showMemoryPicker, setShowMemoryPicker] = useState(false);
-  const [ending, setEnding] = useState(false);
-  const [endingText, setEndingText] = useState('');
-  const [endingType, setEndingType] = useState<'fireside_note' | 'left_question' | 'nothing'>('nothing');
+  const [started, setStarted] = useState(false);
+  const [showMemoryPicker, setShowMemoryPicker] = useState(true);
   const [localNote, setLocalNote] = useState('');
+  const [leaveNote, setLeaveNote] = useState('');
+  const [leaveType, setLeaveType] = useState<'fireside_note' | 'left_question'>('fireside_note');
   const [localSaved, setLocalSaved] = useState(false);
+  const [pinnedNotes, setPinnedNotes] = useState<Array<{ id: string; type: 'fireside_note' | 'left_question'; text: string }>>([]);
   const abortRef = useRef<AbortController | null>(null);
 
   const authorizedMemos = useMemo(
@@ -132,23 +133,39 @@ export default function FiresideChat({
 
   const close = () => {
     abortRef.current?.abort();
-    if (messages.length > 0 && !ending) {
-      setEnding(true);
-      return;
-    }
     onClose();
+  };
+
+  const savePinnedNote = (type: 'fireside_note' | 'left_question', text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    onSaveJourneyEvent(type, trimmed, authorizedMemoIds);
+    setPinnedNotes((current) => [...current, { id: crypto.randomUUID(), type, text: trimmed }].slice(-3));
   };
 
   const saveLocalNote = () => {
     const text = localNote.trim();
     if (!text) return;
-    onSaveJourneyEvent('fireside_note', text, authorizedMemoIds);
+    savePinnedNote('fireside_note', text);
     setLocalNote('');
     setLocalSaved(true);
   };
 
+  const saveLeaveNote = () => {
+    savePinnedNote(leaveType, leaveNote);
+    setLeaveNote('');
+  };
+
+  const companionStatus = loading
+    ? '苔灯在想，火光短了一下。'
+    : companionType === 'llm'
+      ? authorizedMemos.length > 0
+        ? `苔灯只看见你带来的 ${authorizedMemos.length} 段记忆。`
+        : '苔灯在听，但还没有翻看任何记录。'
+      : '苔灯停在远处。这里不会请求 AI。';
+
   return (
-    <div className="game-focus-layer" role="dialog" aria-label="篝火对话">
+    <div className="game-focus-layer game-focus-layer--fireside" role="dialog" aria-label="篝火对话">
       <div className="fireside-panel">
         <header className="fireside-header">
           <div>
@@ -180,19 +197,30 @@ export default function FiresideChat({
           </div>
         </header>
 
-        <div className="fireside-modes" aria-label="选择对话方式">
-          {MODES.map((mode) => (
-            <button
-              key={mode.id}
-              type="button"
-              className={dialogueMode === mode.id ? 'is-active' : ''}
-              onClick={() => onDialogueModeChange(mode.id)}
-              title={mode.description}
-            >
-              {mode.label}
-            </button>
-          ))}
-        </div>
+        {!started ? (
+          <section className="fireside-setup">
+            <p className="game-kicker">先定下今晚的火候</p>
+            <div className="fireside-modes" aria-label="选择对话方式">
+              {MODES.map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  className={dialogueMode === mode.id ? 'is-active' : ''}
+                  onClick={() => onDialogueModeChange(mode.id)}
+                  title={mode.description}
+                >
+                  <strong>{mode.label}</strong>
+                  <span>{mode.description}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <div className="fireside-fixed-mode">
+            <span>{MODES.find((mode) => mode.id === dialogueMode)?.label}</span>
+            <p>{companionStatus}</p>
+          </div>
+        )}
 
         <section className={`fireside-memory-context ${showMemoryPicker ? 'is-open' : ''}`}>
           <button
@@ -282,33 +310,17 @@ export default function FiresideChat({
           )}
         </section>
 
+        {!started && (
+          <button type="button" className="fireside-start" onClick={() => {
+            setStarted(true);
+            setShowMemoryPicker(false);
+          }}>
+            坐到火边
+          </button>
+        )}
+
         <div className="fireside-body">
-          {ending ? (
-            <section className="fireside-ending">
-              <p>离开前，可以留下一句话、一个问题，或什么也不留下。</p>
-              <div>
-                <button type="button" className={endingType === 'fireside_note' ? 'is-selected' : ''} onClick={() => setEndingType('fireside_note')}>留下一句话</button>
-                <button type="button" className={endingType === 'left_question' ? 'is-selected' : ''} onClick={() => setEndingType('left_question')}>留下一个问题</button>
-                <button type="button" className={endingType === 'nothing' ? 'is-selected' : ''} onClick={() => setEndingType('nothing')}>什么也不留下</button>
-              </div>
-              {endingType !== 'nothing' && (
-                <textarea value={endingText} onChange={(event) => setEndingText(event.target.value)} rows={4} placeholder={endingType === 'left_question' ? '把还没有回答的问题折成纸鸟……' : '只写下你愿意确认的一句话……'} />
-              )}
-              <button
-                type="button"
-                className="fireside-ending__leave"
-                disabled={endingType !== 'nothing' && !endingText.trim()}
-                onClick={() => {
-                  if (endingType !== 'nothing') {
-                    onSaveJourneyEvent(endingType, endingText.trim(), authorizedMemoIds);
-                  }
-                  onClose();
-                }}
-              >
-                离开火边
-              </button>
-            </section>
-          ) : companionType !== 'llm' && !showMemoryPicker ? (
+          {started && companionType !== 'llm' && !showMemoryPicker ? (
             <section className="fireside-local-note">
               <p className="game-kicker">独自坐着</p>
               <h3>这张纸不会交给苔灯</h3>
@@ -341,7 +353,7 @@ export default function FiresideChat({
               </div>
               {localSaved && <small>已放在本次旅程回声里。</small>}
             </section>
-          ) : !showMemoryPicker && (
+          ) : started && !showMemoryPicker && (
             <>
               <div className="fireside-messages" aria-live="polite">
                 {messages.length === 0 ? (
@@ -396,6 +408,30 @@ export default function FiresideChat({
             </>
           )}
         </div>
+
+        {started && (
+          <aside className="fireside-keepsake">
+            <div>
+              <p className="game-kicker">想留在火边的纸条</p>
+              <div className="fireside-keepsake__types">
+                <button type="button" className={leaveType === 'fireside_note' ? 'is-selected' : ''} onClick={() => setLeaveType('fireside_note')}>一句话</button>
+                <button type="button" className={leaveType === 'left_question' ? 'is-selected' : ''} onClick={() => setLeaveType('left_question')}>一个问题</button>
+              </div>
+            </div>
+            <textarea
+              value={leaveNote}
+              onChange={(event) => setLeaveNote(event.target.value)}
+              rows={2}
+              placeholder={leaveType === 'left_question' ? '把还没有回答的问题折成纸鸟……' : '只写下你愿意确认的一句话……'}
+            />
+            <button type="button" disabled={!leaveNote.trim()} onClick={saveLeaveNote}>留在火边</button>
+            {pinnedNotes.length > 0 && (
+              <div className="fireside-keepsake__notes">
+                {pinnedNotes.map((note) => <span key={note.id}>{note.type === 'left_question' ? '问' : '记'} · {note.text}</span>)}
+              </div>
+            )}
+          </aside>
+        )}
       </div>
     </div>
   );

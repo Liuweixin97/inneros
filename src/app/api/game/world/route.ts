@@ -5,11 +5,13 @@ import {
   updateWorldSettings,
   updateWorldSeason,
   getWorldObjects,
+  getJourneyEvents,
+  createJourneyEvent,
   createWorldObject,
   updateWorldObject,
   hideWorldObject,
 } from '@/lib/db/game';
-import type { WorldObjectType, GameSeason, GameWorldSettings } from '@/types';
+import type { WorldObjectType, GameSeason, GameWorldSettings, JourneyEventType } from '@/types';
 import { getCurrentUser, getCurrentUserOrGuest } from '@/lib/auth';
 import { getMemoById } from '@/lib/db/memos';
 
@@ -19,7 +21,8 @@ export async function GET() {
     const user = await getCurrentUserOrGuest();
     const world = getOrCreateWorld(user.id);
     const objects = getWorldObjects(world.id, user.id);
-    return NextResponse.json({ world, objects });
+    const journeyEvents = getJourneyEvents(world.id, user.id);
+    return NextResponse.json({ world, objects, journeyEvents });
   } catch (error) {
     console.error('[game/world GET]', error);
     return NextResponse.json({ error: '无法加载世界状态' }, { status: 500 });
@@ -77,6 +80,31 @@ export async function PATCH(req: Request) {
           : {},
       });
       return NextResponse.json({ object: newObj });
+    }
+
+    // 写入旅程回声
+    if (body.action === 'record_journey_event' && body.event && typeof body.event === 'object') {
+      const event = body.event as Record<string, unknown>;
+      const text = typeof event.text === 'string' ? event.text.trim() : '';
+      if (!text) return NextResponse.json({ error: '回声内容不能为空' }, { status: 400 });
+      const sourceMemoIds = Array.isArray(event.sourceMemoIds) ? event.sourceMemoIds as string[] : [];
+      const invalidMemo = sourceMemoIds.some((memoId) => {
+        const memo = getMemoById(memoId);
+        return !memo || memo.user_id !== user.id || memo.privacy_level !== 'normal';
+      });
+      if (invalidMemo) {
+        return NextResponse.json({ error: '来源记录不存在' }, { status: 404 });
+      }
+      const created = createJourneyEvent({
+        id: typeof event.id === 'string' ? event.id : undefined,
+        worldId: world.id,
+        userId: user.id,
+        type: event.type as JourneyEventType,
+        text,
+        sourceMemoIds,
+        createdAt: typeof event.createdAt === 'string' ? event.createdAt : undefined,
+      });
+      return NextResponse.json({ event: created }, { status: 201 });
     }
 
     // 更新物件（移动/隐藏/注释）

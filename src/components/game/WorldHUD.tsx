@@ -115,8 +115,8 @@ export default function WorldHUD({
           <span>{events.length} 次旅程回声</span>
         </div>
         {guide.action === 'trail' && (
-          <button type="button" disabled={bagMemoIds.length < 2} onClick={onOpenLightTrail}>
-            {bagMemoIds.length < 2 ? '至少带上两段记忆' : '循光命名一条路'}
+          <button type="button" disabled={memos.length < 2} onClick={onOpenLightTrail}>
+            {bagMemoIds.length >= 2 ? '循光命名一条路' : '让苔灯提出一组候选'}
           </button>
         )}
         {guide.action === 'fireside' && (
@@ -176,7 +176,7 @@ function getPlaceGuide(location: MapLocation | null, bagCount: number, events: J
   if (location === 'forest') {
     return {
       title: '小径只在你确认后留下',
-      body: bagCount >= 2 ? '苔灯可以提出相似线索，但是否同路由你判断。' : '带上至少两段记忆后，可以来这里判断它们是否真的有关。',
+      body: bagCount >= 2 ? '先看行囊里的纸条是否同路。' : '没有准备材料也可以来，苔灯会先提出一组候选，但是否有关由你判断。',
       action: 'trail' as const,
     };
   }

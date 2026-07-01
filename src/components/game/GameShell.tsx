@@ -16,6 +16,7 @@ import {
   loadWorld,
   loadGameMemos,
   placeObject,
+  recordJourneyEvent,
   syncPlayerPosition,
   clearCache,
 } from '@/lib/game/world-state';
@@ -99,7 +100,7 @@ export default function GameShell({ onExit }: GameShellProps) {
     setLoadError(null);
     setCanvasFailed(false);
     try {
-      const { world: w, objects: objs } = await loadWorld();
+      const { world: w, objects: objs, journeyEvents: serverJourneyEvents } = await loadWorld();
       const safePlayerPosition = isWalkable(w.playerX, w.playerY)
         ? { x: w.playerX, y: w.playerY }
         : { x: 345, y: 245 };
@@ -110,6 +111,11 @@ export default function GameShell({ onExit }: GameShellProps) {
         syncPlayerPosition(w.id, safePlayerPosition.x, safePlayerPosition.y);
       }
       setReducedMotion(w.settings.reducedMotion);
+      if (serverJourneyEvents) {
+        const mergedEvents = mergeJourneyEvents(loadJourneyEvents(), serverJourneyEvents);
+        setJourneyEvents(mergedEvents);
+        saveJourneyEvents(mergedEvents);
+      }
 
       // 加载 Memo
       const memoData = await loadGameMemos('recent');
@@ -255,15 +261,17 @@ export default function GameShell({ onExit }: GameShellProps) {
   }, []);
 
   const addJourneyEvent = useCallback((event: Omit<JourneyEvent, 'id' | 'createdAt'>) => {
+    const createdEvent = {
+      ...event,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
     setJourneyEvents((current) => {
-      const next = [...current, {
-        ...event,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-      }].slice(-30);
+      const next = [...current, createdEvent].slice(-30);
       saveJourneyEvents(next);
       return next;
     });
+    void recordJourneyEvent(createdEvent);
   }, []);
 
   const handleCompanionTypeChange = useCallback((type: CompanionType) => {
@@ -524,7 +532,10 @@ export default function GameShell({ onExit }: GameShellProps) {
 
           {lightTrailOpen && (
             <LightTrailPanel
-              memos={memos.filter((memo) => authorizedMemoIds.includes(memo.id))}
+              memos={authorizedMemoIds.length >= 2
+                ? memos.filter((memo) => authorizedMemoIds.includes(memo.id))
+                : memos}
+              suggested={authorizedMemoIds.length < 2}
               onConfirm={(name, memoIds) => {
                 addJourneyEvent({
                   type: 'named_path',
@@ -597,6 +608,16 @@ export default function GameShell({ onExit }: GameShellProps) {
       )}
     </div>
   );
+}
+
+function mergeJourneyEvents(localEvents: JourneyEvent[], serverEvents: JourneyEvent[]): JourneyEvent[] {
+  const byId = new Map<string, JourneyEvent>();
+  [...localEvents, ...serverEvents].forEach((event) => {
+    byId.set(event.id, event);
+  });
+  return [...byId.values()]
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .slice(-30);
 }
 
 // 降级视图：API 失败时的图文地图

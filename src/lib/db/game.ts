@@ -7,6 +7,8 @@ import type {
   CompanionSession,
   CompanionType,
   DialogueMode,
+  JourneyEvent,
+  JourneyEventType,
   SharedMemoryDraft,
   GameSeason,
 } from '@/types';
@@ -42,6 +44,16 @@ function parseWorldObject(row: Record<string, unknown>): WorldObject {
     hidden: Boolean(row.hidden),
     annotation: row.annotation as string | undefined,
     metadata: JSON.parse(row.metadata as string) as Record<string, unknown>,
+    createdAt: row.created_at as string,
+  };
+}
+
+function parseJourneyEvent(row: Record<string, unknown>): JourneyEvent {
+  return {
+    id: row.id as string,
+    type: row.type as JourneyEventType,
+    text: row.text as string,
+    sourceMemoIds: JSON.parse(row.source_memo_ids as string) as string[],
     createdAt: row.created_at as string,
   };
 }
@@ -201,6 +213,47 @@ export function updateWorldObject(
 export function hideWorldObject(id: string, userId: string): void {
   const db = getDb();
   db.prepare('UPDATE world_objects SET hidden = 1 WHERE id = ? AND user_id = ?').run(id, userId);
+}
+
+// ---- JourneyEvent CRUD ----
+
+export function getJourneyEvents(worldId: string, userId: string, limit = 30): JourneyEvent[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT * FROM journey_events
+    WHERE world_id = ? AND user_id = ?
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(worldId, userId, limit) as Record<string, unknown>[];
+  return rows.reverse().map(parseJourneyEvent);
+}
+
+export function createJourneyEvent(input: {
+  id?: string;
+  worldId: string;
+  userId: string;
+  type: JourneyEventType;
+  text: string;
+  sourceMemoIds?: string[];
+  createdAt?: string;
+}): JourneyEvent {
+  const db = getDb();
+  const id = input.id ?? uuidv4();
+  const now = input.createdAt ?? new Date().toISOString();
+  db.prepare(`
+    INSERT INTO journey_events (id, world_id, user_id, type, text, source_memo_ids, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    input.worldId,
+    input.userId,
+    input.type,
+    input.text,
+    JSON.stringify(input.sourceMemoIds ?? []),
+    now,
+  );
+  const row = db.prepare('SELECT * FROM journey_events WHERE id = ? AND user_id = ?').get(id, input.userId) as Record<string, unknown>;
+  return parseJourneyEvent(row);
 }
 
 // ---- CompanionSession CRUD ----

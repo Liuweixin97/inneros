@@ -13,6 +13,7 @@ export async function POST() {
       db.prepare('DELETE FROM analysis_jobs WHERE user_id = ?').run(user.id);
       db.prepare('DELETE FROM llm_runs WHERE user_id = ?').run(user.id);
       db.prepare('DELETE FROM ai_cache WHERE user_id = ? OR cache_key LIKE ?').run(user.id, `%:${user.id}`);
+      db.prepare('DELETE FROM journey_events WHERE user_id = ?').run(user.id);
       db.prepare('DELETE FROM shared_memory_drafts WHERE user_id = ?').run(user.id);
       db.prepare('DELETE FROM companion_sessions WHERE user_id = ?').run(user.id);
       db.prepare('DELETE FROM world_objects WHERE user_id = ?').run(user.id);

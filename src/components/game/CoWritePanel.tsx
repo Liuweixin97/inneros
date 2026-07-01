@@ -13,7 +13,7 @@ interface CoWritePanelProps {
   onJourneyEvent: (text: string, memoIds: string[]) => void;
 }
 
-type Step = 'material' | 'question' | 'write_one' | 'write_two' | 'reveal' | 'carrier' | 'confirm' | 'done';
+type Step = 'material' | 'question' | 'write_now' | 'reveal' | 'carrier' | 'confirm' | 'done';
 type LayoutDecision = 'side_by_side' | 'intersect' | 'gap' | 'withdraw';
 
 const QUESTIONS = [
@@ -23,11 +23,11 @@ const QUESTIONS = [
 ];
 
 const CARRIERS: Array<{ type: WorldObjectType; name: string; meaning: string }> = [
-  { type: 'bench', name: '长椅', meaning: '两种版本并存' },
-  { type: 'sign', name: '双面路牌', meaning: '我们记得不一样' },
-  { type: 'lamp', name: '灯笼', meaning: '共同确认的一句话' },
-  { type: 'frame', name: '里程碑', meaning: '一段阶段性经历' },
-  { type: 'bottle', name: '木箱', meaning: '暂时封存' },
+  { type: 'bench', name: '长椅', meaning: '过去和现在并排坐着' },
+  { type: 'sign', name: '双面路牌', meaning: '两个方向都是真的' },
+  { type: 'lamp', name: '灯笼', meaning: '此刻愿意照亮的一句' },
+  { type: 'frame', name: '里程碑', meaning: '承认一段阶段变化' },
+  { type: 'bottle', name: '木箱', meaning: '暂时封存，不急着解释' },
 ];
 
 export default function CoWritePanel({
@@ -38,7 +38,10 @@ export default function CoWritePanel({
   onJourneyEvent,
 }: CoWritePanelProps) {
   const availableMemos = useMemo(
-    () => memos.filter((memo) => authorizedMemoIds.includes(memo.id)),
+    () => {
+      const carried = memos.filter((memo) => authorizedMemoIds.includes(memo.id));
+      return carried.length > 0 ? carried : memos.slice(0, 8);
+    },
     [authorizedMemoIds, memos],
   );
   const [step, setStep] = useState<Step>('material');
@@ -52,8 +55,6 @@ export default function CoWritePanel({
   const [decision, setDecision] = useState<LayoutDecision>('side_by_side');
   const [jointText, setJointText] = useState('');
   const [objectType, setObjectType] = useState<WorldObjectType>('bench');
-  const [confirmOne, setConfirmOne] = useState(false);
-  const [confirmTwo, setConfirmTwo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -74,6 +75,7 @@ export default function CoWritePanel({
     const data = await response.json() as { session: { id: string }; draft: SharedMemoryDraft };
     setSessionId(data.session.id);
     setDraft(data.draft);
+    setPlayerOneText(selectedMemo?.plain_text.replace(/\s+/g, ' ').slice(0, 300) ?? '');
     setStep('question');
   };
 
@@ -92,7 +94,6 @@ export default function CoWritePanel({
   };
 
   const finish = async () => {
-    if (!confirmOne || !confirmTwo) return;
     setSaving(true);
     const saveDecision = decision === 'intersect' ? 'joint' : decision === 'withdraw' ? 'discard' : 'separate';
     const saved = await saveDraft({
@@ -110,9 +111,9 @@ export default function CoWritePanel({
       decision === 'intersect'
         ? `共同确认：${jointText}`
         : decision === 'withdraw'
-          ? `你：${playerOneText}`
-          : `Player 1：${playerOneText}\nPlayer 2：${playerTwoText}`,
-      decision === 'gap' ? '我们记得不一样。' : '',
+          ? `过去的我：${playerOneText}`
+          : `过去的我：${playerOneText}\n现在的我：${playerTwoText}`,
+      decision === 'gap' ? '两个时间版本没有被强行合并。' : '',
     ].filter(Boolean).join('\n');
     const object = await placeObject({
       type: objectType,
@@ -128,31 +129,31 @@ export default function CoWritePanel({
       return;
     }
     onObjectPlaced(object);
-    onJourneyEvent(`在工坊放下了「${CARRIERS.find((carrier) => carrier.type === objectType)?.name}」`, [memoId]);
+    onJourneyEvent(`在工坊放下了一次今昔对照：${CARRIERS.find((carrier) => carrier.type === objectType)?.name}`, [memoId]);
     setStep('done');
     setSaving(false);
   };
 
   return (
-    <div className="game-focus-layer" role="dialog" aria-label="共居工坊">
+    <div className="game-focus-layer game-focus-layer--workshop" role="dialog" aria-label="共居工坊">
       <section className="workshop-panel">
         <header>
           <div>
-            <p className="game-kicker">共居工坊 · 双面工作台</p>
-            <h2>让差异决定怎样存在</h2>
+            <p className="game-kicker">共居工坊 · 今昔工作台</p>
+            <h2>让过去的我和现在的我坐在一起</h2>
           </div>
           <button type="button" className="game-icon-button" onClick={onClose} aria-label="离开工坊"><X size={17} /></button>
         </header>
 
         <div className="workshop-progress">
-          {['材料', '问题', '背对书写', '同时翻开', '选择载体', '共同放置'].map((label, index) => (
+          {['旧记录', '问题', '现在回应', '翻开对照', '选择载体', '放进世界'].map((label, index) => (
             <span key={label} className={index <= stepIndex(step) ? 'is-active' : ''}>{label}</span>
           ))}
         </div>
 
         {step === 'material' && (
           <div className="workshop-step">
-            <p>从行囊中放上一段双方获准查看的记忆。</p>
+            <p>选一条旧记录。它负责代表过去的你，不需要另一个人同屏参与。</p>
             <div className="workshop-memory-list">
               {availableMemos.map((memo) => (
                 <button key={memo.id} type="button" className={memoId === memo.id ? 'is-selected' : ''} onClick={() => setMemoId(memo.id)}>
@@ -162,8 +163,8 @@ export default function CoWritePanel({
               ))}
               {availableMemos.length === 0 && (
                 <div className="workshop-empty-material">
-                  <p>行囊里还没有可以放上工作台的记忆。</p>
-                  <small>先去记忆花园带走一段双方都愿意看的记录，再回到工坊。</small>
+                  <p>还没有可以放上工作台的记录。</p>
+                  <small>先在 InnerOS 写下一段真实记录，再回来和过去的自己对照。</small>
                   <button type="button" onClick={onClose}>回到地图找材料</button>
                 </div>
               )}
@@ -176,35 +177,29 @@ export default function CoWritePanel({
 
         {step === 'question' && (
           <div className="workshop-step">
-            <p>选择一个具体问题。双方也可以跳过预设，自己写。</p>
+            <p>选一个问题，让现在的你回应过去那段记录。</p>
             <div className="workshop-question-list">
               {QUESTIONS.map((item) => (
                 <button key={item} type="button" className={question === item && !customQuestion ? 'is-selected' : ''} onClick={() => { setQuestion(item); setCustomQuestion(''); }}>{item}</button>
               ))}
             </div>
             <input value={customQuestion} onChange={(event) => setCustomQuestion(event.target.value)} placeholder="或者写下你们自己的问题" />
-            <button type="button" className="workshop-primary" onClick={() => setStep('write_one')}>开始背对书写</button>
+            <button type="button" className="workshop-primary" onClick={() => setStep('write_now')}>现在回应</button>
           </div>
         )}
 
-        {step === 'write_one' && (
-          <WritingFace label="Player 1" question={finalQuestion} value={playerOneText} onChange={setPlayerOneText} onNext={async () => {
-            if (await saveDraft({ playerOneText })) setStep('write_two');
-          }} />
-        )}
-
-        {step === 'write_two' && (
-          <WritingFace label="Player 2" question={finalQuestion} value={playerTwoText} onChange={setPlayerTwoText} onNext={async () => {
+        {step === 'write_now' && (
+          <WritingFace label="现在的我" question={finalQuestion} pastText={playerOneText} value={playerTwoText} onChange={setPlayerTwoText} onNext={async () => {
             if (await saveDraft({ playerTwoText })) setStep('reveal');
           }} />
         )}
 
         {step === 'reveal' && (
           <div className="workshop-step">
-            <p>两块木牌同时翻开。系统不会替你们总结共识。</p>
+            <p>两块木牌同时翻开。系统不会替你总结哪个版本更正确。</p>
             <div className={`workshop-boards decision-${decision}`}>
-              <article><small>Player 1</small><p>{playerOneText}</p></article>
-              <article><small>Player 2</small><p>{playerTwoText}</p></article>
+              <article><small>过去的我</small><p>{playerOneText}</p></article>
+              <article><small>现在的我</small><p>{playerTwoText}</p></article>
             </div>
             <div className="workshop-decisions">
               <button type="button" className={decision === 'side_by_side' ? 'is-selected' : ''} onClick={() => setDecision('side_by_side')}>并排</button>
@@ -233,19 +228,13 @@ export default function CoWritePanel({
 
         {step === 'confirm' && (
           <div className="workshop-step workshop-confirm">
-            <p>两个角色分别站在物件两侧。双方都确认后，物件才会进入世界。</p>
+            <p>确认之后，它会成为地图里一处可以回访的时间痕迹。</p>
             <div>
-              <button type="button" className={confirmOne ? 'is-confirmed' : ''} onClick={() => setConfirmOne((value) => !value)}>
-                <Check size={18} /> Player 1 {confirmOne ? '已确认' : '站到左侧'}
-              </button>
               <span>{CARRIERS.find((carrier) => carrier.type === objectType)?.name}</span>
-              <button type="button" className={confirmTwo ? 'is-confirmed' : ''} onClick={() => setConfirmTwo((value) => !value)}>
-                <Check size={18} /> Player 2 {confirmTwo ? '已确认' : '站到右侧'}
-              </button>
             </div>
             {error && <p className="fireside-error">{error}</p>}
-            <button type="button" className="workshop-primary" disabled={!confirmOne || !confirmTwo || saving} onClick={() => void finish()}>
-              {saving ? '正在共同放置……' : '共同放置'}
+            <button type="button" className="workshop-primary" disabled={saving} onClick={() => void finish()}>
+              {saving ? '正在放置……' : '放进世界'}
             </button>
           </div>
         )}
@@ -266,22 +255,25 @@ export default function CoWritePanel({
 function WritingFace({
   label,
   question,
+  pastText,
   value,
   onChange,
   onNext,
 }: {
   label: string;
   question: string;
+  pastText: string;
   value: string;
   onChange: (value: string) => void;
   onNext: () => void | Promise<void>;
 }) {
   return (
     <div className="workshop-step workshop-writing">
-      <p className="game-kicker">现在只有 {label} 看得见这一面</p>
+      <p className="game-kicker">{label}</p>
       <h3>{question}</h3>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={7} autoFocus placeholder="写下自己的版本。另一面现在仍然扣着。" />
-      <button type="button" className="workshop-primary" disabled={!value.trim()} onClick={() => void onNext()}>扣好木牌，交给下一位</button>
+      <blockquote>过去的我写过：{pastText}</blockquote>
+      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={7} autoFocus placeholder="现在的你怎么回应同一个问题？" />
+      <button type="button" className="workshop-primary" disabled={!value.trim()} onClick={() => void onNext()}>翻开对照</button>
     </div>
   );
 }
@@ -290,8 +282,7 @@ function stepIndex(step: Step): number {
   const map: Record<Step, number> = {
     material: 0,
     question: 1,
-    write_one: 2,
-    write_two: 2,
+    write_now: 2,
     reveal: 3,
     carrier: 4,
     confirm: 5,

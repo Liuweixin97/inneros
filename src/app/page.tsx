@@ -13,7 +13,6 @@ import {
   Loader2,
   RefreshCw,
   Sparkles,
-  Underline,
   X,
 } from 'lucide-react';
 import type { TodayDigest, TodayEmotion } from '@/types';
@@ -60,7 +59,9 @@ export default function TodayPage() {
   const [composerFocused, setComposerFocused] = useState(false);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [actionIndex, setActionIndex] = useState(0);
-  const editorRef = useRef<HTMLDivElement>(null);
+  const [questionPaused, setQuestionPaused] = useState(false);
+  const [actionPaused, setActionPaused] = useState(false);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
 
   const loadDigest = useCallback(async (refresh = false) => {
     setLoading(true);
@@ -94,21 +95,30 @@ export default function TodayPage() {
     if (!digest) return;
     setQuestionIndex(0);
     setActionIndex(0);
-    const questionTimer = window.setInterval(() => {
-      setQuestionIndex((current) => digest.questions.length > 1 ? (current + 1) % digest.questions.length : 0);
-    }, 7000);
-    const actionTimer = window.setInterval(() => {
-      setActionIndex((current) => digest.actions.length > 1 ? (current + 1) % digest.actions.length : 0);
-    }, 8200);
-    return () => {
-      window.clearInterval(questionTimer);
-      window.clearInterval(actionTimer);
-    };
   }, [digest]);
 
+  useEffect(() => {
+    if (!digest || questionPaused || digest.questions.length <= 1) return undefined;
+    const questionTimer = window.setInterval(() => {
+      setQuestionIndex((current) => (current + 1) % digest.questions.length);
+    }, 7000);
+    return () => {
+      window.clearInterval(questionTimer);
+    };
+  }, [digest, questionPaused]);
+
+  useEffect(() => {
+    if (!digest || actionPaused || digest.actions.length <= 1) return undefined;
+    const actionTimer = window.setInterval(() => {
+      setActionIndex((current) => (current + 1) % digest.actions.length);
+    }, 8200);
+    return () => {
+      window.clearInterval(actionTimer);
+    };
+  }, [digest, actionPaused]);
+
   const saveMemo = async () => {
-    const html = editorRef.current?.innerHTML.trim() ?? '';
-    const text = editorRef.current?.innerText.trim() ?? '';
+    const text = content.trim();
     if (!text || saving) return;
     if (user?.isGuest) {
       setError('游客可以浏览示例，登录后可以记录自己的内容。');
@@ -120,12 +130,11 @@ export default function TodayPage() {
       const response = await fetch('/api/memos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: html, source: 'manual' }),
+        body: JSON.stringify({ content: text, source: 'manual' }),
       });
       if (!response.ok) throw new Error('保存失败');
       await response.json();
       setContent('');
-      if (editorRef.current) editorRef.current.innerHTML = '';
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2200);
       window.setTimeout(() => loadDigest(), 2500);
@@ -142,10 +151,39 @@ export default function TodayPage() {
   const dominantEmotion = digest?.emotion.distribution[0] ?? null;
   const stateAnchor = digest?.state_anchor ?? null;
 
-  const applyFormat = (command: 'bold' | 'italic' | 'underline' | 'insertUnorderedList') => {
-    editorRef.current?.focus();
-    document.execCommand(command);
-    setContent(editorRef.current?.innerText ?? '');
+  const insertMarkdown = (format: 'bold' | 'italic' | 'list') => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const selected = content.slice(start, end);
+    let next = content;
+    let nextStart = start;
+    let nextEnd = end;
+
+    if (format === 'list') {
+      const fallback = selected || '列表项';
+      const replacement = fallback
+        .split('\n')
+        .map((line) => line.trim() ? `- ${line.replace(/^[-*]\s+/, '')}` : '- ')
+        .join('\n');
+      next = `${content.slice(0, start)}${replacement}${content.slice(end)}`;
+      nextStart = start;
+      nextEnd = start + replacement.length;
+    } else {
+      const mark = format === 'bold' ? '**' : '*';
+      const fallback = selected || (format === 'bold' ? '重点' : '想法');
+      const replacement = `${mark}${fallback}${mark}`;
+      next = `${content.slice(0, start)}${replacement}${content.slice(end)}`;
+      nextStart = start + mark.length;
+      nextEnd = start + mark.length + fallback.length;
+    }
+
+    setContent(next);
+    window.requestAnimationFrame(() => {
+      editor.focus();
+      editor.setSelectionRange(nextStart, nextEnd);
+    });
   };
 
   return (
@@ -176,17 +214,17 @@ export default function TodayPage() {
 
         {loading ? (
           <div className="grid gap-4 lg:grid-cols-[1.45fr_0.75fr]">
-            <div className="skeleton h-[370px] rounded-[28px]" />
-            <div className="skeleton h-[370px] rounded-[28px]" />
+            <div className="skeleton h-[370px] rounded-[var(--radius-2xl)]" />
+            <div className="skeleton h-[370px] rounded-[var(--radius-2xl)]" />
           </div>
         ) : digest ? (
           <main className="grid items-start gap-4 lg:grid-cols-[1.45fr_0.75fr]">
             <section
-              className="relative flex min-h-[390px] flex-col overflow-hidden rounded-[28px] border p-6 text-white shadow-[var(--shadow-lg)] md:p-8"
-              style={{
-                backgroundColor: '#111827',
-                borderColor: 'rgba(255,255,255,0.08)',
-              }}
+              className="today-hero-card relative flex min-h-[390px] flex-col overflow-hidden rounded-[var(--radius-2xl)] border p-6 text-white shadow-[var(--shadow-lg)] md:p-8"
+              onMouseEnter={() => setQuestionPaused(true)}
+              onMouseLeave={() => setQuestionPaused(false)}
+              onFocus={() => setQuestionPaused(true)}
+              onBlur={() => setQuestionPaused(false)}
             >
               <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-[var(--color-primary)] opacity-10 blur-3xl" />
               <div className="relative flex items-center gap-2 text-[12px] font-medium text-white/60">
@@ -283,7 +321,12 @@ export default function TodayPage() {
                   今天只往前一步
                 </div>
                 {primaryAction ? (
-                  <div>
+                  <div
+                    onMouseEnter={() => setActionPaused(true)}
+                    onMouseLeave={() => setActionPaused(false)}
+                    onFocus={() => setActionPaused(true)}
+                    onBlur={() => setActionPaused(false)}
+                  >
                     <Link href={`/chat?prompt=${encodeURIComponent(`请基于我的历史记录，继续推演这个下一步：${primaryAction.text}`)}`} className="group block">
                       <p key={primaryAction.key} className="animate-fade-in text-[16px] font-medium leading-7 text-[var(--color-text-strong)]">{primaryAction.text}</p>
                       <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-[var(--color-primary-dark)]">
@@ -349,31 +392,29 @@ export default function TodayPage() {
             <>
           {composerFocused && (
             <div className="mb-2 flex items-center gap-1">
-              <FormatButton label="加粗" onClick={() => applyFormat('bold')}><Bold className="h-3.5 w-3.5" /></FormatButton>
-              <FormatButton label="斜体" onClick={() => applyFormat('italic')}><Italic className="h-3.5 w-3.5" /></FormatButton>
-              <FormatButton label="下划线" onClick={() => applyFormat('underline')}><Underline className="h-3.5 w-3.5" /></FormatButton>
-              <FormatButton label="列表" onClick={() => applyFormat('insertUnorderedList')}><List className="h-3.5 w-3.5" /></FormatButton>
+              <FormatButton label="加粗 Markdown" onClick={() => insertMarkdown('bold')}><Bold className="h-3.5 w-3.5" /></FormatButton>
+              <FormatButton label="斜体 Markdown" onClick={() => insertMarkdown('italic')}><Italic className="h-3.5 w-3.5" /></FormatButton>
+              <FormatButton label="无序列表" onClick={() => insertMarkdown('list')}><List className="h-3.5 w-3.5" /></FormatButton>
             </div>
           )}
           <div className="flex items-end gap-3">
-            <div
+            <textarea
               ref={editorRef}
-              contentEditable
-              suppressContentEditableWarning
-              data-placeholder="此刻有什么值得留下？"
+              value={content}
+              placeholder="此刻有什么值得留下？支持 **重点**、*想法* 和 - 列表。"
               onFocus={() => setComposerFocused(true)}
               onBlur={() => {
-                if (!editorRef.current?.innerText.trim()) setComposerFocused(false);
+                if (!content.trim()) setComposerFocused(false);
               }}
-              onInput={(event) => setContent(event.currentTarget.innerText)}
+              onChange={(event) => setContent(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
                   event.preventDefault();
                   saveMemo();
                 }
               }}
-              className={`min-w-0 flex-1 bg-transparent text-[16px] leading-7 text-[var(--color-text-primary)] outline-none transition-[min-height] duration-200 empty:before:pointer-events-none empty:before:text-[var(--color-text-muted)] empty:before:content-[attr(data-placeholder)] [&_b]:font-semibold [&_i]:italic [&_li]:ml-5 [&_li]:list-disc [&_u]:underline ${
-                composerFocused ? 'min-h-[92px]' : 'min-h-[32px]'
+              className={`min-w-0 flex-1 resize-none bg-transparent text-[16px] leading-7 text-[var(--color-text-primary)] outline-none transition-[height] duration-200 placeholder:text-[var(--color-text-muted)] ${
+                composerFocused ? 'h-[112px]' : 'h-[34px]'
               }`}
             />
             <div className="flex shrink-0 items-center gap-2">
