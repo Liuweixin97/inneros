@@ -25,7 +25,10 @@ interface PixelWorldCanvasProps {
   onEnterFireside: () => void;
   onEnterCoWrite: () => void;
   onEnterPond: () => void;
+  onEnterLightTrail: () => void;
+  onEnterDesk: () => void;
   onCanvasFailure: () => void;
+  interactionDisabled?: boolean;
 }
 
 type Direction = 'down' | 'left' | 'right' | 'up';
@@ -73,7 +76,10 @@ export default function PixelWorldCanvas({
   onEnterFireside,
   onEnterCoWrite,
   onEnterPond,
+  onEnterLightTrail,
+  onEnterDesk,
   onCanvasFailure,
+  interactionDisabled = false,
 }: PixelWorldCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -127,6 +133,7 @@ export default function PixelWorldCanvas({
   }, [onCanvasFailure]);
 
   const triggerInteraction = useCallback(() => {
+    if (interactionDisabled) return;
     const object = nearbyObjectRef.current;
     const action = nearbyActionRef.current;
     if (object) {
@@ -139,7 +146,9 @@ export default function PixelWorldCanvas({
     if (action === 'fireside') onEnterFireside();
     if (action === 'workshop') onEnterCoWrite();
     if (action === 'pond') onEnterPond();
-  }, [onEnterBench, onEnterCabin, onEnterCoWrite, onEnterFireside, onEnterPond, onOpenMemo]);
+    if (action === 'trail') onEnterLightTrail();
+    if (action === 'desk') onEnterDesk();
+  }, [interactionDisabled, onEnterBench, onEnterCabin, onEnterCoWrite, onEnterDesk, onEnterFireside, onEnterLightTrail, onEnterPond, onOpenMemo]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -281,6 +290,10 @@ export default function PixelWorldCanvas({
         ? '进入共写小屋'
         : nearbyAction === 'pond'
           ? '到池边坐一会儿'
+          : nearbyAction === 'trail'
+            ? '走进循光小径'
+            : nearbyAction === 'desk'
+              ? '在中庭写作台坐下'
           : '';
 
   return (
@@ -296,7 +309,7 @@ export default function PixelWorldCanvas({
         }}
       />
 
-      {interactionLabel && (
+      {interactionLabel && !interactionDisabled && (
         <button type="button" className="game-context-prompt" onClick={triggerInteraction}>
           <kbd>E</kbd>
           <span>{interactionLabel}</span>
@@ -331,7 +344,7 @@ export default function PixelWorldCanvas({
         </div>
       </div>
 
-      {(nearbyObject || nearbyAction) && (
+      {(nearbyObject || nearbyAction) && !interactionDisabled && (
         <button type="button" className="game-mobile-interact md:hidden" onClick={triggerInteraction}>
           互动
         </button>
@@ -413,6 +426,12 @@ function findNearbyAction(
 
   const pond = GAME_ACTION_POINTS.pond;
   if (Math.hypot(pond.x - x, pond.y - y) < pond.radius) return 'pond';
+
+  const desk = GAME_ACTION_POINTS.desk;
+  if (Math.hypot(desk.x - x, desk.y - y) < desk.radius) return 'desk';
+
+  const trail = GAME_ACTION_POINTS.trail;
+  if (Math.hypot(trail.x - x, trail.y - y) < trail.radius) return 'trail';
   return null;
 }
 

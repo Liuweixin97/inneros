@@ -374,6 +374,7 @@ export type JourneyEventType =
   | 'carried_memory'
   | 'left_annotation'
   | 'named_path'
+  | 'separated_path'
   | 'fireside_note'
   | 'left_question'
   | 'pond_release'

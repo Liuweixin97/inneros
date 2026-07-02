@@ -12,7 +12,7 @@ export const WORLD_WIDTH = 800;
 export const WORLD_HEIGHT = 450;
 export const TILE_SIZE = 16;
 
-export type GameActionId = 'cabin' | 'bench' | 'fireside' | 'workshop' | 'pond';
+export type GameActionId = 'cabin' | 'bench' | 'fireside' | 'workshop' | 'pond' | 'trail' | 'desk';
 
 export interface GameActionPoint {
   id: GameActionId;
@@ -28,6 +28,8 @@ export const GAME_ACTION_POINTS: Record<GameActionId, GameActionPoint> = {
   fireside: { id: 'fireside', x: 650, y: 170, radius: 54 },
   workshop: { id: 'workshop', x: 590, y: 335, radius: 52 },
   pond: { id: 'pond', x: 380, y: 285, radius: 52 },
+  trail: { id: 'trail', x: 110, y: 105, radius: 56 },
+  desk: { id: 'desk', x: 455, y: 255, radius: 54 },
 };
 
 // 地图区域定义：中心点 + 半径（椭圆触发区）

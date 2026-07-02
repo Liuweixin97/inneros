@@ -35,6 +35,7 @@ import CompanionBench from './CompanionBench';
 import CabinPanel from './CabinPanel';
 import LightTrailPanel from './LightTrailPanel';
 import WorldObjectDetail from './WorldObjectDetail';
+import WritingDeskPanel from './WritingDeskPanel';
 import {
   loadBagMemoIds,
   loadCompanionInvited,
@@ -94,6 +95,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [benchOpen, setBenchOpen] = useState(false);
   const [cabinOpen, setCabinOpen] = useState(false);
   const [lightTrailOpen, setLightTrailOpen] = useState(false);
+  const [writingDeskOpen, setWritingDeskOpen] = useState(false);
   const [activePlacedObject, setActivePlacedObject] = useState<WorldObject | null>(null);
 
   // ---- 减少动态模式 ----
@@ -253,6 +255,7 @@ export default function GameShell({ onExit }: GameShellProps) {
     setBenchOpen(false);
     setCabinOpen(false);
     setLightTrailOpen(false);
+    setWritingDeskOpen(false);
     setActivePlacedObject(null);
     setPhase('explore');
   }, []);
@@ -381,6 +384,7 @@ export default function GameShell({ onExit }: GameShellProps) {
     || cabinOpen
     || benchOpen
     || lightTrailOpen
+    || writingDeskOpen
     || Boolean(activePlacedObject);
 
   // ---- 渲染 ----
@@ -421,7 +425,10 @@ export default function GameShell({ onExit }: GameShellProps) {
                 onEnterFireside={handleEnterFireside}
                 onEnterCoWrite={handleEnterCoWrite}
                 onEnterPond={handleEnterPond}
+                onEnterLightTrail={() => setLightTrailOpen(true)}
+                onEnterDesk={() => setWritingDeskOpen(true)}
                 onCanvasFailure={() => setCanvasFailed(true)}
+                interactionDisabled={panelOpen}
               />
 
               <WorldHUD
@@ -577,7 +584,29 @@ export default function GameShell({ onExit }: GameShellProps) {
                 });
                 setLightTrailOpen(false);
               }}
+              onSeparate={(memoIds) => addJourneyEvent({
+                type: 'separated_path',
+                text: '确认这几段纸条暂时不是同一条路',
+                sourceMemoIds: memoIds,
+              })}
               onClose={() => setLightTrailOpen(false)}
+            />
+          )}
+
+          {writingDeskOpen && (
+            <WritingDeskPanel
+              memos={memos}
+              bagMemoIds={authorizedMemoIds}
+              events={journeyEvents}
+              onMemoCreated={(memo) => {
+                setMemos((current) => [memo, ...current]);
+              }}
+              onJourneyEvent={(text, memoIds) => addJourneyEvent({
+                type: 'left_annotation',
+                text,
+                sourceMemoIds: memoIds,
+              })}
+              onClose={() => setWritingDeskOpen(false)}
             />
           )}
 

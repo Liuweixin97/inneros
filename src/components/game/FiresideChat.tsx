@@ -1,12 +1,23 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { BookOpen, Check, ChevronDown, Pause, Send, X } from 'lucide-react';
+import { Check, Lamp, Pause, Send } from 'lucide-react';
 import type { CompanionType, DialogueMode, GameWorld, Memo } from '@/types';
 import {
   sendCompanionMessage,
   type CompanionMessage,
 } from '@/lib/game/world-state';
+import {
+  ForestSceneLayer,
+  ForestScenePanel,
+  SceneButton,
+  SceneEmpty,
+  SceneMemoCard,
+  SceneProgress,
+  SceneSection,
+  formatMemoExcerpt,
+  formatMemoTitle,
+} from './ForestScenePrimitives';
 
 interface FiresideChatProps {
   world: GameWorld;
@@ -22,13 +33,15 @@ interface FiresideChatProps {
 }
 
 const MODES: Array<{ id: DialogueMode; label: string; description: string }> = [
-  { id: 'listen', label: '听我说', description: '少问一点，先听你说完' },
-  { id: 'ask', label: '问我一点', description: '一次只问一个具体问题' },
-  { id: 'organize', label: '一起整理', description: '分开事实、当时判断与现在看法' },
-  { id: 'silent', label: '只陪我坐着', description: '不追问，也不要求留下什么' },
+  { id: 'listen', label: '听我说', description: '少问一点，先听你说完。' },
+  { id: 'ask', label: '问我一点', description: '一次只问一个具体问题。' },
+  { id: 'organize', label: '一起整理', description: '分开事实、判断和现在看法。' },
+  { id: 'silent', label: '只陪我坐着', description: '可以不回应，也不要求留下什么。' },
 ];
 
 const MAX_AUTHORIZED_MEMOS = 3;
+
+type Step = 'material' | 'mode' | 'talk' | 'keep';
 
 export default function FiresideChat({
   world,
@@ -42,18 +55,16 @@ export default function FiresideChat({
   onClose,
   onSaveJourneyEvent,
 }: FiresideChatProps) {
+  const [step, setStep] = useState<Step>('material');
   const [messages, setMessages] = useState<CompanionMessage[]>([]);
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [started, setStarted] = useState(false);
-  const [showMemoryPicker, setShowMemoryPicker] = useState(true);
   const [localNote, setLocalNote] = useState('');
-  const [leaveNote, setLeaveNote] = useState('');
-  const [leaveType, setLeaveType] = useState<'fireside_note' | 'left_question'>('fireside_note');
-  const [localSaved, setLocalSaved] = useState(false);
-  const [pinnedNotes, setPinnedNotes] = useState<Array<{ id: string; type: 'fireside_note' | 'left_question'; text: string }>>([]);
+  const [keepText, setKeepText] = useState('');
+  const [keepType, setKeepType] = useState<'fireside_note' | 'left_question'>('fireside_note');
+  const [savedKeepText, setSavedKeepText] = useState('');
   const abortRef = useRef<AbortController | null>(null);
 
   const authorizedMemos = useMemo(
@@ -80,21 +91,22 @@ export default function FiresideChat({
     const text = input.trim();
     if (!text || loading) return;
     if (companionType !== 'llm') {
-      onSaveJourneyEvent('fireside_note', text, authorizedMemoIds);
+      setLocalNote(text);
+      setKeepType('fireside_note');
+      setKeepText(text);
       setInput('');
-      setLocalSaved(true);
+      setStep('keep');
       return;
     }
+
     setInput('');
     setError('');
     setLoading(true);
     const controller = new AbortController();
     abortRef.current = controller;
     const userMessage: CompanionMessage = { role: 'user', content: text };
-    const history = [...messages, userMessage];
-    setMessages(history);
+    setMessages((current) => [...current, userMessage, { role: 'assistant', content: '' }]);
     let streamed = '';
-    setMessages((current) => [...current, { role: 'assistant', content: '' }]);
 
     const result = await sendCompanionMessage({
       message: text,
@@ -105,8 +117,8 @@ export default function FiresideChat({
       authorizedMemoIds,
       conversationHistory: messages,
       recentUserAction: authorizedMemos.length > 0
-        ? `带来了 ${authorizedMemos.length} 段自己选择的记录`
-        : '在篝火边坐下',
+        ? `用户明确带来了 ${authorizedMemos.length} 段记录`
+        : '用户没有带入记录，只在火边说此刻的事',
       signal: controller.signal,
       onChunk: (chunk) => {
         streamed += chunk;
@@ -124,7 +136,7 @@ export default function FiresideChat({
     } else {
       setMessages((current) => current.slice(0, -1));
       if (!controller.signal.aborted) {
-        setError('苔灯现在听得见，但暂时说不了话。你写下的内容仍留在这里。');
+        setError('苔灯暂时说不了话。你写下的内容没有丢，可以改为本地纸条。');
       }
     }
     setLoading(false);
@@ -136,303 +148,230 @@ export default function FiresideChat({
     onClose();
   };
 
-  const savePinnedNote = (type: 'fireside_note' | 'left_question', text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    onSaveJourneyEvent(type, trimmed, authorizedMemoIds);
-    setPinnedNotes((current) => [...current, { id: crypto.randomUUID(), type, text: trimmed }].slice(-3));
-  };
-
-  const saveLocalNote = () => {
-    const text = localNote.trim();
+  const saveKeep = () => {
+    const text = keepText.trim();
     if (!text) return;
-    savePinnedNote('fireside_note', text);
-    setLocalNote('');
-    setLocalSaved(true);
+    onSaveJourneyEvent(keepType, text, authorizedMemoIds);
+    setSavedKeepText(text);
+    setKeepText('');
   };
 
-  const saveLeaveNote = () => {
-    savePinnedNote(leaveType, leaveNote);
-    setLeaveNote('');
-  };
-
-  const companionStatus = loading
-    ? '苔灯在想，火光短了一下。'
-    : companionType === 'llm'
-      ? authorizedMemos.length > 0
-        ? `苔灯只看见你带来的 ${authorizedMemos.length} 段记忆。`
-        : '苔灯在听，但还没有翻看任何记录。'
-      : '苔灯停在远处。这里不会请求 AI。';
+  const progress = step === 'material' ? 0 : step === 'mode' ? 1 : step === 'talk' ? 2 : 3;
+  const materialLabel = authorizedMemos.length > 0
+    ? `已带入 ${authorizedMemos.length} 段记忆`
+    : '没有带材料，也可以直接说此刻';
+  const companionLabel = companionType === 'llm'
+    ? '苔灯只看见本次带入的材料'
+    : '当前不会请求 AI';
 
   return (
-    <div className="game-focus-layer game-focus-layer--fireside" role="dialog" aria-label="篝火对话">
-      <div className="fireside-panel">
-        <header className="fireside-header">
-          <div>
-            <p className="game-kicker">篝火地 · 一起说</p>
-            <h2>{companionType === 'llm' ? '苔灯在火光的另一边亮着' : '火光的另一边暂时空着'}</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* 邀请或遣散苔灯 */}
-            <button
-              type="button"
-              className="game-hud-btn text-[11px] px-2 py-1"
-              style={{
-                background: companionType === 'llm'
-                  ? 'rgba(255,155,61,0.2)'
-                  : 'rgba(255,243,196,0.08)',
-                borderColor: companionType === 'llm'
-                  ? 'rgba(255,155,61,0.5)'
-                  : 'rgba(255,243,196,0.15)',
-                color: companionType === 'llm' ? '#FF9B3D' : 'var(--game-hud-muted)',
-              }}
-              onClick={() => onCompanionTypeChange(companionType === 'llm' ? 'none' : 'llm')}
-              title={companionType === 'llm' ? '遣散苔灯，独自漫游' : '邀请苔灯'}
-            >
-              {companionType === 'llm' ? '苔灯同行中' : '+ 邀请苔灯'}
-            </button>
-            <button type="button" className="game-icon-button" onClick={close} aria-label="离开篝火">
-              <X size={17} />
-            </button>
-          </div>
-        </header>
-
-        {!started ? (
-          <section className="fireside-setup">
-            <p className="game-kicker">先定下今晚的火候</p>
-            <div className="fireside-modes" aria-label="选择对话方式">
-              {MODES.map((mode) => (
-                <button
-                  key={mode.id}
-                  type="button"
-                  className={dialogueMode === mode.id ? 'is-active' : ''}
-                  onClick={() => onDialogueModeChange(mode.id)}
-                  title={mode.description}
-                >
-                  <strong>{mode.label}</strong>
-                  <span>{mode.description}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        ) : (
-          <div className="fireside-fixed-mode">
-            <span>{MODES.find((mode) => mode.id === dialogueMode)?.label}</span>
-            <p>{companionStatus}</p>
-          </div>
+    <ForestSceneLayer tone="fire" align="end" label="篝火地">
+      <ForestScenePanel
+        tone="fire"
+        size="wide"
+        kicker="篝火地 · 放清楚"
+        title="把一段材料和此刻的说法放到同一张纸上"
+        subtitle={`${materialLabel}。${companionLabel}。`}
+        onClose={close}
+        footer={(
+          <>
+            <SceneButton variant="quiet" onClick={close}>离开火边</SceneButton>
+            {step === 'material' && <SceneButton variant="primary" onClick={() => setStep('mode')}>确定材料</SceneButton>}
+            {step === 'mode' && <SceneButton variant="primary" onClick={() => setStep('talk')}>坐到火边</SceneButton>}
+            {step === 'talk' && <SceneButton variant="secondary" onClick={() => setStep('keep')}>收束一句</SceneButton>}
+            {step === 'keep' && <SceneButton variant="primary" onClick={close}>回到地图</SceneButton>}
+          </>
         )}
+      >
+        <SceneProgress steps={['材料', '谈法', '对话', '收束']} current={progress} />
 
-        <section className={`fireside-memory-context ${showMemoryPicker ? 'is-open' : ''}`}>
-          <button
-            type="button"
-            className="fireside-memory-summary"
-            aria-expanded={showMemoryPicker}
-            onClick={() => setShowMemoryPicker((value) => !value)}
-          >
-            <span className="fireside-memory-summary__icon" aria-hidden="true">
-              <BookOpen size={15} />
-            </span>
-            <span className="fireside-memory-summary__copy">
-              <strong>
-                {authorizedMemos.length > 0
-                  ? `已带入 ${authorizedMemos.length} 段记忆`
-                  : '带一段记忆到火边'}
-              </strong>
-              <small>
-                {authorizedMemos.length > 0
-                  ? '苔灯只会看到你本次选择的内容'
-                  : '可选。也可以不带记录，直接说此刻的事'}
-              </small>
-            </span>
-            <span className="fireside-memory-summary__action">
-              {authorizedMemos.length > 0 ? '调整' : '选择'}
-              <ChevronDown size={14} aria-hidden="true" />
-            </span>
-          </button>
-
-          {!showMemoryPicker && authorizedMemos.length > 0 && (
-            <div className="fireside-memory-chips" aria-label="本次带入的记忆">
-              {authorizedMemos.map((memo) => (
-                <span key={memo.id}>{memo.ai_title || memo.plain_text.slice(0, 20) || '未命名记录'}</span>
-              ))}
-            </div>
-          )}
-
-          {showMemoryPicker && (
-            <div className="fireside-memory-picker">
-              <div className="fireside-memory-picker__header">
-                <div>
-                  <strong>选择本次愿意谈到的记忆</strong>
-                  <small>最多 {MAX_AUTHORIZED_MEMOS} 段，仅用于本次篝火对话</small>
-                </div>
-                <span>{authorizedMemoIds.length} / {MAX_AUTHORIZED_MEMOS}</span>
-              </div>
-
-              <div className="fireside-memory-picker__list">
+        {step === 'material' && (
+          <SceneSection title="选择本次愿意谈到的记忆" caption={`最多 ${MAX_AUTHORIZED_MEMOS} 段。苔灯不会看到未选择的记录。`}>
+            {pickerMemos.length > 0 ? (
+              <div className="forest-memo-picker">
                 {pickerMemos.map((memo) => {
-                  const checked = authorizedMemoIds.includes(memo.id);
-                  const disabled = !checked && authorizedMemoIds.length >= MAX_AUTHORIZED_MEMOS;
+                  const selected = authorizedMemoIds.includes(memo.id);
+                  const disabled = !selected && authorizedMemoIds.length >= MAX_AUTHORIZED_MEMOS;
                   return (
-                    <label key={memo.id} className={`${checked ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        disabled={disabled}
-                        onChange={() => toggleMemo(memo.id)}
-                      />
-                      <span className="fireside-memory-check" aria-hidden="true">
-                        {checked && <Check size={13} />}
-                      </span>
-                      <span className="fireside-memory-copy">
-                        <strong>{memo.ai_title || memo.plain_text.slice(0, 28) || '未命名记录'}</strong>
-                        <small>
-                          {new Date(memo.created_at).toLocaleDateString('zh-CN')}
-                          {memo.plain_text ? ` · ${memo.plain_text.slice(0, 42)}` : ''}
-                        </small>
-                      </span>
-                    </label>
+                    <SceneMemoCard
+                      key={memo.id}
+                      memo={memo}
+                      selected={selected}
+                      disabled={disabled}
+                      onClick={() => toggleMemo(memo.id)}
+                      action={selected ? <Check size={14} /> : null}
+                    />
                   );
                 })}
-                {memos.length === 0 && <p>这里还没有可带到火边的记录。</p>}
               </div>
-
-              <div className="fireside-memory-picker__footer">
-                {authorizedMemoIds.length > 0 ? (
-                  <button type="button" onClick={() => onAuthorizeMemos([])}>
-                    清空选择
-                  </button>
-                ) : <span />}
-                <button type="button" className="is-primary" onClick={() => setShowMemoryPicker(false)}>
-                  {authorizedMemoIds.length > 0 ? '带到火边' : '不带记录，直接开始'}
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
-
-        {!started && (
-          <button type="button" className="fireside-start" onClick={() => {
-            setStarted(true);
-            setShowMemoryPicker(false);
-          }}>
-            坐到火边
-          </button>
+            ) : (
+              <SceneEmpty
+                title="还没有可带来的记录"
+                body="可以不带材料坐下。火边会只处理你此刻写下的话。"
+              />
+            )}
+          </SceneSection>
         )}
 
-        <div className="fireside-body">
-          {started && companionType !== 'llm' && !showMemoryPicker ? (
-            <section className="fireside-local-note">
-              <p className="game-kicker">独自坐着</p>
-              <h3>这张纸不会交给苔灯</h3>
-              <p>
-                你可以只把此刻的说法放在火边。它会成为本次旅程回声，但不会请求 AI。
-              </p>
+        {step === 'mode' && (
+          <div className="forest-scene-split">
+            <SceneSection title="选择今晚的火候" caption="选择影响苔灯回应方式，不影响记录权限。">
+              <div className="forest-mode-grid">
+                {MODES.map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    className={dialogueMode === mode.id ? 'is-selected' : ''}
+                    onClick={() => onDialogueModeChange(mode.id)}
+                  >
+                    <strong>{mode.label}</strong>
+                    <small>{mode.description}</small>
+                  </button>
+                ))}
+              </div>
+            </SceneSection>
+            <SceneSection title="是否邀请苔灯" caption="不邀请时，所有输入只保存成本次旅程回声。">
+              <div className="forest-lantern-toggle">
+                <Lamp size={24} />
+                <span>
+                  <strong>{companionType === 'llm' ? '苔灯在火边' : '苔灯在远处'}</strong>
+                  <small>{companionLabel}</small>
+                </span>
+                <SceneButton
+                  variant={companionType === 'llm' ? 'secondary' : 'primary'}
+                  onClick={() => onCompanionTypeChange(companionType === 'llm' ? 'none' : 'llm')}
+                >
+                  {companionType === 'llm' ? '遣散' : '邀请'}
+                </SceneButton>
+              </div>
               {authorizedMemos.length > 0 && (
-                <div className="fireside-local-note__materials">
-                  {authorizedMemos.map((memo) => (
-                    <span key={memo.id}>{memo.ai_title || memo.plain_text.slice(0, 20) || '未命名记录'}</span>
-                  ))}
+                <div className="forest-material-chips">
+                  {authorizedMemos.map((memo) => <span key={memo.id}>{formatMemoTitle(memo)}</span>)}
                 </div>
               )}
-              <textarea
-                value={localNote}
-                onChange={(event) => {
-                  setLocalNote(event.target.value);
-                  setLocalSaved(false);
-                }}
-                rows={6}
-                placeholder="只写下你愿意确认的一句话……"
-              />
-              <div className="fireside-local-note__actions">
-                <button type="button" disabled={!localNote.trim()} onClick={saveLocalNote}>
-                  放在火边
-                </button>
-                <button type="button" onClick={() => onCompanionTypeChange('llm')}>
-                  邀请苔灯回应
-                </button>
-              </div>
-              {localSaved && <small>已放在本次旅程回声里。</small>}
-            </section>
-          ) : started && !showMemoryPicker && (
-            <>
-              <div className="fireside-messages" aria-live="polite">
-                {messages.length === 0 ? (
-                  <div className="fireside-empty">
-                    <p>
-                      {dialogueMode === 'silent'
-                        ? '火焰轻轻响着。你不需要先说什么。'
-                        : dialogueMode === 'organize'
-                          ? '可以从一件具体发生过的事开始。苔灯会陪你区分当时发生了什么、当时怎样感受，以及现在怎么看。'
-                        : '你可以从刚刚遇见的那段记忆开始，也可以只说此刻想到的事。'}
-                    </p>
-                  </div>
-                ) : messages.map((message, index) => (
-                  <div key={`${message.role}-${index}`} className={`fireside-message ${message.role}`}>
-                    <span>{message.role === 'user' ? '你' : '苔灯'}</span>
-                    <p>{message.content || (loading ? '……' : '')}</p>
-                    {message.isInference && <small>这是苔灯的推测，不是原记录中的事实。</small>}
-                  </div>
-                ))}
-                {error && <p className="fireside-error">{error}</p>}
-              </div>
-
-              <footer className="fireside-composer">
-                <textarea
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  placeholder={
-                    dialogueMode === 'silent'
-                      ? '想说时再写……'
-                      : dialogueMode === 'organize'
-                        ? '先说一件具体发生过的事……'
-                        : '在火边说一点……'
-                  }
-                  rows={2}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.shiftKey) {
-                      event.preventDefault();
-                      void send();
-                    }
-                  }}
-                />
-                {loading ? (
-                  <button type="button" onClick={() => abortRef.current?.abort()} aria-label="停止回应">
-                    <Pause size={17} />
-                  </button>
-                ) : (
-                  <button type="button" onClick={() => void send()} disabled={!input.trim()} aria-label="发送">
-                    <Send size={17} />
-                  </button>
-                )}
-              </footer>
-            </>
-          )}
-        </div>
-
-        {started && (
-          <aside className="fireside-keepsake">
-            <div>
-              <p className="game-kicker">想留在火边的纸条</p>
-              <div className="fireside-keepsake__types">
-                <button type="button" className={leaveType === 'fireside_note' ? 'is-selected' : ''} onClick={() => setLeaveType('fireside_note')}>一句话</button>
-                <button type="button" className={leaveType === 'left_question' ? 'is-selected' : ''} onClick={() => setLeaveType('left_question')}>一个问题</button>
-              </div>
-            </div>
-            <textarea
-              value={leaveNote}
-              onChange={(event) => setLeaveNote(event.target.value)}
-              rows={2}
-              placeholder={leaveType === 'left_question' ? '把还没有回答的问题折成纸鸟……' : '只写下你愿意确认的一句话……'}
-            />
-            <button type="button" disabled={!leaveNote.trim()} onClick={saveLeaveNote}>留在火边</button>
-            {pinnedNotes.length > 0 && (
-              <div className="fireside-keepsake__notes">
-                {pinnedNotes.map((note) => <span key={note.id}>{note.type === 'left_question' ? '问' : '记'} · {note.text}</span>)}
-              </div>
-            )}
-          </aside>
+            </SceneSection>
+          </div>
         )}
-      </div>
-    </div>
+
+        {step === 'talk' && (
+          <div className="forest-fire-talk">
+            <SceneSection title="材料在左边" caption="对话只围绕这些材料，或只围绕你此刻写下的话。">
+              {authorizedMemos.length > 0 ? (
+                <div className="forest-material-stack">
+                  {authorizedMemos.map((memo) => (
+                    <article key={memo.id}>
+                      <strong>{formatMemoTitle(memo)}</strong>
+                      <p>{formatMemoExcerpt(memo, 90)}</p>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <SceneEmpty title="没有带入材料" body="这会是一场只关于此刻的火边记录。" />
+              )}
+            </SceneSection>
+
+            <SceneSection title={companionType === 'llm' ? '火边对话' : '本地纸条'} caption={companionType === 'llm' ? 'Enter 发送，Shift+Enter 换行。' : '不会请求 AI，会直接留下为火边纸条。'}>
+              {companionType === 'llm' ? (
+                <div className="forest-message-list" aria-live="polite">
+                  {messages.length === 0 ? (
+                    <p>
+                      {dialogueMode === 'organize'
+                        ? '可以从一件具体发生过的事开始。'
+                        : dialogueMode === 'silent'
+                          ? '火还亮着。想说时再说。'
+                          : '你可以从刚刚遇见的那段记忆开始。'}
+                    </p>
+                  ) : messages.map((message, index) => (
+                    <article key={`${message.role}-${index}`} className={message.role === 'user' ? 'is-user' : ''}>
+                      <small>{message.role === 'user' ? '你' : '苔灯'}</small>
+                      <p>{message.content || (loading ? '...' : '')}</p>
+                      {message.isInference && <em>这是苔灯的推测，不是原记录中的事实。</em>}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <textarea
+                  value={localNote}
+                  onChange={(event) => setLocalNote(event.target.value)}
+                  rows={9}
+                  placeholder="只写下你愿意确认的一句话。"
+                />
+              )}
+
+              {companionType === 'llm' ? (
+                <footer className="forest-composer">
+                  <textarea
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    rows={2}
+                    placeholder="在火边说一点..."
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        void send();
+                      }
+                    }}
+                  />
+                  {loading ? (
+                    <button type="button" onClick={() => abortRef.current?.abort()} aria-label="停止回应">
+                      <Pause size={16} />
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => void send()} disabled={!input.trim()} aria-label="发送">
+                      <Send size={16} />
+                    </button>
+                  )}
+                </footer>
+              ) : (
+                <div className="forest-inline-actions">
+                  <SceneButton
+                    variant="primary"
+                    disabled={!localNote.trim()}
+                    onClick={() => {
+                      setKeepType('fireside_note');
+                      setKeepText(localNote.trim());
+                      setLocalNote('');
+                      setStep('keep');
+                    }}
+                  >
+                    带去收束
+                  </SceneButton>
+                  <SceneButton variant="secondary" onClick={() => onCompanionTypeChange('llm')}>邀请苔灯回应</SceneButton>
+                </div>
+              )}
+              {error && <p className="forest-scene-error">{error}</p>}
+            </SceneSection>
+          </div>
+        )}
+
+        {step === 'keep' && (
+          <div className="forest-scene-split">
+            <SceneSection title="离开前留下一句" caption="这会成为本次旅程回声，不覆盖原记录。">
+              <div className="forest-choice-row">
+                <SceneButton variant={keepType === 'fireside_note' ? 'primary' : 'quiet'} onClick={() => setKeepType('fireside_note')}>一句话</SceneButton>
+                <SceneButton variant={keepType === 'left_question' ? 'primary' : 'quiet'} onClick={() => setKeepType('left_question')}>一个问题</SceneButton>
+              </div>
+              <textarea
+                value={keepText}
+                onChange={(event) => setKeepText(event.target.value)}
+                rows={7}
+                placeholder={keepType === 'left_question' ? '把还没有回答的问题折成纸鸟...' : '只写下你愿意确认的一句话...'}
+              />
+              <div className="forest-inline-actions">
+                <SceneButton variant="primary" disabled={!keepText.trim()} onClick={saveKeep}>留在火边</SceneButton>
+              </div>
+              {savedKeepText && <p className="forest-scene-success">已留下：{savedKeepText}</p>}
+            </SceneSection>
+            <SceneSection title="本场边界" caption="火边不替你判断人生，只保存你确认过的说法。">
+              <ul className="forest-boundary-list">
+                <li>带入材料最多三段。</li>
+                <li>苔灯回应会标记推测，不作为事实。</li>
+                <li>真正写回长期记录，请去中庭写作台。</li>
+              </ul>
+            </SceneSection>
+          </div>
+        )}
+      </ForestScenePanel>
+    </ForestSceneLayer>
   );
 }
