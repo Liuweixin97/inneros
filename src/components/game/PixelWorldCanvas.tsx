@@ -279,21 +279,21 @@ export default function PixelWorldCanvas({
   };
 
   const interactionLabel = nearbyObject
-    ? '靠近，看看这段记忆'
+    ? '采一粒记忆种子'
     : nearbyAction === 'cabin'
-      ? '走上门廊'
+      ? '查看今日农活'
       : nearbyAction === 'bench'
-        ? '在长椅上坐下'
+        ? '选择同行村民'
         : nearbyAction === 'fireside'
-      ? '坐下来，和苔灯谈谈'
+      ? '给记忆浇水'
       : nearbyAction === 'workshop'
-        ? '进入共写小屋'
+        ? '打开木匠配方'
         : nearbyAction === 'pond'
-          ? '到池边坐一会儿'
+          ? '投进漂流瓶'
           : nearbyAction === 'trail'
-            ? '走进循光小径'
+            ? '酿造关系果酱'
             : nearbyAction === 'desk'
-              ? '在中庭写作台坐下'
+              ? '出货到 InnerOS'
           : '';
 
   return (

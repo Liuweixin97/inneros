@@ -6159,3 +6159,656 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* 林间世界：星露谷式农场 HUD */
+.farm-rpg-hud {
+  --farm-wood-dark: #2e1a0f;
+  --farm-wood: #6f431f;
+  --farm-wood-light: #a56b32;
+  --farm-honey: #f3bd62;
+  --farm-parchment: #e7c982;
+  --farm-paper: #f7df9c;
+  --farm-moss: #6f9f48;
+  --farm-pond: #5f94b7;
+  --farm-ink: #1b1008;
+  --farm-night: #111a17;
+  position: absolute;
+  inset: 0;
+  z-index: 42;
+  color: var(--farm-ink);
+  font-family: var(--font-pixel), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  pointer-events: none;
+}
+
+.farm-rpg-hud *,
+.farm-rpg-hud *::before,
+.farm-rpg-hud *::after {
+  box-sizing: border-box;
+}
+
+.farm-rpg-hud button,
+.farm-rpg-hud input,
+.farm-rpg-hud textarea {
+  font: inherit;
+}
+
+.farm-day-ledger,
+.farm-weather-board,
+.farm-quest-board,
+.farm-recipe-board,
+.farm-menu-rail,
+.farm-toolbelt,
+.farm-dialog,
+.farm-toast {
+  pointer-events: auto;
+  image-rendering: pixelated;
+}
+
+.farm-day-ledger,
+.farm-weather-board,
+.farm-quest-board,
+.farm-recipe-board,
+.farm-dialog,
+.farm-toast {
+  border: 3px solid var(--farm-wood-dark);
+  outline: 2px solid rgba(255, 232, 151, 0.52);
+  background:
+    linear-gradient(180deg, rgba(255, 231, 157, 0.96), rgba(217, 164, 83, 0.96)),
+    repeating-linear-gradient(90deg, rgba(83, 44, 18, 0.18) 0 2px, transparent 2px 14px);
+  box-shadow:
+    0 0 0 3px rgba(73, 38, 15, 0.48),
+    0 10px 0 rgba(39, 20, 8, 0.34),
+    0 18px 32px rgba(0, 0, 0, 0.26);
+}
+
+.farm-day-ledger {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 4px 10px;
+  width: 172px;
+  padding: 10px 12px 11px;
+}
+
+.farm-ledger-pin {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 20px;
+  height: 13px;
+  border: 2px solid var(--farm-wood-dark);
+  background: var(--farm-honey);
+  transform: translateX(-50%);
+}
+
+.farm-day-ledger strong {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.farm-day-ledger small,
+.farm-weather-board div {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.farm-day-ledger button,
+.farm-weather-board button,
+.farm-recipe-board button,
+.farm-menu-rail button,
+.farm-toolbelt button,
+.farm-dialog button {
+  border: 2px solid var(--farm-wood-dark);
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--farm-honey), #cb7d33);
+  box-shadow: inset 0 -3px 0 rgba(75, 38, 13, 0.3);
+  color: var(--farm-ink);
+  cursor: pointer;
+}
+
+.farm-day-ledger button {
+  grid-column: 1 / -1;
+  min-height: 28px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.farm-rpg-hud button:hover:not(:disabled),
+.farm-rpg-hud button:focus-visible {
+  outline: 2px solid #fff0ad;
+  outline-offset: 2px;
+  filter: brightness(1.06);
+}
+
+.farm-rpg-hud button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+  opacity: 0.56;
+}
+
+.farm-weather-board {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  gap: 8px;
+  width: 208px;
+  padding: 11px 13px;
+}
+
+.farm-mood-row {
+  display: grid !important;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px !important;
+}
+
+.farm-mood-row meter {
+  width: 100%;
+  height: 9px;
+  border: 2px solid var(--farm-wood-dark);
+  background: #402313;
+}
+
+.farm-mood-row meter::-webkit-meter-bar {
+  border: 0;
+  background: #402313;
+}
+
+.farm-mood-row meter::-webkit-meter-optimum-value {
+  background: linear-gradient(90deg, var(--farm-moss), #b4d66a);
+}
+
+.farm-quest-board {
+  position: absolute;
+  top: 126px;
+  left: 18px;
+  display: grid;
+  gap: 8px;
+  width: 254px;
+  padding: 12px;
+}
+
+.farm-quest-board header,
+.farm-recipe-board header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.farm-quest-board button {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px;
+  text-align: left;
+}
+
+.farm-quest-board button.is-done {
+  background: linear-gradient(180deg, #c8d878, #7fa84a);
+}
+
+.farm-quest-board button span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+
+.farm-quest-board strong,
+.farm-recipe-board h3,
+.farm-dialog h2,
+.farm-memo-strip strong {
+  letter-spacing: 0;
+}
+
+.farm-quest-board small,
+.farm-quest-board em,
+.farm-village-note p,
+.farm-recipe-board li,
+.farm-dialog p,
+.farm-dialog small,
+.farm-empty-line {
+  color: rgba(32, 17, 7, 0.74);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.55;
+}
+
+.farm-village-note {
+  border: 2px dashed rgba(46, 26, 15, 0.42);
+  background: rgba(255, 243, 185, 0.48);
+  padding: 9px;
+}
+
+.farm-village-note p {
+  margin-top: 4px;
+}
+
+.farm-recipe-board {
+  position: absolute;
+  top: 126px;
+  right: 18px;
+  width: 232px;
+  padding: 13px;
+}
+
+.farm-recipe-board h3 {
+  margin: 8px 0 10px;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.farm-recipe-equation {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  justify-items: center;
+  margin: 10px 0;
+  padding: 10px;
+  border: 2px solid rgba(46, 26, 15, 0.55);
+  background: rgba(255, 246, 204, 0.46);
+}
+
+.farm-recipe-board ul {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 12px 17px;
+}
+
+.farm-recipe-board button {
+  width: 100%;
+  min-height: 32px;
+}
+
+.farm-menu-rail {
+  position: absolute;
+  bottom: 20px;
+  left: 18px;
+  display: flex;
+  gap: 6px;
+}
+
+.farm-menu-rail button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 0 10px;
+  color: #ffedb4;
+  background: linear-gradient(180deg, #59401f, #2e1a0f);
+}
+
+.farm-toolbelt {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(6, 74px) 62px;
+  gap: 6px;
+  padding: 7px;
+  border: 3px solid var(--farm-wood-dark);
+  background: rgba(49, 27, 13, 0.92);
+  box-shadow: 0 0 0 2px rgba(255, 230, 139, 0.36), 0 12px 28px rgba(0, 0, 0, 0.34);
+  transform: translateX(-50%);
+}
+
+.farm-toolbelt button {
+  position: relative;
+  display: grid;
+  height: 62px;
+  place-items: center;
+  gap: 2px;
+  padding: 6px 4px 5px;
+  color: #ffe9a6;
+  background: linear-gradient(180deg, #89532a, #4f2b15);
+}
+
+.farm-toolbelt button.is-selected {
+  color: #1b1008;
+  background: linear-gradient(180deg, #ffd879, #d28a34);
+}
+
+.farm-toolbelt em,
+.farm-toolbelt kbd {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  color: rgba(255, 240, 180, 0.72);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.farm-toolbelt span {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.farm-toolbelt .farm-toolbag {
+  color: #1b1008;
+  background: linear-gradient(180deg, #e9c86b, #9e682f);
+}
+
+.farm-toolbelt .farm-toolbag kbd {
+  right: 4px;
+  left: auto;
+  color: rgba(32, 17, 7, 0.72);
+}
+
+.farm-toast {
+  position: absolute;
+  right: 22px;
+  bottom: 112px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
+  padding: 9px 10px;
+  font-size: 12px;
+}
+
+.farm-toast button,
+.farm-dialog-close {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+}
+
+.farm-dialog {
+  position: absolute;
+  right: 22px;
+  bottom: 104px;
+  width: min(460px, calc(100vw - 44px));
+  max-height: min(62dvh, 520px);
+  overflow: auto;
+  padding: 15px;
+}
+
+.farm-dialog--cabin,
+.farm-dialog--bench {
+  right: auto;
+  left: 50%;
+  bottom: 112px;
+  transform: translateX(-50%);
+}
+
+.farm-dialog-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.farm-speaker {
+  margin: 0 28px 5px 0;
+  color: #5b3519 !important;
+  font-size: 11px !important;
+}
+
+.farm-dialog h2 {
+  margin: 0 32px 8px 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.farm-dialog blockquote {
+  margin: 11px 0;
+  border: 2px solid rgba(46, 26, 15, 0.28);
+  background: rgba(255, 246, 204, 0.5);
+  padding: 10px;
+  color: rgba(32, 17, 7, 0.8);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.farm-dialog textarea,
+.farm-dialog input {
+  width: 100%;
+  border: 2px solid var(--farm-wood-dark);
+  border-radius: 2px;
+  background: rgba(255, 246, 204, 0.86);
+  padding: 10px;
+  color: var(--farm-ink);
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.farm-dialog textarea:focus,
+.farm-dialog input:focus {
+  outline: 2px solid #fff0ad;
+  outline-offset: 2px;
+}
+
+.farm-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.farm-dialog-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 11px;
+}
+
+.farm-choice-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.farm-choice-grid button {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+  gap: 9px;
+  min-height: 56px;
+  padding: 8px;
+  text-align: left;
+}
+
+.farm-choice-grid button.is-selected,
+.farm-route-picks button.is-selected,
+.farm-memo-strip button.is-selected {
+  background: linear-gradient(180deg, #cddc78, var(--farm-moss));
+}
+
+.farm-choice-grid span,
+.farm-memo-strip button {
+  display: grid;
+  gap: 3px;
+}
+
+.farm-memo-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(132px, 1fr);
+  gap: 7px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+}
+
+.farm-memo-strip button {
+  min-height: 60px;
+  padding: 8px;
+  text-align: left;
+}
+
+.farm-route-picks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.farm-route-picks button,
+.farm-pack-list button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 8px;
+  text-align: left;
+}
+
+.farm-pack-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.farm-empty-line {
+  margin: 8px 0;
+}
+
+@media (max-width: 1024px) {
+  .farm-recipe-board {
+    display: none;
+  }
+
+  .farm-quest-board {
+    width: 226px;
+  }
+
+  .farm-toolbelt {
+    grid-template-columns: repeat(6, 64px) 56px;
+  }
+}
+
+@media (max-width: 768px) {
+  .farm-day-ledger {
+    top: max(10px, env(safe-area-inset-top));
+    left: 10px;
+    width: 136px;
+    padding: 8px;
+  }
+
+  .farm-day-ledger strong {
+    font-size: 17px;
+  }
+
+  .farm-weather-board {
+    top: max(10px, env(safe-area-inset-top));
+    right: 10px;
+    width: 154px;
+    gap: 5px;
+    padding: 8px;
+  }
+
+  .farm-mood-row {
+    grid-template-columns: 1fr;
+  }
+
+  .farm-mood-row meter,
+  .farm-mood-row small {
+    display: none;
+  }
+
+  .farm-quest-board {
+    top: 98px;
+    left: 10px;
+    width: min(218px, calc(100vw - 20px));
+    max-height: 190px;
+    overflow: hidden;
+    padding: 9px;
+  }
+
+  .farm-quest-board button {
+    min-height: 42px;
+    grid-template-columns: 18px 1fr auto;
+    padding: 6px;
+  }
+
+  .farm-quest-board small,
+  .farm-village-note {
+    display: none;
+  }
+
+  .farm-menu-rail {
+    display: none;
+  }
+
+  .farm-toolbelt {
+    right: 8px;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    left: 8px;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    overflow: visible;
+    padding: 5px;
+    transform: none;
+  }
+
+  .farm-toolbelt button {
+    height: 50px;
+    min-width: 0;
+  }
+
+  .farm-toolbelt span {
+    font-size: 9px;
+  }
+
+  .farm-dialog,
+  .farm-dialog--cabin,
+  .farm-dialog--bench {
+    right: 10px;
+    bottom: calc(166px + env(safe-area-inset-bottom));
+    left: 10px;
+    width: auto;
+    max-height: 44dvh;
+    padding: 13px;
+    transform: none;
+  }
+
+  .farm-dialog h2 {
+    font-size: 17px;
+  }
+
+  .farm-route-picks,
+  .farm-choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .farm-toast {
+    right: 12px;
+    bottom: calc(166px + env(safe-area-inset-bottom));
+    left: 12px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .farm-weather-board {
+    width: 138px;
+  }
+
+  .farm-quest-board {
+    top: 91px;
+    width: min(218px, calc(100vw - 168px));
+  }
+
+  .farm-quest-board button:nth-of-type(n+3) {
+    display: none;
+  }
+
+  .farm-toolbelt {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}

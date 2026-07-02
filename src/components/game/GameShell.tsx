@@ -6,13 +6,11 @@ import type {
   WorldObject,
   GamePhase,
   CompanionType,
-  DialogueMode,
   JourneyEvent,
   Memo,
+  WorldObjectType,
 } from '@/types';
 import {
-  annotateObject,
-  hideObject,
   loadWorld,
   loadGameMemos,
   placeObject,
@@ -25,17 +23,8 @@ import { getDefaultCharacter, getCharacterById } from '@/lib/game/sprite';
 import { isWalkable } from '@/lib/game/collisions';
 import GamePortal from './GamePortal';
 import PixelWorldCanvas from './PixelWorldCanvas';
-import WorldHUD from './WorldHUD';
 import GameSettings from './GameSettings';
-import MemoEncounter from './MemoEncounter';
-import FiresideChat from './FiresideChat';
-import CoWritePanel from './CoWritePanel';
-import PondPanel from './PondPanel';
-import CompanionBench from './CompanionBench';
-import CabinPanel from './CabinPanel';
-import LightTrailPanel from './LightTrailPanel';
-import WorldObjectDetail from './WorldObjectDetail';
-import WritingDeskPanel from './WritingDeskPanel';
+import ForestFarmHud, { type FarmActionId } from './ForestFarmHud';
 import {
   loadBagMemoIds,
   loadCompanionInvited,
@@ -81,7 +70,6 @@ export default function GameShell({ onExit }: GameShellProps) {
 
   // ---- 同行者 ----
   const [companionType, setCompanionType] = useState<CompanionType>('none');
-  const [dialogueMode, setDialogueMode] = useState<DialogueMode>('listen');
   const [authorizedMemoIds, setAuthorizedMemoIds] = useState<string[]>([]);
   const [journeyEvents, setJourneyEvents] = useState<JourneyEvent[]>([]);
 
@@ -89,13 +77,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [activeMemo, setActiveMemo] = useState<Memo | null>(null);
   const [activeObject, setActiveObject] = useState<WorldObject | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [firesideChatOpen, setFiresideChatOpen] = useState(false);
-  const [coWriteOpen, setCoWriteOpen] = useState(false);
-  const [pondOpen, setPondOpen] = useState(false);
-  const [benchOpen, setBenchOpen] = useState(false);
-  const [cabinOpen, setCabinOpen] = useState(false);
-  const [lightTrailOpen, setLightTrailOpen] = useState(false);
-  const [writingDeskOpen, setWritingDeskOpen] = useState(false);
+  const [farmAction, setFarmAction] = useState<FarmActionId>(null);
   const [activePlacedObject, setActivePlacedObject] = useState<WorldObject | null>(null);
 
   // ---- 减少动态模式 ----
@@ -217,46 +199,39 @@ export default function GameShell({ onExit }: GameShellProps) {
     const object = objects.find((item) => item.id === objectId);
     if (object?.sourceSessionId) {
       setActivePlacedObject(object);
+      setFarmAction('object');
       return;
     }
     const memo = memos.find((m) => m.id === memoId);
     if (memo) {
       setActiveMemo(memo);
       setActiveObject(objects.find((object) => object.id === objectId) ?? null);
-      setPhase('memo_encounter');
+      setFarmAction('memory');
     }
   }, [memos, objects]);
 
-  // 进入篝火对话
+  // 地图地标统一打开新的农场式 HUD 动作
+  const handleEnterCabin = useCallback(() => setFarmAction('cabin'), []);
+  const handleEnterBench = useCallback(() => setFarmAction('bench'), []);
   const handleEnterFireside = useCallback(() => {
-    setFiresideChatOpen(true);
-    setPhase('fireside_chat');
+    setFarmAction('cook');
   }, []);
-
-  // 进入共写
   const handleEnterCoWrite = useCallback(() => {
-    setCoWriteOpen(true);
-    setPhase('co_write');
+    setFarmAction('workshop');
   }, []);
-
-  // 进入池塘
   const handleEnterPond = useCallback(() => {
-    setPondOpen(true);
-    setPhase('pond');
+    setFarmAction('pond');
   }, []);
+  const handleEnterLightTrail = useCallback(() => setFarmAction('trail'), []);
+  const handleEnterDesk = useCallback(() => setFarmAction('desk'), []);
 
   // 关闭所有弹层，回到探索
   const handleCloseAll = useCallback(() => {
     setActiveMemo(null);
     setActiveObject(null);
-    setFiresideChatOpen(false);
-    setCoWriteOpen(false);
-    setPondOpen(false);
-    setBenchOpen(false);
-    setCabinOpen(false);
-    setLightTrailOpen(false);
-    setWritingDeskOpen(false);
     setActivePlacedObject(null);
+    setFarmAction(null);
+    setShowSettings(false);
     setPhase('explore');
   }, []);
 
@@ -271,7 +246,7 @@ export default function GameShell({ onExit }: GameShellProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (phase !== 'explore') {
+        if (showSettings || farmAction) {
           handleCloseAll();
         } else {
           setShowSettings((v) => !v);
@@ -280,7 +255,7 @@ export default function GameShell({ onExit }: GameShellProps) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [phase, handleCloseAll]);
+  }, [farmAction, handleCloseAll, showSettings]);
 
   // 授权 Memo（用户勾选后可带入 AI 对话）
   const handleAuthorizeMemos = useCallback((ids: string[]) => {
@@ -308,45 +283,79 @@ export default function GameShell({ onExit }: GameShellProps) {
     saveCompanionInvited(type === 'llm');
   }, []);
 
-  const handleSaveAnnotation = useCallback(async (annotation: string) => {
-    if (!activeMemo || !world) return false;
-    if (activeObject && !activeObject.id.startsWith('candidate-')) {
-      await annotateObject(activeObject.id, annotation);
-      setObjects((current) => current.map((object) => (
-        object.id === activeObject.id ? { ...object, annotation } : object
-      )));
+  const handleFarmActionChange = useCallback((action: FarmActionId) => {
+    setFarmAction(action);
+    if (!action) {
+      setActiveMemo(null);
+      setActiveObject(null);
+      setActivePlacedObject(null);
+    }
+  }, []);
+
+  const handleCarryMemo = useCallback((memo: Memo) => {
+    setAuthorizedMemoIds((current) => {
+      const next = [...current.filter((id) => id !== memo.id), memo.id].slice(-3);
+      saveBagMemoIds(next);
+      return next;
+    });
+    addJourneyEvent({
+      type: 'carried_memory',
+      text: `带走了「${memo.ai_title || memo.plain_text.slice(0, 24) || '一段记忆'}」`,
+      sourceMemoIds: [memo.id],
+    });
+  }, [addJourneyEvent]);
+
+  const handleCreateFarmMemo = useCallback(async (content: string) => {
+    try {
+      const res = await fetch('/api/memos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content,
+          tags: ['InnerOS/林间世界'],
+          source: 'manual',
+        }),
+      });
+      if (!res.ok) return false;
+      const memo = await res.json() as Memo;
+      setMemos((current) => [memo, ...current]);
       addJourneyEvent({
         type: 'left_annotation',
-        text: annotation,
-        sourceMemoIds: [activeMemo.id],
+        text: '把睡前确认写回 InnerOS',
+        sourceMemoIds: [memo.id],
       });
       return true;
+    } catch {
+      return false;
     }
+  }, [addJourneyEvent]);
+
+  const handlePlaceFarmObject = useCallback(async (input: {
+    type: WorldObjectType;
+    annotation: string;
+    memoIds: string[];
+    eventText: string;
+  }) => {
+    if (!world) return false;
     const created = await placeObject({
-      type: activeObject?.type ?? 'memory_plant',
-      x: activeObject?.x,
-      y: activeObject?.y,
-      sourceMemoIds: [activeMemo.id],
-      annotation,
+      type: input.type,
+      location: 'workshop',
+      sourceMemoIds: input.memoIds,
+      annotation: input.annotation,
       userConfirmed: true,
     });
     if (!created) return false;
     setObjects((current) => [
-      ...current.filter((object) => object.id !== activeObject?.id),
+      ...current.filter((object) => !object.id.startsWith('candidate-') || !object.sourceMemoIds.some((id) => input.memoIds.includes(id))),
       created,
     ]);
-    setActiveObject(created);
     addJourneyEvent({
-      type: 'left_annotation',
-      text: annotation,
-      sourceMemoIds: [activeMemo.id],
+      type: 'placed_object',
+      text: input.eventText,
+      sourceMemoIds: input.memoIds,
     });
     return true;
-  }, [activeMemo, activeObject, addJourneyEvent, world]);
-
-  const handleObjectPlaced = useCallback((object: WorldObject) => {
-    setObjects((current) => [...current, object]);
-  }, []);
+  }, [addJourneyEvent, world]);
 
   const visibleMemos = useMemo(
     () => companionType === 'human_local'
@@ -363,29 +372,7 @@ export default function GameShell({ onExit }: GameShellProps) {
       )),
     [authorizedMemoIds, companionType, objects],
   );
-  const memoryEncounterObjects = useMemo(
-    () => visibleObjects.filter((object) => (
-      !object.hidden
-      && !object.sourceSessionId
-      && object.sourceMemoIds.some((memoId) => memos.some((memo) => memo.id === memoId))
-    )),
-    [memos, visibleObjects],
-  );
-  const nextMemoryEncounter = useMemo(() => {
-    if (!activeObject) return null;
-    const activeIndex = memoryEncounterObjects.findIndex((object) => object.id === activeObject.id);
-    if (activeIndex < 0) return null;
-    return memoryEncounterObjects.slice(activeIndex + 1).find((object) => (
-      object.sourceMemoIds.some((memoId) => memos.some((memo) => memo.id === memoId))
-    )) ?? null;
-  }, [activeObject, memoryEncounterObjects, memos]);
-  const panelOpen = phase !== 'explore'
-    || showSettings
-    || cabinOpen
-    || benchOpen
-    || lightTrailOpen
-    || writingDeskOpen
-    || Boolean(activePlacedObject);
+  const panelOpen = showSettings || Boolean(farmAction);
 
   // ---- 渲染 ----
   return (
@@ -396,7 +383,7 @@ export default function GameShell({ onExit }: GameShellProps) {
       )}
 
       {/* 主地图 */}
-      {(phase === 'explore' || phase === 'memo_encounter' || phase === 'fireside_chat' || phase === 'co_write' || phase === 'pond') && (
+      {phase === 'explore' && (
         <>
           {loadError || canvasFailed ? (
             <GameFallbackView
@@ -420,202 +407,43 @@ export default function GameShell({ onExit }: GameShellProps) {
                 reducedMotion={reducedMotion}
                 onPlayerMove={handlePlayerMove}
                 onOpenMemo={handleOpenMemo}
-                onEnterCabin={() => setCabinOpen(true)}
-                onEnterBench={() => setBenchOpen(true)}
+                onEnterCabin={handleEnterCabin}
+                onEnterBench={handleEnterBench}
                 onEnterFireside={handleEnterFireside}
                 onEnterCoWrite={handleEnterCoWrite}
                 onEnterPond={handleEnterPond}
-                onEnterLightTrail={() => setLightTrailOpen(true)}
-                onEnterDesk={() => setWritingDeskOpen(true)}
+                onEnterLightTrail={handleEnterLightTrail}
+                onEnterDesk={handleEnterDesk}
                 onCanvasFailure={() => setCanvasFailed(true)}
                 interactionDisabled={panelOpen}
               />
 
-              <WorldHUD
+              <ForestFarmHud
                 world={world}
-                phase={phase}
-                companionType={companionType}
-                playerX={playerX}
-                playerY={playerY}
                 memos={memos}
                 bagMemoIds={authorizedMemoIds}
                 events={journeyEvents}
+                companionType={companionType}
+                activeAction={farmAction}
+                activeMemo={activeMemo}
+                activeObject={activeObject}
+                activePlacedObject={activePlacedObject}
+                onActionChange={handleFarmActionChange}
+                onCarryMemo={handleCarryMemo}
                 onRemoveFromBag={(memoId) => handleAuthorizeMemos(
                   authorizedMemoIds.filter((id) => id !== memoId),
                 )}
-                onOpenFireside={handleEnterFireside}
-                onOpenLightTrail={() => setLightTrailOpen(true)}
-                onOpenSettings={() => setShowSettings(true)}
+                onAddJourneyEvent={addJourneyEvent}
+                onCompanionTypeChange={handleCompanionTypeChange}
+                onCreateMemo={handleCreateFarmMemo}
+                onPlaceObject={handlePlaceFarmObject}
+                onOpenSettings={() => {
+                  setFarmAction(null);
+                  setShowSettings(true);
+                }}
                 onExit={handleExit}
-                panelOpen={panelOpen}
               />
             </>
-          )}
-
-          {/* Memo 阅读弹层 */}
-          {phase === 'memo_encounter' && activeMemo && (
-            <MemoEncounter
-              key={activeMemo.id}
-              memo={activeMemo}
-              worldObject={activeObject}
-              authorizedMemoIds={authorizedMemoIds}
-              onAuthorize={(id) => {
-                handleAuthorizeMemos([...authorizedMemoIds, id]);
-                addJourneyEvent({
-                  type: 'carried_memory',
-                  text: `带走了「${activeMemo.ai_title || activeMemo.plain_text.slice(0, 24) || '一段记忆'}」`,
-                  sourceMemoIds: [id],
-                });
-              }}
-              onSaveAnnotation={handleSaveAnnotation}
-              onHide={activeObject
-                && !activeObject.id.startsWith('candidate-')
-                && !activeObject.id.startsWith('fallback-')
-                ? async () => {
-                  await hideObject(activeObject.id);
-                  setObjects((current) => current.filter((object) => object.id !== activeObject.id));
-                  handleCloseAll();
-                }
-                : undefined}
-              onClose={handleCloseAll}
-              onOpenFireside={() => {
-                setActiveMemo(null);
-                handleEnterFireside();
-              }}
-              hasNextMemo={Boolean(nextMemoryEncounter)}
-              onNextMemo={() => {
-                const nextMemoId = nextMemoryEncounter?.sourceMemoIds.find((memoId) => (
-                  memos.some((memo) => memo.id === memoId)
-                ));
-                if (nextMemoryEncounter && nextMemoId) {
-                  handleOpenMemo(nextMemoId, nextMemoryEncounter.id);
-                }
-              }}
-            />
-          )}
-
-          {/* 篝火对话 */}
-          {phase === 'fireside_chat' && firesideChatOpen && (
-            world ? (
-              <FiresideChat
-                world={world}
-                memos={memos}
-                authorizedMemoIds={authorizedMemoIds}
-                dialogueMode={dialogueMode}
-                onDialogueModeChange={setDialogueMode}
-                onAuthorizeMemos={handleAuthorizeMemos}
-                companionType={companionType}
-                onCompanionTypeChange={handleCompanionTypeChange}
-                onClose={handleCloseAll}
-                onSaveJourneyEvent={(type, text, memoIds) => addJourneyEvent({
-                  type,
-                  text,
-                  sourceMemoIds: memoIds,
-                })}
-              />
-            ) : null
-          )}
-
-          {/* 共写面板 */}
-          {phase === 'co_write' && coWriteOpen && (
-            <CoWritePanel
-              memos={memos}
-              authorizedMemoIds={authorizedMemoIds}
-              onClose={handleCloseAll}
-              onObjectPlaced={handleObjectPlaced}
-              onJourneyEvent={(text, memoIds) => addJourneyEvent({
-                type: 'placed_object',
-                text,
-                sourceMemoIds: memoIds,
-              })}
-            />
-          )}
-
-          {/* 池塘面板 */}
-          {phase === 'pond' && pondOpen && (
-            <PondPanel
-              memos={memos}
-              bagMemoIds={authorizedMemoIds}
-              events={journeyEvents}
-              onRemoveFromBag={(memoId) => handleAuthorizeMemos(
-                authorizedMemoIds.filter((id) => id !== memoId),
-              )}
-              onJourneyEvent={(text, memoIds) => addJourneyEvent({
-                type: 'pond_release',
-                text,
-                sourceMemoIds: memoIds,
-              })}
-              onClose={handleCloseAll}
-            />
-          )}
-
-          {benchOpen && (
-            <CompanionBench
-              companionType={companionType}
-              onChange={handleCompanionTypeChange}
-              onClose={() => setBenchOpen(false)}
-            />
-          )}
-
-          {cabinOpen && (
-            <CabinPanel
-              events={journeyEvents}
-              memos={memos}
-              onOpenSettings={() => {
-                setCabinOpen(false);
-                setShowSettings(true);
-              }}
-              onExit={handleExit}
-              onClose={() => setCabinOpen(false)}
-            />
-          )}
-
-          {lightTrailOpen && (
-            <LightTrailPanel
-              memos={authorizedMemoIds.length >= 2
-                ? memos.filter((memo) => authorizedMemoIds.includes(memo.id))
-                : memos}
-              suggested={authorizedMemoIds.length < 2}
-              onConfirm={(name, memoIds) => {
-                addJourneyEvent({
-                  type: 'named_path',
-                  text: `把小径命名为「${name}」`,
-                  sourceMemoIds: memoIds,
-                });
-                setLightTrailOpen(false);
-              }}
-              onSeparate={(memoIds) => addJourneyEvent({
-                type: 'separated_path',
-                text: '确认这几段纸条暂时不是同一条路',
-                sourceMemoIds: memoIds,
-              })}
-              onClose={() => setLightTrailOpen(false)}
-            />
-          )}
-
-          {writingDeskOpen && (
-            <WritingDeskPanel
-              memos={memos}
-              bagMemoIds={authorizedMemoIds}
-              events={journeyEvents}
-              onMemoCreated={(memo) => {
-                setMemos((current) => [memo, ...current]);
-              }}
-              onJourneyEvent={(text, memoIds) => addJourneyEvent({
-                type: 'left_annotation',
-                text,
-                sourceMemoIds: memoIds,
-              })}
-              onClose={() => setWritingDeskOpen(false)}
-            />
-          )}
-
-          {activePlacedObject && (
-            <WorldObjectDetail
-              object={activePlacedObject}
-              memos={memos}
-              onClose={() => setActivePlacedObject(null)}
-            />
           )}
 
           {/* 游戏设置 */}
