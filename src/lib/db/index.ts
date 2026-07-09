@@ -4,6 +4,7 @@ import fs from 'fs';
 
 let db: Database.Database | null = null;
 export const DEFAULT_OWNER_USER_ID = 'liuweixin';
+export const GUEST_USER_ID = 'guest';
 
 function ensureColumn(database: Database.Database, table: string, column: string, definition: string): void {
   const columns = database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
@@ -309,13 +310,29 @@ export function getDb(): Database.Database {
   if (!messageColumnNames.has('reasoning_content')) {
     db.exec("ALTER TABLE messages ADD COLUMN reasoning_content TEXT NOT NULL DEFAULT ''");
   }
-  db.prepare("UPDATE conversations SET mode = 'unified' WHERE mode != 'unified'").run();
+
+  ensureColumn(db, 'users', 'username', 'TEXT');
   db.prepare(`
-    DELETE FROM memory_items
-    WHERE NOT EXISTS (
-      SELECT 1 FROM memory_evidence e WHERE e.memory_id = memory_items.id
-    )
-  `).run();
+    UPDATE users
+    SET username = CASE
+      WHEN id = ? THEN ?
+      WHEN email IS NOT NULL AND email != '' THEN lower(substr(email, 1, instr(email, '@') - 1))
+      ELSE lower(id)
+    END
+    WHERE username IS NULL OR username = ''
+  `).run(DEFAULT_OWNER_USER_ID, DEFAULT_OWNER_USER_ID);
+  const userNameRows = db.prepare('SELECT id, username FROM users ORDER BY created_at ASC').all() as Array<{ id: string; username: string }>;
+  const seenUserNames = new Set<string>();
+  for (const row of userNameRows) {
+    if (!seenUserNames.has(row.username)) {
+      seenUserNames.add(row.username);
+      continue;
+    }
+    const nextUsername = `${row.username}_${row.id.slice(0, 6).toLowerCase()}`;
+    db.prepare('UPDATE users SET username = ? WHERE id = ?').run(nextUsername, row.id);
+    seenUserNames.add(nextUsername);
+  }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)');
 
   const userScopedTables = [
     'memos',
@@ -335,6 +352,65 @@ export function getDb(): Database.Database {
     ensureColumn(db, table, 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
     db.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id IS NULL OR user_id = ''`).run(DEFAULT_OWNER_USER_ID);
   }
+
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT OR IGNORE INTO users (id, name, username, email, password_hash, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(GUEST_USER_ID, '游客', 'guest', 'guest@inneros.local', 'guest-disabled', now, now);
+  const { guestMemoCount } = db.prepare('SELECT COUNT(*) as guestMemoCount FROM memos WHERE user_id = ?')
+    .get(GUEST_USER_ID) as { guestMemoCount: number };
+  if (guestMemoCount === 0) {
+    const insertSample = db.prepare(`
+      INSERT OR IGNORE INTO memos (
+        id, user_id, raw_content, plain_text, created_at, updated_at, source,
+        import_fingerprint, original_tags, ai_title, ai_summary, ai_category,
+        ai_topics, ai_emotions, ai_people, ai_projects, ai_actions, ai_key_questions,
+        embedding, analysis_status, privacy_level
+      ) VALUES (
+        @id, @user_id, @raw_content, @plain_text, @created_at, @updated_at, 'manual',
+        NULL, '["示例"]', @ai_title, @ai_summary, '观察',
+        @ai_topics, @ai_emotions, '[]', '[]', '[]', @ai_key_questions,
+        NULL, 'done', 'normal'
+      )
+    `);
+    [
+      {
+        id: 'guest-sample-001',
+        raw_content: '#示例\n今天把三个分散的想法归到同一个主题下：注意力、长期项目和身体状态其实会互相影响。',
+        plain_text: '今天把三个分散的想法归到同一个主题下：注意力、长期项目和身体状态其实会互相影响。',
+        ai_title: '注意力与长期项目',
+        ai_summary: '注意力、长期项目和身体状态之间存在相互影响。',
+        ai_topics: JSON.stringify(['注意力管理', '长期项目']),
+        ai_emotions: JSON.stringify(['平静']),
+        ai_key_questions: JSON.stringify(['这些状态之间是偶然同现，还是有稳定关系？']),
+      },
+      {
+        id: 'guest-sample-002',
+        raw_content: '#复盘\n如果一个任务连续两天都没有推进，问题通常不是执行力，而是下一步没有被拆到足够小。',
+        plain_text: '如果一个任务连续两天都没有推进，问题通常不是执行力，而是下一步没有被拆到足够小。',
+        ai_title: '任务推进粒度',
+        ai_summary: '连续停滞的任务需要重新拆解下一步。',
+        ai_topics: JSON.stringify(['行动系统', '复盘']),
+        ai_emotions: JSON.stringify(['有力量']),
+        ai_key_questions: JSON.stringify(['下一步是否已经小到可以直接开始？']),
+      },
+    ].forEach((sample) => {
+      insertSample.run({
+        ...sample,
+        user_id: GUEST_USER_ID,
+        created_at: now,
+        updated_at: now,
+      });
+    });
+  }
+  db.prepare("UPDATE conversations SET mode = 'unified' WHERE mode != 'unified'").run();
+  db.prepare(`
+    DELETE FROM memory_items
+    WHERE NOT EXISTS (
+      SELECT 1 FROM memory_evidence e WHERE e.memory_id = memory_items.id
+    )
+  `).run();
 
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_memos_user_created_at ON memos(user_id, created_at);
@@ -387,25 +463,37 @@ export function getDb(): Database.Database {
       FOREIGN KEY (world_id) REFERENCES game_worlds(id) ON DELETE CASCADE
     );
 
-    CREATE TABLE IF NOT EXISTS shared_memory_drafts (
+    CREATE TABLE IF NOT EXISTS game_pond_entries (
       id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
-      memo_id TEXT,
-      player_one_text TEXT,
-      player_two_text TEXT,
-      joint_text TEXT,
-      save_decision TEXT NOT NULL DEFAULT 'pending',
+      world_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      content TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      FOREIGN KEY (session_id) REFERENCES companion_sessions(id) ON DELETE CASCADE
+      FOREIGN KEY (world_id) REFERENCES game_worlds(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS game_weekly_reviews (
+      id TEXT PRIMARY KEY,
+      world_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      gains TEXT NOT NULL DEFAULT '',
+      struggles TEXT NOT NULL DEFAULT '',
+      next_focus TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (world_id) REFERENCES game_worlds(id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_world_objects_world_id ON world_objects(world_id, hidden);
     CREATE INDEX IF NOT EXISTS idx_companion_sessions_world ON companion_sessions(world_id, started_at);
-    CREATE INDEX IF NOT EXISTS idx_shared_drafts_session ON shared_memory_drafts(session_id);
+    CREATE INDEX IF NOT EXISTS idx_game_pond_entries_user_created ON game_pond_entries(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_game_weekly_reviews_user_created ON game_weekly_reviews(user_id, created_at);
   `);
+  db.exec('DROP TABLE IF EXISTS shared_memory_drafts');
+  db.prepare("UPDATE companion_sessions SET companion_type = 'none' WHERE companion_type NOT IN ('none', 'llm')").run();
 
   ensureColumn(db, 'game_worlds', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
-  db.prepare('UPDATE game_worlds SET user_id = ? WHERE user_id IS NULL OR user_id = ""').run(DEFAULT_OWNER_USER_ID);
+  db.prepare("UPDATE game_worlds SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
   db.exec('CREATE INDEX IF NOT EXISTS idx_game_worlds_user_visit ON game_worlds(user_id, last_visited_at)');
 
   return db;

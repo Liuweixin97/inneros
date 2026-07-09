@@ -10,7 +10,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -22,7 +22,7 @@ function LoginForm() {
     const response = await fetch(`/api/auth/${mode}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, username, password }),
     });
     const data = await response.json().catch(() => ({}));
     setSubmitting(false);
@@ -49,17 +49,22 @@ function LoginForm() {
 
         {mode === 'register' && (
           <label className="block mb-3">
-            <span className="block text-xs text-[var(--color-text-muted)] mb-1">姓名</span>
+            <span className="block text-xs text-[var(--color-text-muted)] mb-1">昵称</span>
             <input value={name} onChange={(event) => setName(event.target.value)} className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]" />
           </label>
         )}
         <label className="block mb-3">
-          <span className="block text-xs text-[var(--color-text-muted)] mb-1">邮箱</span>
-          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]" />
+          <span className="block text-xs text-[var(--color-text-muted)] mb-1">账户名</span>
+          <input
+            value={username}
+            autoComplete="username"
+            onChange={(event) => setUsername(event.target.value.trim().toLowerCase())}
+            className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]"
+          />
         </label>
         <label className="block mb-4">
           <span className="block text-xs text-[var(--color-text-muted)] mb-1">密码</span>
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]" />
+          <input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]" />
         </label>
 
         {error && <p className="text-sm text-red-500 mb-3">{error}</p>}

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
+import { getCurrentUserOrGuest } from '@/lib/auth';
 import { streamText } from '@/lib/ai/gateway';
 import { buildCompanionMessages, parseCompanionOutput } from '@/lib/game/companion-prompt';
-import { getMemoById } from '@/lib/db/memos';
+import { getMemoByIdForUser } from '@/lib/db/memos';
 import {
   createCompanionSession,
-  getCompanionSession,
+  getCompanionSessionForWorld,
   getOrCreateWorld,
   updateSessionAuthorizedMemos,
   updateSessionDialogueMode,
@@ -29,11 +30,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '消息不能为空' }, { status: 400 });
     }
 
-    const world = getOrCreateWorld();
+    const user = await getCurrentUserOrGuest();
+    const world = getOrCreateWorld(user.id);
 
     // 获取授权 Memo，并将本次明确授权写回会话。
-    const authorizedMemoIds = body.authorizedMemoIds ?? [];
-    let session = body.sessionId ? getCompanionSession(body.sessionId) : null;
+    const requestedMemoIds = [...new Set(body.authorizedMemoIds ?? [])]
+      .filter((id): id is string => typeof id === 'string')
+      .slice(0, 3);
+    if (requestedMemoIds.length < 1 || requestedMemoIds.length > 3) {
+      return NextResponse.json({ error: '请先选择 1-3 段本次愿意带入的记忆' }, { status: 400 });
+    }
+    const authorizedMemos = requestedMemoIds
+      .map((id) => getMemoByIdForUser(id, user.id))
+      .filter((m): m is Memo => m !== null && m.privacy_level === 'normal');
+    if (authorizedMemos.length !== requestedMemoIds.length) {
+      return NextResponse.json({ error: '本次授权的记忆不存在或无权访问' }, { status: 403 });
+    }
+    const authorizedMemoIds = authorizedMemos.map((memo) => memo.id);
+    let session = body.sessionId ? getCompanionSessionForWorld(body.sessionId, world.id) : null;
 
     if (!session) {
       session = createCompanionSession({
@@ -46,12 +60,6 @@ export async function POST(req: Request) {
       updateSessionDialogueMode(session.id, body.dialogueMode ?? session.dialogueMode);
       updateSessionAuthorizedMemos(session.id, authorizedMemoIds);
     }
-
-    // 加载 Memo 内容（最多 5 条，避免 context 过大）
-    const authorizedMemos = authorizedMemoIds
-      .slice(0, 5)
-      .map((id) => getMemoById(id))
-      .filter((m): m is Memo => m !== null && m.privacy_level === 'normal');
 
     // 构建消息列表
     const messages = buildCompanionMessages(body.message, {
@@ -70,7 +78,7 @@ export async function POST(req: Request) {
       task: 'chat.respond',
       messages,
       temperature: 0.7,
-      maxTokens: 300, // 控制回复长度
+      maxTokens: 400, // 控制回复长度，organize 模式需要更多空间
     });
 
     // 将 ReadableStream<string> 转为 SSE 流

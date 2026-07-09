@@ -2,16 +2,13 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
-import type { CompanionType, Memo } from '@/types';
+import type { CompanionType } from '@/types';
 import { CHARACTER_PRESETS } from '@/lib/game/sprite';
 
 interface CharacterSelectProps {
-  memos: Memo[];
   onConfirm: (
     charId: string,
     companionType: CompanionType,
-    secondCharId?: string,
-    sharedMemoIds?: string[],
   ) => void;
 }
 
@@ -39,7 +36,7 @@ export default function CharacterSelect({ onConfirm }: CharacterSelectProps) {
         <p className="forest-arrival__place">木屋门前</p>
         <h1>选一个此刻的样子</h1>
         <p className="forest-arrival__description">
-          这里只决定你在世界里的外观。独处、谈话或一起留下东西，都可以进门以后再决定。
+          这里只决定你在世界里的外观。独处、问灯、放下或归档，都可以进门以后再决定。
         </p>
 
         <div className="forest-arrival__characters" aria-label="角色外观">

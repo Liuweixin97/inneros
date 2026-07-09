@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3"],
   devIndicators: false,
   turbopack: {},
-  allowedDevOrigins: ["192.168.31.40", "localhost"],
+  allowedDevOrigins: ["192.168.31.40", "localhost", "127.0.0.1"],
   webpack(config, { dev }) {
     if (dev) {
       config.watchOptions = {

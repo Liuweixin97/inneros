@@ -28,7 +28,7 @@ export default function PondPanel({
     .map((id) => memos.find((memo) => memo.id === id))
     .filter((memo): memo is Memo => Boolean(memo));
   const reflections = events
-    .filter((event) => ['fireside_note', 'named_path', 'placed_object'].includes(event.type))
+    .filter((event) => ['fireside_note', 'left_question', 'saved_observation'].includes(event.type))
     .slice(-4)
     .reverse();
 
@@ -39,11 +39,11 @@ export default function PondPanel({
   };
 
   return (
-    <div className="pond-focus-layer" role="dialog" aria-label="静水池塘">
+    <div className="pond-focus-layer" role="dialog" aria-label="静水池">
       <section className="pond-panel-v2">
         <header>
           <div>
-            <p className="game-kicker">静水池塘 · 不必回答</p>
+            <p className="game-kicker">静水池 · 不必回答</p>
             <h2>{mode === 'sit' ? '水面很安静' : '有哪些东西，我还不想解释？'}</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="离开池塘"><X size={17} /></button>
@@ -108,6 +108,7 @@ export default function PondPanel({
               </>
             ) : (
               <div className="pond-release__done">
+                <div className="pond-bottle-drop" style={{ textAlign: 'center', fontSize: 28, marginBottom: 12 }}>🍶</div>
                 <p>瓶子漂远了。关闭这次林间世界后，这段文字会自动消失。</p>
                 <button type="button" onClick={onClose}>回到岸上</button>
               </div>

@@ -367,7 +367,7 @@ export interface NavItem {
 // ============================================================
 
 export type GameSeason = 'spring' | 'summer' | 'autumn' | 'winter';
-export type CompanionType = 'none' | 'human_local' | 'llm';
+export type CompanionType = 'none' | 'llm';
 export type DialogueMode = 'listen' | 'ask' | 'organize' | 'silent';
 export type JourneyEventType =
   | 'carried_memory'
@@ -375,7 +375,8 @@ export type JourneyEventType =
   | 'named_path'
   | 'fireside_note'
   | 'left_question'
-  | 'placed_object';
+  | 'placed_object'
+  | 'saved_observation';
 
 export interface JourneyEvent {
   id: string;
@@ -439,14 +440,23 @@ export interface CompanionSession {
   endedAt?: string;
 }
 
-export interface SharedMemoryDraft {
+export interface GamePondEntry {
   id: string;
-  sessionId: string;
-  memoId?: string;
-  playerOneText?: string;
-  playerTwoText?: string;
-  jointText?: string;
-  saveDecision: 'pending' | 'separate' | 'joint' | 'discard';
+  worldId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface GameWeeklyReview {
+  id: string;
+  worldId: string;
+  userId: string;
+  gains: string;
+  struggles: string;
+  nextFocus: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type CompanionResponseIntent =
@@ -466,13 +476,13 @@ export interface CompanionResponse {
 
 // 地图区域标识
 export type MapLocation =
-  | 'cabin'       // 亮灯木屋
-  | 'garden'      // 记忆花园
-  | 'fireside'    // 篝火地
-  | 'pond'        // 静水池塘
-  | 'workshop'    // 共居工坊
-  | 'forest'      // 记忆林
-  | 'hillside';   // 山坡/远望台（P1）
+  | 'cabin'             // 亮灯木屋
+  | 'garden'            // 记忆花园
+  | 'fireside'          // 苔灯火边
+  | 'pond'              // 静水池
+  | 'reflection_table'  // 观照桌
+  | 'forest'            // 记忆林
+  | 'hillside';         // 山坡/远望台（P1）
 
 // 游戏状态机
 export type GamePhase =
@@ -480,9 +490,9 @@ export type GamePhase =
   | 'character_select'  // 角色 & 模式选择
   | 'explore'       // 自由探索
   | 'memo_encounter' // Memo 阅读弹层
-  | 'fireside_chat'  // 篝火对话
-  | 'co_write'      // 共同书写
-  | 'pond'          // 静水池塘
+  | 'fireside_chat'  // 苔灯火边
+  | 'reflection_table' // 观照桌
+  | 'pond'          // 静水池
   | 'settings';     // 游戏内设置
 
 export interface PlayerCharacter {

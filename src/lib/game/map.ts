@@ -12,7 +12,7 @@ export const WORLD_WIDTH = 800;
 export const WORLD_HEIGHT = 450;
 export const TILE_SIZE = 16;
 
-export type GameActionId = 'cabin' | 'bench' | 'fireside' | 'workshop' | 'pond';
+export type GameActionId = 'cabin' | 'bench' | 'fireside' | 'reflection_table' | 'pond';
 
 export interface GameActionPoint {
   id: GameActionId;
@@ -26,7 +26,7 @@ export const GAME_ACTION_POINTS: Record<GameActionId, GameActionPoint> = {
   cabin: { id: 'cabin', x: 332, y: 222, radius: 44 },
   bench: { id: 'bench', x: 165, y: 326, radius: 48 },
   fireside: { id: 'fireside', x: 650, y: 170, radius: 54 },
-  workshop: { id: 'workshop', x: 590, y: 335, radius: 52 },
+  reflection_table: { id: 'reflection_table', x: 590, y: 335, radius: 52 },
   pond: { id: 'pond', x: 380, y: 285, radius: 52 },
 };
 
@@ -68,8 +68,8 @@ export const MAP_REGIONS: MapRegion[] = [
   },
   {
     id: 'fireside',
-    name: '篝火地',
-    subtitle: '一起说',
+    name: '苔灯火边',
+    subtitle: '只照亮本次带入',
     cx: 650,
     cy: 170,
     rx: 70,
@@ -79,7 +79,7 @@ export const MAP_REGIONS: MapRegion[] = [
   },
   {
     id: 'pond',
-    name: '静水池塘',
+    name: '静水池',
     subtitle: '不必回答',
     cx: 380,
     cy: 340,
@@ -89,15 +89,15 @@ export const MAP_REGIONS: MapRegion[] = [
     icon: 'pond',
   },
   {
-    id: 'workshop',
-    name: '共居工坊',
-    subtitle: '一起留下',
+    id: 'reflection_table',
+    name: '观照桌',
+    subtitle: '看见关系',
     cx: 665,
     cy: 335,
     rx: 75,
     ry: 65,
     color: '#C4A882',
-    icon: 'workshop',
+    icon: 'reflection_table',
   },
   {
     id: 'forest',
@@ -123,10 +123,10 @@ export const MAP_PATHS: MapPath[] = [
   { fromId: 'cabin', toId: 'garden' },
   { fromId: 'cabin', toId: 'fireside' },
   { fromId: 'cabin', toId: 'pond' },
-  { fromId: 'cabin', toId: 'workshop' },
+  { fromId: 'cabin', toId: 'reflection_table' },
   { fromId: 'cabin', toId: 'forest' },
   { fromId: 'garden', toId: 'forest' },
-  { fromId: 'fireside', toId: 'workshop' },
+  { fromId: 'fireside', toId: 'reflection_table' },
 ];
 
 // 地图装饰物（树木、草地、石头等静态元素）
@@ -158,7 +158,7 @@ export const MAP_DECORS: MapDecor[] = [
   // 木屋周围
   { type: 'bush', x: 340, y: 280 },
   { type: 'flower', x: 460, y: 260 },
-  // 工坊周围
+  // 观照桌周围
   { type: 'rock', x: 560, y: 160 },
   { type: 'bush', x: 680, y: 180 },
   // 散落

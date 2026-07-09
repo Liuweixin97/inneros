@@ -14,7 +14,6 @@ interface PixelWorldCanvasProps {
   playerX: number;
   playerY: number;
   playerChar: PlayerCharacter;
-  secondPlayerChar: PlayerCharacter;
   objects: WorldObject[];
   companionType: CompanionType;
   reducedMotion: boolean;
@@ -23,7 +22,7 @@ interface PixelWorldCanvasProps {
   onEnterCabin: () => void;
   onEnterBench: () => void;
   onEnterFireside: () => void;
-  onEnterCoWrite: () => void;
+  onEnterReflectionTable: () => void;
   onEnterPond: () => void;
   onCanvasFailure: () => void;
 }
@@ -62,7 +61,6 @@ export default function PixelWorldCanvas({
   playerX,
   playerY,
   playerChar,
-  secondPlayerChar,
   objects,
   companionType,
   reducedMotion,
@@ -71,7 +69,7 @@ export default function PixelWorldCanvas({
   onEnterCabin,
   onEnterBench,
   onEnterFireside,
-  onEnterCoWrite,
+  onEnterReflectionTable,
   onEnterPond,
   onCanvasFailure,
 }: PixelWorldCanvasProps) {
@@ -90,7 +88,6 @@ export default function PixelWorldCanvas({
   }>({});
   const [nearbyObject, setNearbyObject] = useState<WorldObject | null>(null);
   const [nearbyAction, setNearbyAction] = useState<NearbyAction>(null);
-  const [mobilePlayer, setMobilePlayer] = useState<1 | 2>(1);
   const [joystick, setJoystick] = useState({
     active: false,
     startX: 0,
@@ -98,6 +95,28 @@ export default function PixelWorldCanvas({
     dx: 0,
     dy: 0,
   });
+
+  // 萤火虫粒子状态（延迟初始化避免 render 时调用 Math.random）
+  const firefliesRef = useRef<Array<{
+    x: number; y: number; vx: number; vy: number; phase: number; size: number;
+  }>>([]);
+
+  // 相机平滑跟随
+  const cameraRef = useRef({ x: playerX, y: playerY });
+
+  // 萤火虫初始化
+  useEffect(() => {
+    if (firefliesRef.current.length === 0) {
+      firefliesRef.current = Array.from({ length: 12 }, () => ({
+        x: Math.random() * WORLD_WIDTH,
+        y: Math.random() * WORLD_HEIGHT,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.2,
+        phase: Math.random() * Math.PI * 2,
+        size: 1.5 + Math.random() * 1.5,
+      }));
+    }
+  }, []);
 
   useEffect(() => {
     playerRef.current.x = playerX;
@@ -137,9 +156,9 @@ export default function PixelWorldCanvas({
     if (action === 'cabin') onEnterCabin();
     if (action === 'bench') onEnterBench();
     if (action === 'fireside') onEnterFireside();
-    if (action === 'workshop') onEnterCoWrite();
+    if (action === 'reflection_table') onEnterReflectionTable();
     if (action === 'pond') onEnterPond();
-  }, [onEnterBench, onEnterCabin, onEnterCoWrite, onEnterFireside, onEnterPond, onOpenMemo]);
+  }, [onEnterBench, onEnterCabin, onEnterFireside, onEnterPond, onEnterReflectionTable, onOpenMemo]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -189,10 +208,8 @@ export default function PixelWorldCanvas({
     const loop = (now: number) => {
       const delta = Math.min((now - previous) / 16.67, 2);
       previous = now;
-      updateMovement(playerRef.current, false, companionType, mobilePlayer, delta);
-      if (companionType === 'human_local') {
-        updateMovement(secondRef.current, true, companionType, mobilePlayer, delta);
-      } else if (companionType === 'llm') {
+      updateMovement(playerRef.current, delta);
+      if (companionType === 'llm') {
         secondRef.current.x += (playerRef.current.x + 24 - secondRef.current.x) * 0.035;
         secondRef.current.y += (playerRef.current.y + 12 - secondRef.current.y) * 0.035;
       }
@@ -202,13 +219,7 @@ export default function PixelWorldCanvas({
         nearbyObjectRef.current = object;
         setNearbyObject(object);
       }
-      const action = findNearbyAction(
-        playerRef.current.x,
-        playerRef.current.y,
-        companionType,
-        secondRef.current.x,
-        secondRef.current.y,
-      );
+      const action = findNearbyAction(playerRef.current.x, playerRef.current.y);
       if (action !== nearbyActionRef.current) {
         nearbyActionRef.current = action;
         setNearbyAction(action);
@@ -219,19 +230,24 @@ export default function PixelWorldCanvas({
         onPlayerMove(playerRef.current.x, playerRef.current.y);
       }
 
+      // 相机平滑跟随
+      cameraRef.current.x += (playerRef.current.x - cameraRef.current.x) * 0.08;
+      cameraRef.current.y += (playerRef.current.y - cameraRef.current.y) * 0.08;
+
       drawScene(
         canvasRef.current,
         imagesRef.current,
         playerRef.current,
         secondRef.current,
         playerChar,
-        secondPlayerChar,
         objects,
         companionType,
         nearbyObjectRef.current,
         nearbyActionRef.current,
         reducedMotion,
         now,
+        firefliesRef.current,
+        cameraRef.current,
       );
       frame = requestAnimationFrame(loop);
     };
@@ -240,12 +256,10 @@ export default function PixelWorldCanvas({
     return () => cancelAnimationFrame(frame);
   }, [
     companionType,
-    mobilePlayer,
     objects,
     onPlayerMove,
     playerChar,
     reducedMotion,
-    secondPlayerChar,
   ]);
 
   const handleTouchStart = (event: React.TouchEvent) => {
@@ -270,18 +284,18 @@ export default function PixelWorldCanvas({
   };
 
   const interactionLabel = nearbyObject
-    ? '靠近，看看这段记忆'
+    ? '翻开这页记忆'
     : nearbyAction === 'cabin'
-      ? '走上门廊'
+      ? '进入亮灯木屋'
       : nearbyAction === 'bench'
-        ? '在长椅上坐下'
+        ? '在入林长椅坐下'
         : nearbyAction === 'fireside'
-      ? '坐下来，和苔灯谈谈'
-      : nearbyAction === 'workshop'
-        ? '进入共写小屋'
-        : nearbyAction === 'pond'
-          ? '到池边坐一会儿'
-          : '';
+          ? '到苔灯火边'
+          : nearbyAction === 'reflection_table'
+            ? '到观照桌看看关系'
+            : nearbyAction === 'pond'
+              ? '到静水池坐一会儿'
+              : '';
 
   return (
     <div ref={containerRef} className="game-world-stage">
@@ -289,7 +303,7 @@ export default function PixelWorldCanvas({
         ref={canvasRef}
         className="game-canvas-layer"
         tabIndex={0}
-        aria-label="林间世界地图。使用 WASD 移动，E 键互动。"
+        aria-label="林间世界地图。靠近微光后按 E 互动，也可以使用方向键移动。"
         onClick={(event) => {
           event.currentTarget.focus();
           if (nearbyObjectRef.current || nearbyActionRef.current) triggerInteraction();
@@ -304,20 +318,6 @@ export default function PixelWorldCanvas({
       )}
 
       <div className="game-mobile-controls md:hidden">
-        {companionType === 'human_local' && (
-          <div className="game-player-switch">
-            {[1, 2].map((player) => (
-              <button
-                key={player}
-                type="button"
-                className={mobilePlayer === player ? 'is-active' : ''}
-                onClick={() => setMobilePlayer(player as 1 | 2)}
-              >
-                P{player}
-              </button>
-            ))}
-          </div>
-        )}
         <div
           className="virtual-joystick-base"
           onTouchStart={handleTouchStart}
@@ -342,23 +342,16 @@ export default function PixelWorldCanvas({
 
 function updateMovement(
   player: { x: number; y: number; direction: Direction },
-  second: boolean,
-  companionType: CompanionType,
-  mobilePlayer: 1 | 2,
   delta: number,
 ) {
-  const touchForThisPlayer = companionType !== 'human_local'
-    ? !second
-    : second ? mobilePlayer === 2 : mobilePlayer === 1;
-  const useArrows = second || companionType !== 'human_local';
-  const left = second ? keys.ArrowLeft : keys.KeyA || (useArrows && keys.ArrowLeft);
-  const right = second ? keys.ArrowRight : keys.KeyD || (useArrows && keys.ArrowRight);
-  const up = second ? keys.ArrowUp : keys.KeyW || (useArrows && keys.ArrowUp);
-  const down = second ? keys.ArrowDown : keys.KeyS || (useArrows && keys.ArrowDown);
-  const dx = (left || (touchForThisPlayer && keys.TouchLeft) ? -1 : 0)
-    + (right || (touchForThisPlayer && keys.TouchRight) ? 1 : 0);
-  const dy = (up || (touchForThisPlayer && keys.TouchUp) ? -1 : 0)
-    + (down || (touchForThisPlayer && keys.TouchDown) ? 1 : 0);
+  const left = keys.KeyA || keys.ArrowLeft;
+  const right = keys.KeyD || keys.ArrowRight;
+  const up = keys.KeyW || keys.ArrowUp;
+  const down = keys.KeyS || keys.ArrowDown;
+  const dx = (left || keys.TouchLeft ? -1 : 0)
+    + (right || keys.TouchRight ? 1 : 0);
+  const dy = (up || keys.TouchUp ? -1 : 0)
+    + (down || keys.TouchDown ? 1 : 0);
   if (!dx && !dy) return;
   const length = Math.hypot(dx, dy);
   const normalizedX = dx / length;
@@ -390,13 +383,7 @@ function findNearbyObject(objects: WorldObject[], x: number, y: number): WorldOb
   return closest;
 }
 
-function findNearbyAction(
-  x: number,
-  y: number,
-  companionType: CompanionType,
-  secondX: number,
-  secondY: number,
-): NearbyAction {
+function findNearbyAction(x: number, y: number): NearbyAction {
   const cabin = GAME_ACTION_POINTS.cabin;
   if (Math.hypot(cabin.x - x, cabin.y - y) < cabin.radius) return 'cabin';
 
@@ -406,10 +393,8 @@ function findNearbyAction(
   const fireside = GAME_ACTION_POINTS.fireside;
   if (Math.hypot(fireside.x - x, fireside.y - y) < fireside.radius) return 'fireside';
 
-  const workshop = GAME_ACTION_POINTS.workshop;
-  const nearWorkshop = Math.hypot(workshop.x - x, workshop.y - y) < workshop.radius;
-  const secondNearWorkshop = Math.hypot(workshop.x - secondX, workshop.y - secondY) < workshop.radius + 12;
-  if (nearWorkshop && (companionType !== 'human_local' || secondNearWorkshop)) return 'workshop';
+  const table = GAME_ACTION_POINTS.reflection_table;
+  if (Math.hypot(table.x - x, table.y - y) < table.radius) return 'reflection_table';
 
   const pond = GAME_ACTION_POINTS.pond;
   if (Math.hypot(pond.x - x, pond.y - y) < pond.radius) return 'pond';
@@ -422,13 +407,14 @@ function drawScene(
   player: { x: number; y: number; direction: Direction },
   second: { x: number; y: number; direction: Direction },
   playerChar: PlayerCharacter,
-  secondPlayerChar: PlayerCharacter,
   objects: WorldObject[],
   companionType: CompanionType,
   nearbyObject: WorldObject | null,
   nearbyAction: NearbyAction,
   reducedMotion: boolean,
   now: number,
+  fireflies: Array<{ x: number; y: number; vx: number; vy: number; phase: number; size: number }>,
+  camera: { x: number; y: number },
 ) {
   if (!canvas) return;
   const context = canvas.getContext('2d');
@@ -463,10 +449,7 @@ function drawScene(
     drawObjectSprite(context, images.objects, object.type, point.x, point.y, scale, object.id === nearbyObject?.id, now, reducedMotion);
   });
 
-  if (companionType === 'human_local' && images.characters?.complete) {
-    const point = toScreen(second.x, second.y);
-    drawCharacterSprite(context, images.characters, secondPlayerChar.id === 'wanderer' ? 0 : 1, second.direction, point.x, point.y, scale, now, reducedMotion);
-  } else if (companionType === 'llm' && images.companion?.complete) {
+  if (companionType === 'llm' && images.companion?.complete) {
     const point = toScreen(second.x, second.y);
     const size = 30 * scale;
     const frame = reducedMotion ? 0 : Math.floor(now / 520) % 2;
@@ -505,6 +488,36 @@ function drawScene(
     context.fill();
     context.restore();
   });
+
+  // 萤火虫粒子
+  if (!reducedMotion && fireflies) {
+    fireflies.forEach((f) => {
+      // 更新位置
+      f.x += f.vx;
+      f.y += f.vy;
+      if (f.x < 0 || f.x > WORLD_WIDTH) f.vx *= -1;
+      if (f.y < 0 || f.y > WORLD_HEIGHT) f.vy *= -1;
+      // 随机微调方向
+      f.vx += (Math.random() - 0.5) * 0.02;
+      f.vy += (Math.random() - 0.5) * 0.02;
+      f.vx = Math.max(-0.4, Math.min(0.4, f.vx));
+      f.vy = Math.max(-0.3, Math.min(0.3, f.vy));
+
+      const alpha = 0.3 + 0.5 * Math.sin(now / 800 + f.phase);
+      const driftX = (camera.x - WORLD_WIDTH / 2) * -0.01;
+      const driftY = (camera.y - WORLD_HEIGHT / 2) * -0.01;
+      const point = toScreen(f.x + driftX, f.y + driftY);
+      context.save();
+      context.globalAlpha = alpha;
+      context.fillStyle = '#ffcf5a';
+      context.shadowColor = 'rgba(255, 207, 90, 0.8)';
+      context.shadowBlur = 6 * scale;
+      context.beginPath();
+      context.arc(point.x, point.y, f.size * scale, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+    });
+  }
 }
 
 function drawCharacterSprite(
@@ -556,10 +569,21 @@ function drawObjectSprite(
   const size = (type === 'bench' || type === 'frame' ? 44 : 32) * scale;
   if (active) {
     context.save();
+    // 底部椭圆高亮
     context.fillStyle = `rgba(255, 210, 128, ${reducedMotion ? 0.15 : 0.12 + Math.sin(now / 260) * 0.04})`;
     context.beginPath();
     context.ellipse(x, y, size * 0.65, size * 0.3, 0, 0, Math.PI * 2);
     context.fill();
+    // 物件上方微光
+    if (!reducedMotion) {
+      const sparkleAlpha = 0.2 + Math.sin(now / 400) * 0.1;
+      context.fillStyle = `rgba(255, 220, 160, ${sparkleAlpha})`;
+      context.shadowColor = 'rgba(255, 210, 128, 0.5)';
+      context.shadowBlur = 8;
+      context.beginPath();
+      context.arc(x, y - size * 0.8, 2, 0, Math.PI * 2);
+      context.fill();
+    }
     context.restore();
   }
   drawAtlasCell(context, image, column, row, 4, 3, x, y, size, size);

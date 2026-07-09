@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen, Check, ChevronDown, Pause, Send, X } from 'lucide-react';
 import type { CompanionType, DialogueMode, GameWorld, Memo } from '@/types';
 import {
@@ -52,6 +52,8 @@ export default function FiresideChat({
   const [endingText, setEndingText] = useState('');
   const [endingType, setEndingType] = useState<'fireside_note' | 'left_question' | 'nothing'>('nothing');
   const abortRef = useRef<AbortController | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevModeRef = useRef(dialogueMode);
 
   const authorizedMemos = useMemo(
     () => memos.filter((memo) => authorizedMemoIds.includes(memo.id)),
@@ -62,6 +64,35 @@ export default function FiresideChat({
     const unselected = memos.filter((memo) => !authorizedMemoIds.includes(memo.id));
     return [...selected, ...unselected].slice(0, 12);
   }, [authorizedMemoIds, memos]);
+
+  // 自动邀请苔灯
+  useEffect(() => {
+    if (companionType !== 'llm') {
+      onCompanionTypeChange('llm');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 新消息时自动滚动到底部
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // 对话模式切换时追加系统提示
+  useEffect(() => {
+    if (prevModeRef.current !== dialogueMode && messages.length > 0) {
+      const modeLabel = MODES.find((m) => m.id === dialogueMode)?.label ?? dialogueMode;
+      setMessages((current) => [
+        ...current,
+        {
+          role: 'assistant' as const,
+          content: `（切换到「${modeLabel}」模式）`,
+          isInference: false,
+        },
+      ]);
+    }
+    prevModeRef.current = dialogueMode;
+  }, [dialogueMode, messages.length]);
 
   const toggleMemo = (memoId: string) => {
     const checked = authorizedMemoIds.includes(memoId);
@@ -76,6 +107,11 @@ export default function FiresideChat({
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
+    if (authorizedMemoIds.length < 1) {
+      setError('请先选择 1-3 段本次愿意带入的记忆。');
+      setShowMemoryPicker(true);
+      return;
+    }
     setInput('');
     setError('');
     setLoading(true);
@@ -97,7 +133,7 @@ export default function FiresideChat({
       conversationHistory: messages,
       recentUserAction: authorizedMemos.length > 0
         ? `带来了 ${authorizedMemos.length} 段自己选择的记录`
-        : '在篝火边坐下',
+        : '在苔灯火边坐下',
       signal: controller.signal,
       onChunk: (chunk) => {
         streamed += chunk;
@@ -131,33 +167,18 @@ export default function FiresideChat({
     onClose();
   };
 
+  const hasMemories = authorizedMemoIds.length > 0;
+  const isReady = hasMemories;
+
   return (
-    <div className="game-focus-layer" role="dialog" aria-label="篝火对话">
+    <div className="game-focus-layer" role="dialog" aria-label="苔灯火边">
       <div className="fireside-panel">
         <header className="fireside-header">
           <div>
-            <p className="game-kicker">篝火地 · 一起说</p>
-            <h2>{companionType === 'llm' ? '苔灯在火光的另一边亮着' : '火光的另一边暂时空着'}</h2>
+            <p className="game-kicker">苔灯火边 · 仅基于你本次带入的记忆</p>
+            <h2>苔灯在火光的另一边亮着</h2>
           </div>
           <div className="flex items-center gap-2">
-            {/* 邀请或遣散苔灯 */}
-            <button
-              type="button"
-              className="game-hud-btn text-[11px] px-2 py-1"
-              style={{
-                background: companionType === 'llm'
-                  ? 'rgba(255,155,61,0.2)'
-                  : 'rgba(255,243,196,0.08)',
-                borderColor: companionType === 'llm'
-                  ? 'rgba(255,155,61,0.5)'
-                  : 'rgba(255,243,196,0.15)',
-                color: companionType === 'llm' ? '#FF9B3D' : 'var(--game-hud-muted)',
-              }}
-              onClick={() => onCompanionTypeChange(companionType === 'llm' ? 'none' : 'llm')}
-              title={companionType === 'llm' ? '遣散苔灯，独自漫游' : '邀请苔灯'}
-            >
-              {companionType === 'llm' ? '苔灯同行中' : '+ 邀请苔灯'}
-            </button>
             <button type="button" className="game-icon-button" onClick={close} aria-label="离开篝火">
               <X size={17} />
             </button>
@@ -192,12 +213,12 @@ export default function FiresideChat({
               <strong>
                 {authorizedMemos.length > 0
                   ? `已带入 ${authorizedMemos.length} 段记忆`
-                  : '带一段记忆到火边'}
+                  : '先带一段记忆到火边'}
               </strong>
               <small>
                 {authorizedMemos.length > 0
                   ? '苔灯只会看到你本次选择的内容'
-                  : '可选。也可以不带记录，直接说此刻的事'}
+                  : '火边不会读取你没有明确带入的记录'}
               </small>
             </span>
             <span className="fireside-memory-summary__action">
@@ -259,7 +280,7 @@ export default function FiresideChat({
                   </button>
                 ) : <span />}
                 <button type="button" className="is-primary" onClick={() => setShowMemoryPicker(false)}>
-                  {authorizedMemoIds.length > 0 ? '带到火边' : '不带记录，直接开始'}
+                  {authorizedMemoIds.length > 0 ? '带到火边' : '先回去选择'}
                 </button>
               </div>
             </div>
@@ -297,21 +318,55 @@ export default function FiresideChat({
               <div className="fireside-messages" aria-live="polite">
                 {messages.length === 0 ? (
                   <div className="fireside-empty">
-                    <p>
-                      {dialogueMode === 'silent'
-                        ? '火焰轻轻响着。你不需要先说什么。'
-                        : dialogueMode === 'organize'
-                          ? '可以从一件具体发生过的事开始。苔灯会陪你区分当时发生了什么、当时怎样感受，以及现在怎么看。'
-                        : '你可以从刚刚遇见的那段记忆开始，也可以只说此刻想到的事。'}
-                    </p>
+                    {!isReady ? (
+                      <div className="fireside-guide-steps">
+                        <div
+                          className={`fireside-guide-step ${hasMemories ? 'is-done' : ''}`}
+                          onClick={() => setShowMemoryPicker(true)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => e.key === 'Enter' && setShowMemoryPicker(true)}
+                        >
+                          <span className="fireside-guide-step__num">{hasMemories ? '✓' : '1'}</span>
+                          <span className="fireside-guide-step__text">
+                            <strong>带一段记忆到火边</strong>
+                            <small>苔灯不会打开你没有授权的内容</small>
+                          </span>
+                        </div>
+                        <div className="fireside-guide-step" style={{ opacity: hasMemories ? 1 : 0.4 }}>
+                          <span className="fireside-guide-step__num">2</span>
+                          <span className="fireside-guide-step__text">
+                            <strong>在火边说一点</strong>
+                            <small>从记忆开始，也可以只说此刻想到的事</small>
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p>
+                        {dialogueMode === 'silent'
+                          ? '火焰轻轻响着。你不需要先说什么。'
+                          : dialogueMode === 'organize'
+                            ? '可以从一件具体发生过的事开始。苔灯会陪你区分当时发生了什么、当时怎样感受，以及现在怎么看。'
+                            : '你可以从刚刚遇见的那段记忆开始，也可以只说此刻想到的事。'}
+                      </p>
+                    )}
                   </div>
                 ) : messages.map((message, index) => (
-                  <div key={`${message.role}-${index}`} className={`fireside-message ${message.role}`}>
+                  <div key={`${message.role}-${index}`} className={`fireside-message ${message.role} fireside-message-enter`}>
                     <span>{message.role === 'user' ? '你' : '苔灯'}</span>
-                    <p>{message.content || (loading ? '……' : '')}</p>
+                    {message.role === 'assistant' && loading && index === messages.length - 1 && !message.content ? (
+                      <div className="typing-indicator">
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                    ) : (
+                      <p>{message.content || ''}</p>
+                    )}
                     {message.isInference && <small>这是苔灯的推测，不是原记录中的事实。</small>}
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
                 {error && <p className="fireside-error">{error}</p>}
               </div>
 
@@ -320,13 +375,16 @@ export default function FiresideChat({
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   placeholder={
-                    dialogueMode === 'silent'
-                      ? '想说时再写……'
-                      : dialogueMode === 'organize'
-                        ? '先说一件具体发生过的事……'
-                        : '在火边说一点……'
+                    !isReady
+                      ? '先选择一段记忆，再开始对话……'
+                      : dialogueMode === 'silent'
+                        ? '想说时再写……'
+                        : dialogueMode === 'organize'
+                          ? '先说一件具体发生过的事……'
+                          : '在火边说一点……'
                   }
                   rows={2}
+                  disabled={!isReady}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' && !event.shiftKey) {
                       event.preventDefault();
@@ -339,7 +397,7 @@ export default function FiresideChat({
                     <Pause size={17} />
                   </button>
                 ) : (
-                  <button type="button" onClick={() => void send()} disabled={!input.trim()} aria-label="发送">
+                  <button type="button" onClick={() => void send()} disabled={!input.trim() || !isReady} aria-label="发送">
                     <Send size={17} />
                   </button>
                 )}

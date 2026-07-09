@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type {
   GameWorld,
   WorldObject,
@@ -22,17 +22,17 @@ import {
 import { mapMemosToWorldObjects } from '@/lib/game/memo-mapper';
 import { getDefaultCharacter, getCharacterById } from '@/lib/game/sprite';
 import { isWalkable } from '@/lib/game/collisions';
+import { GAME_ACTION_POINTS, type GameActionId } from '@/lib/game/map';
 import GamePortal from './GamePortal';
 import PixelWorldCanvas from './PixelWorldCanvas';
 import WorldHUD from './WorldHUD';
 import GameSettings from './GameSettings';
 import MemoEncounter from './MemoEncounter';
 import FiresideChat from './FiresideChat';
-import CoWritePanel from './CoWritePanel';
+import ObservationTablePanel from './ObservationTablePanel';
 import PondPanel from './PondPanel';
 import CompanionBench from './CompanionBench';
 import CabinPanel from './CabinPanel';
-import LightTrailPanel from './LightTrailPanel';
 import WorldObjectDetail from './WorldObjectDetail';
 import {
   loadBagMemoIds,
@@ -46,6 +46,31 @@ import {
 
 interface GameShellProps {
   onExit: () => void;
+}
+
+function readForestDebugStart(): { position: { x: number; y: number }; action: GameActionId | null } | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('forestDebug') !== '1') return null;
+  const x = Number(params.get('x'));
+  const y = Number(params.get('y'));
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  const explicitAction = params.get('open');
+  const action = isGameActionId(explicitAction)
+    ? explicitAction
+    : findActionAtPosition(x, y);
+  return { position: { x, y }, action };
+}
+
+function isGameActionId(value: string | null): value is GameActionId {
+  return Boolean(value && value in GAME_ACTION_POINTS);
+}
+
+function findActionAtPosition(x: number, y: number): GameActionId | null {
+  for (const action of Object.values(GAME_ACTION_POINTS)) {
+    if (Math.hypot(action.x - x, action.y - y) < action.radius) return action.id;
+  }
+  return null;
 }
 
 export default function GameShell({ onExit }: GameShellProps) {
@@ -64,7 +89,6 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [playerX, setPlayerX] = useState(345);
   const [playerY, setPlayerY] = useState(245);
   const [playerChar, setPlayerChar] = useState(getDefaultCharacter());
-  const [secondPlayerChar] = useState(getCharacterById('drifter'));
 
   // ---- 同行者 ----
   const [companionType, setCompanionType] = useState<CompanionType>('none');
@@ -77,12 +101,12 @@ export default function GameShell({ onExit }: GameShellProps) {
   const [activeObject, setActiveObject] = useState<WorldObject | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [firesideChatOpen, setFiresideChatOpen] = useState(false);
-  const [coWriteOpen, setCoWriteOpen] = useState(false);
+  const [reflectionTableOpen, setReflectionTableOpen] = useState(false);
   const [pondOpen, setPondOpen] = useState(false);
   const [benchOpen, setBenchOpen] = useState(false);
   const [cabinOpen, setCabinOpen] = useState(false);
-  const [lightTrailOpen, setLightTrailOpen] = useState(false);
   const [activePlacedObject, setActivePlacedObject] = useState<WorldObject | null>(null);
+  const debugAutoEnteredRef = useRef(false);
 
   // ---- 减少动态模式 ----
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -94,19 +118,24 @@ export default function GameShell({ onExit }: GameShellProps) {
   }, []);
 
   // 加载世界
-  const initWorld = useCallback(async () => {
+  const initWorld = useCallback(async (options?: { startAtBench?: boolean; startPosition?: { x: number; y: number } }) => {
     setIsLoading(true);
     setLoadError(null);
     setCanvasFailed(false);
     try {
       const { world: w, objects: objs } = await loadWorld();
-      const safePlayerPosition = isWalkable(w.playerX, w.playerY)
-        ? { x: w.playerX, y: w.playerY }
-        : { x: 345, y: 245 };
+      const requestedPosition = options?.startPosition;
+      const safePlayerPosition = requestedPosition && isWalkable(requestedPosition.x, requestedPosition.y)
+        ? requestedPosition
+        : options?.startAtBench
+        ? { x: GAME_ACTION_POINTS.bench.x, y: GAME_ACTION_POINTS.bench.y }
+        : isWalkable(w.playerX, w.playerY)
+          ? { x: w.playerX, y: w.playerY }
+          : { x: 345, y: 245 };
       setWorld(w);
       setPlayerX(safePlayerPosition.x);
       setPlayerY(safePlayerPosition.y);
-      if (safePlayerPosition.x !== w.playerX || safePlayerPosition.y !== w.playerY) {
+      if (options?.startAtBench || requestedPosition || safePlayerPosition.x !== w.playerX || safePlayerPosition.y !== w.playerY) {
         syncPlayerPosition(w.id, safePlayerPosition.x, safePlayerPosition.y);
       }
       setReducedMotion(w.settings.reducedMotion);
@@ -158,11 +187,32 @@ export default function GameShell({ onExit }: GameShellProps) {
     }
   }, []);
 
-  // 传送门过场完成 → 直接进入探索（默认独自漫游）
+  // 传送门过场完成 → 从入林长椅开始本次回看
   const handlePortalComplete = useCallback(() => {
-    setPhase('explore');
-    initWorld();
+    const debugStart = readForestDebugStart();
+    const debugAction = debugStart?.action ?? null;
+    setPhase(
+      debugAction === 'fireside'
+        ? 'fireside_chat'
+        : debugAction === 'reflection_table'
+          ? 'reflection_table'
+          : debugAction === 'pond'
+            ? 'pond'
+            : 'explore',
+    );
+    setBenchOpen(debugAction === 'bench' || !debugStart);
+    setCabinOpen(debugAction === 'cabin');
+    setFiresideChatOpen(debugAction === 'fireside');
+    setReflectionTableOpen(debugAction === 'reflection_table');
+    setPondOpen(debugAction === 'pond');
+    initWorld(debugStart ? { startPosition: debugStart.position } : { startAtBench: true });
   }, [initWorld]);
+
+  useEffect(() => {
+    if (debugAutoEnteredRef.current || !readForestDebugStart()) return;
+    debugAutoEnteredRef.current = true;
+    handlePortalComplete();
+  }, [handlePortalComplete]);
 
   // 从设置面板更新角色
   const handleCharacterChange = useCallback((charId: string) => {
@@ -199,10 +249,10 @@ export default function GameShell({ onExit }: GameShellProps) {
     setPhase('fireside_chat');
   }, []);
 
-  // 进入共写
-  const handleEnterCoWrite = useCallback(() => {
-    setCoWriteOpen(true);
-    setPhase('co_write');
+  // 进入观照桌
+  const handleEnterReflectionTable = useCallback(() => {
+    setReflectionTableOpen(true);
+    setPhase('reflection_table');
   }, []);
 
   // 进入池塘
@@ -216,11 +266,10 @@ export default function GameShell({ onExit }: GameShellProps) {
     setActiveMemo(null);
     setActiveObject(null);
     setFiresideChatOpen(false);
-    setCoWriteOpen(false);
+    setReflectionTableOpen(false);
     setPondOpen(false);
     setBenchOpen(false);
     setCabinOpen(false);
-    setLightTrailOpen(false);
     setActivePlacedObject(null);
     setPhase('explore');
   }, []);
@@ -311,21 +360,8 @@ export default function GameShell({ onExit }: GameShellProps) {
     setObjects((current) => [...current, object]);
   }, []);
 
-  const visibleMemos = useMemo(
-    () => companionType === 'human_local'
-      ? memos.filter((memo) => authorizedMemoIds.includes(memo.id))
-      : memos,
-    [authorizedMemoIds, companionType, memos],
-  );
-  const visibleObjects = useMemo(
-    () => companionType !== 'human_local'
-      ? objects
-      : objects.filter((object) => (
-        object.sourceMemoIds.length === 0
-        || object.sourceMemoIds.every((id) => authorizedMemoIds.includes(id))
-      )),
-    [authorizedMemoIds, companionType, objects],
-  );
+  const visibleMemos = memos;
+  const visibleObjects = objects;
   const memoryEncounterObjects = useMemo(
     () => visibleObjects.filter((object) => (
       !object.hidden
@@ -352,7 +388,7 @@ export default function GameShell({ onExit }: GameShellProps) {
       )}
 
       {/* 主地图 */}
-      {(phase === 'explore' || phase === 'memo_encounter' || phase === 'fireside_chat' || phase === 'co_write' || phase === 'pond') && (
+      {(phase === 'explore' || phase === 'memo_encounter' || phase === 'fireside_chat' || phase === 'reflection_table' || phase === 'pond') && (
         <>
           {loadError || canvasFailed ? (
             <GameFallbackView
@@ -360,7 +396,7 @@ export default function GameShell({ onExit }: GameShellProps) {
               memos={visibleMemos}
               onOpenMemo={(memoId) => handleOpenMemo(memoId, `fallback-${memoId}`)}
               onOpenFireside={handleEnterFireside}
-              onOpenCoWrite={handleEnterCoWrite}
+              onOpenReflectionTable={handleEnterReflectionTable}
               onRetry={initWorld}
               onExit={handleExit}
             />
@@ -370,7 +406,6 @@ export default function GameShell({ onExit }: GameShellProps) {
                 playerX={playerX}
                 playerY={playerY}
                 playerChar={playerChar}
-                secondPlayerChar={secondPlayerChar}
                 objects={visibleObjects}
                 companionType={companionType}
                 reducedMotion={reducedMotion}
@@ -379,7 +414,7 @@ export default function GameShell({ onExit }: GameShellProps) {
                 onEnterCabin={() => setCabinOpen(true)}
                 onEnterBench={() => setBenchOpen(true)}
                 onEnterFireside={handleEnterFireside}
-                onEnterCoWrite={handleEnterCoWrite}
+                onEnterReflectionTable={handleEnterReflectionTable}
                 onEnterPond={handleEnterPond}
                 onCanvasFailure={() => setCanvasFailed(true)}
               />
@@ -396,7 +431,6 @@ export default function GameShell({ onExit }: GameShellProps) {
                   authorizedMemoIds.filter((id) => id !== memoId),
                 )}
                 onOpenFireside={handleEnterFireside}
-                onOpenLightTrail={() => setLightTrailOpen(true)}
                 onOpenSettings={() => setShowSettings(true)}
                 onExit={handleExit}
               />
@@ -467,15 +501,15 @@ export default function GameShell({ onExit }: GameShellProps) {
             ) : null
           )}
 
-          {/* 共写面板 */}
-          {phase === 'co_write' && coWriteOpen && (
-            <CoWritePanel
+          {/* 观照桌 */}
+          {phase === 'reflection_table' && reflectionTableOpen && (
+            <ObservationTablePanel
               memos={memos}
-              authorizedMemoIds={authorizedMemoIds}
+              bagMemoIds={authorizedMemoIds}
               onClose={handleCloseAll}
               onObjectPlaced={handleObjectPlaced}
               onJourneyEvent={(text, memoIds) => addJourneyEvent({
-                type: 'placed_object',
+                type: 'saved_observation',
                 text,
                 sourceMemoIds: memoIds,
               })}
@@ -506,28 +540,13 @@ export default function GameShell({ onExit }: GameShellProps) {
           {cabinOpen && (
             <CabinPanel
               events={journeyEvents}
-              memos={memos}
+              objects={objects}
               onOpenSettings={() => {
                 setCabinOpen(false);
                 setShowSettings(true);
               }}
               onExit={handleExit}
               onClose={() => setCabinOpen(false)}
-            />
-          )}
-
-          {lightTrailOpen && (
-            <LightTrailPanel
-              memos={memos.filter((memo) => authorizedMemoIds.includes(memo.id))}
-              onConfirm={(name, memoIds) => {
-                addJourneyEvent({
-                  type: 'named_path',
-                  text: `把小径命名为「${name}」`,
-                  sourceMemoIds: memoIds,
-                });
-                setLightTrailOpen(false);
-              }}
-              onClose={() => setLightTrailOpen(false)}
             />
           )}
 
@@ -547,8 +566,6 @@ export default function GameShell({ onExit }: GameShellProps) {
               onReducedMotionChange={(v) => setReducedMotion(v)}
               currentCharId={playerChar.id}
               onCharacterChange={handleCharacterChange}
-              companionType={companionType}
-              onCompanionTypeChange={handleCompanionTypeChange}
               onExit={handleExit}
               onClose={() => setShowSettings(false)}
             />
@@ -599,7 +616,7 @@ function GameFallbackView({
   memos,
   onOpenMemo,
   onOpenFireside,
-  onOpenCoWrite,
+  onOpenReflectionTable,
   onRetry,
   onExit,
 }: {
@@ -607,7 +624,7 @@ function GameFallbackView({
   memos: Memo[];
   onOpenMemo: (memoId: string) => void;
   onOpenFireside: () => void;
-  onOpenCoWrite: () => void;
+  onOpenReflectionTable: () => void;
   onRetry: () => void;
   onExit: () => void;
 }) {
@@ -621,12 +638,12 @@ function GameFallbackView({
 
         <div className="game-static-map__places">
           <button type="button" onClick={onOpenFireside}>
-            <strong>篝火地</strong>
-            <span>与苔灯谈谈</span>
+            <strong>苔灯火边</strong>
+            <span>只谈本次带入的记忆</span>
           </button>
-          <button type="button" onClick={onOpenCoWrite}>
-            <strong>共居工坊</strong>
-            <span>一起留下痕迹</span>
+          <button type="button" onClick={onOpenReflectionTable}>
+            <strong>观照桌</strong>
+            <span>看看几段记忆之间的关系</span>
           </button>
         </div>
 

@@ -1,4 +1,7 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+@source "./**/*.{ts,tsx}";
+@source "../components/**/*.{ts,tsx}";
+@source "../lib/**/*.{ts,tsx}";
 
 /* ============================================================
    InnerOS - Design System & Global Styles
@@ -1025,7 +1028,7 @@ body {
   color: var(--game-warm-light);
 }
 
-/* --- 篝火与共写：独立于主站的沉浸式操作层 --- */
+/* --- 苔灯火边：独立于主站的沉浸式操作层 --- */
 .game-focus-layer {
   position: absolute;
   inset: 0;
@@ -1039,8 +1042,7 @@ body {
   backdrop-filter: none;
 }
 
-.fireside-panel,
-.cowrite-panel {
+.fireside-panel {
   width: min(720px, 100%);
   max-height: min(760px, calc(100vh - 48px));
   overflow: hidden;
@@ -1066,8 +1068,7 @@ body {
     linear-gradient(180deg, rgba(72, 43, 24, 0.98), rgba(37, 22, 14, 0.98));
 }
 
-.fireside-header,
-.cowrite-panel > header {
+.fireside-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1075,8 +1076,7 @@ body {
   padding: 24px 26px 18px;
 }
 
-.fireside-header h2,
-.cowrite-panel h2 {
+.fireside-header h2 {
   margin-top: 5px;
   font-size: clamp(20px, 3vw, 28px);
   font-weight: 550;
@@ -1250,8 +1250,7 @@ body {
   overflow-y: auto;
 }
 
-.fireside-memory-picker label,
-.cowrite-memory-list label {
+.fireside-memory-picker label {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -1261,9 +1260,7 @@ body {
 }
 
 .fireside-memory-picker label:hover,
-.fireside-memory-picker label.is-selected,
-.cowrite-memory-list label:hover,
-.cowrite-memory-list label.is-selected {
+.fireside-memory-picker label.is-selected {
   background: rgba(255, 248, 231, 0.06);
 }
 
@@ -1276,8 +1273,7 @@ body {
   opacity: 0.38;
 }
 
-.fireside-memory-picker input,
-.cowrite-memory-list input {
+.fireside-memory-picker input {
   margin-top: 3px;
   accent-color: var(--game-green-light);
 }
@@ -1308,13 +1304,11 @@ body {
   overflow: hidden;
 }
 
-.fireside-memory-picker span,
-.cowrite-memory-list span {
+.fireside-memory-picker span {
   min-width: 0;
 }
 
-.fireside-memory-picker strong,
-.cowrite-memory-list strong {
+.fireside-memory-picker strong {
   display: block;
   overflow: hidden;
   color: rgba(255, 248, 231, 0.84);
@@ -1324,8 +1318,7 @@ body {
   white-space: nowrap;
 }
 
-.fireside-memory-picker small,
-.cowrite-memory-list small {
+.fireside-memory-picker small {
   display: block;
   overflow: hidden;
   color: rgba(255, 248, 231, 0.38);
@@ -1479,8 +1472,7 @@ body {
   opacity: 0.3;
 }
 
-.fireside-composer textarea,
-.cowrite-panel textarea {
+.fireside-composer textarea {
   width: 100%;
   min-height: 58px;
   max-height: 132px;
@@ -1495,8 +1487,7 @@ body {
   line-height: 1.65;
 }
 
-.fireside-composer textarea:focus,
-.cowrite-panel textarea:focus {
+.fireside-composer textarea:focus {
   border-color: rgba(255, 185, 106, 0.5);
 }
 
@@ -1515,143 +1506,10 @@ body {
   opacity: 0.35;
 }
 
-.cowrite-panel {
-  overflow-y: auto;
-}
-
-.cowrite-panel section {
-  padding: 4px 26px 26px;
-}
-
-.cowrite-intro {
-  margin-bottom: 15px;
-  color: rgba(255, 248, 231, 0.58);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.cowrite-memory-list {
-  display: grid;
-  max-height: 210px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px;
-  overflow-y: auto;
-}
-
-.cowrite-panel blockquote {
-  margin: 14px 0;
-  border-left: 2px solid rgba(255, 185, 106, 0.4);
-  padding: 6px 0 6px 12px;
-  color: rgba(255, 248, 231, 0.55);
-  font-size: 12px;
-  line-height: 1.65;
-}
-
-.cowrite-primary {
-  width: 100%;
-  margin-top: 18px;
-  border: 1px solid rgba(181, 217, 156, 0.3);
-  border-radius: 12px;
-  background: var(--game-green-mid);
-  padding: 11px 16px;
-  color: white;
-  font-size: 13px;
-  font-weight: 550;
-}
-
-.cowrite-primary:disabled {
-  opacity: 0.35;
-}
-
-.cowrite-question {
-  margin: 8px 0 18px;
-  font-size: clamp(19px, 3vw, 25px);
-  font-weight: 550;
-}
-
-.cowrite-two-voices,
-.cowrite-decisions,
-.cowrite-object-grid,
 .game-static-map__places {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-}
-
-.cowrite-two-voices article {
-  min-height: 110px;
-  border: 1px solid rgba(255, 224, 174, 0.12);
-  border-radius: 14px;
-  padding: 13px;
-}
-
-.cowrite-two-voices span {
-  color: rgba(255, 224, 174, 0.44);
-  font-size: 10px;
-}
-
-.cowrite-two-voices p {
-  margin-top: 7px;
-  color: rgba(255, 248, 231, 0.82);
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.cowrite-decisions {
-  margin-top: 12px;
-}
-
-.cowrite-decisions button,
-.cowrite-object-grid button {
-  border: 1px solid rgba(255, 224, 174, 0.14);
-  border-radius: 12px;
-  padding: 12px;
-  color: rgba(255, 248, 231, 0.64);
-  text-align: left;
-}
-
-.cowrite-decisions button.is-selected,
-.cowrite-object-grid button.is-selected {
-  border-color: rgba(181, 217, 156, 0.52);
-  background: rgba(125, 184, 90, 0.12);
-  color: var(--game-cabin-light);
-}
-
-.cowrite-object-grid strong,
-.cowrite-object-grid span {
-  display: block;
-}
-
-.cowrite-object-grid strong {
-  font-size: 13px;
-}
-
-.cowrite-object-grid span {
-  margin-top: 4px;
-  color: rgba(255, 248, 231, 0.42);
-  font-size: 10px;
-}
-
-.cowrite-done {
-  padding-block: 54px !important;
-  text-align: center;
-}
-
-.cowrite-done > span {
-  color: var(--game-firelight);
-  font-size: 28px;
-}
-
-.cowrite-done h3 {
-  margin-top: 12px;
-  font-size: 22px;
-}
-
-.cowrite-done p,
-.cowrite-empty {
-  margin-top: 8px;
-  color: rgba(255, 248, 231, 0.5);
-  font-size: 12px;
 }
 
 /* --- Canvas 失败时的图文地图 --- */
@@ -1738,15 +1596,14 @@ body {
   }
 
   .fireside-panel,
-  .cowrite-panel {
+  .reflection-table-panel {
     max-height: 88vh;
     border-radius: 18px 18px 0 0;
   }
 
   .fireside-memory-picker__list,
-  .cowrite-memory-list,
-  .cowrite-two-voices,
-  .cowrite-object-grid {
+  .reflection-table-grid,
+  .reflection-table-relation {
     grid-template-columns: 1fr;
   }
 
@@ -2240,415 +2097,222 @@ body {
   font-size: 11px;
 }
 
-.game-bag__light-trail {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  margin-top: 7px;
-  border: 1px solid rgba(111, 184, 210, 0.25);
-  border-radius: 10px;
-  background: rgba(78, 157, 194, 0.09);
-  padding: 8px;
-  color: #9ed8e9;
-  font-size: 11px;
+.game-bag__hint {
+  margin-top: 10px;
+  color: rgba(255, 248, 231, 0.42);
+  font-size: 10px;
+  line-height: 1.6;
 }
 
-.light-trail-panel {
-  width: min(620px, 100%);
-  border: 1px solid rgba(127, 199, 220, 0.24);
-  border-radius: 20px;
-  background: linear-gradient(160deg, #122321, #172b28);
-  box-shadow: 0 24px 80px rgba(3, 13, 15, 0.58);
-  padding: 24px;
-  color: #eff3df;
-}
-
-.light-trail-panel > header {
-  display: flex;
-  justify-content: space-between;
-}
-
-.light-trail-panel h2 {
-  margin-top: 5px;
-  font-size: 24px;
-}
-
-.light-trail-map {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 28px 0;
-}
-
-.light-trail-node {
-  display: flex;
-  align-items: center;
-}
-
-.light-trail-node span {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border: 1px solid rgba(135, 208, 224, 0.16);
-  border-radius: 50%;
-  color: rgba(135, 208, 224, 0.25);
-}
-
-.light-trail-node.is-lit span {
-  border-color: rgba(152, 220, 228, 0.5);
-  background: rgba(91, 172, 195, 0.14);
-  box-shadow: 0 0 24px rgba(99, 188, 210, 0.18);
-  color: #a5deea;
-}
-
-.light-trail-node i {
-  width: 80px;
-  border-top: 1px dashed rgba(135, 208, 224, 0.24);
-}
-
-.light-trail-excerpt {
-  min-height: 135px;
-  border: 1px solid rgba(135, 208, 224, 0.13);
-  border-radius: 14px;
-  background: rgba(223, 242, 235, 0.035);
-  padding: 17px;
-  text-align: center;
-}
-
-.light-trail-excerpt small {
-  color: rgba(169, 220, 227, 0.4);
-  font-size: 9px;
-}
-
-.light-trail-excerpt blockquote {
-  margin-top: 13px;
-  color: rgba(239, 243, 223, 0.8);
-  font-family: var(--font-serif);
-  font-size: 16px;
-  line-height: 1.8;
-}
-
-.light-trail-primary {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  margin-top: 14px;
-  border: 1px solid rgba(135, 208, 224, 0.28);
-  border-radius: 11px;
-  background: rgba(91, 172, 195, 0.12);
-  padding: 10px;
-  color: #b7e3e8;
-  font-size: 12px;
-}
-
-.light-trail-question,
-.light-trail-name {
-  text-align: center;
-}
-
-.light-trail-question p,
-.light-trail-name p {
-  color: rgba(183, 227, 232, 0.54);
-  font-size: 11px;
-  line-height: 1.7;
-}
-
-.light-trail-question h3 {
-  margin: 10px 0 15px;
-  font-size: 18px;
-}
-
-.light-trail-question > div {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.light-trail-question button {
-  border: 1px solid rgba(135, 208, 224, 0.2);
-  border-radius: 9px;
-  padding: 8px 11px;
-  color: rgba(239, 243, 223, 0.66);
-  font-size: 11px;
-}
-
-.light-trail-name input {
-  width: 100%;
-  margin-top: 14px;
-  border: 1px solid rgba(135, 208, 224, 0.18);
-  border-radius: 10px;
-  outline: none;
-  background: rgba(0, 0, 0, 0.14);
-  padding: 11px;
-  color: #eff3df;
-  font-size: 13px;
-}
-
-.workshop-panel {
-  width: min(790px, 100%);
+.reflection-table-panel {
+  width: min(860px, calc(100vw - 48px));
   max-height: calc(100vh - 48px);
   overflow-y: auto;
-  border: 1px solid rgba(224, 186, 131, 0.23);
-  border-radius: 20px;
-  background: #241710;
-  box-shadow: 0 24px 80px rgba(10, 4, 2, 0.52);
   padding: 24px;
-  color: var(--game-cabin-light);
 }
 
-.workshop-panel > header {
+.reflection-table-panel > header {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
 }
 
-.workshop-panel h2 {
+.reflection-table-panel h2 {
   margin-top: 5px;
-  font-size: 25px;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 560;
 }
 
-.workshop-progress {
+.reflection-table-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
-  margin: 18px 0;
+  grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+  gap: 14px;
 }
 
-.workshop-progress span {
-  border-top: 2px solid rgba(255, 224, 174, 0.1);
-  padding-top: 5px;
-  color: rgba(255, 248, 231, 0.25);
-  font-size: 8px;
+.reflection-table-memos,
+.reflection-table-signals,
+.reflection-table-decision {
+  min-width: 0;
 }
 
-.workshop-progress span.is-active {
-  border-color: #d2a35f;
-  color: rgba(255, 224, 174, 0.68);
+.reflection-table-memos article {
+  margin-top: 9px;
+  border-radius: 6px;
+  padding: 12px;
 }
 
-.workshop-step > p {
-  color: rgba(255, 248, 231, 0.48);
-  font-size: 11px;
-}
-
-.workshop-memory-list,
-.workshop-question-list,
-.workshop-carriers {
-  display: grid;
-  gap: 7px;
-  margin-top: 12px;
-}
-
-.workshop-memory-list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-height: 250px;
-  overflow-y: auto;
-}
-
-.workshop-memory-list button,
-.workshop-question-list button,
-.workshop-carriers button {
-  border: 1px solid rgba(255, 224, 174, 0.11);
-  border-radius: 10px;
-  background: rgba(255, 248, 231, 0.035);
-  padding: 10px;
-  color: rgba(255, 248, 231, 0.62);
-  text-align: left;
-}
-
-.workshop-memory-list button.is-selected,
-.workshop-question-list button.is-selected,
-.workshop-carriers button.is-selected {
-  border-color: rgba(210, 163, 95, 0.48);
-  background: rgba(210, 163, 95, 0.1);
-}
-
-.workshop-memory-list strong,
-.workshop-memory-list small,
-.workshop-carriers strong,
-.workshop-carriers span {
-  display: block;
-}
-
-.workshop-memory-list strong,
-.workshop-carriers strong {
-  font-size: 11px;
-}
-
-.workshop-memory-list small,
-.workshop-carriers span {
-  margin-top: 3px;
-  color: rgba(255, 248, 231, 0.32);
-  font-size: 9px;
-}
-
-.workshop-step blockquote {
-  margin-top: 10px;
-  border-left: 2px solid rgba(210, 163, 95, 0.32);
-  padding: 8px 12px;
-  color: rgba(255, 248, 231, 0.55);
-  font-family: var(--font-serif);
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.workshop-question-list {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.workshop-step > input,
-.workshop-step > textarea {
-  width: 100%;
-  margin-top: 10px;
-  resize: none;
-  border: 1px solid rgba(255, 224, 174, 0.14);
-  border-radius: 11px;
-  outline: none;
-  background: rgba(0, 0, 0, 0.16);
-  padding: 11px;
-  color: #fff8e7;
-  font-size: 12px;
-}
-
-.workshop-primary {
-  width: 100%;
-  margin-top: 13px;
-  border: 1px solid rgba(125, 184, 90, 0.3);
-  border-radius: 10px;
-  background: rgba(125, 184, 90, 0.13);
-  padding: 10px;
-  color: #dcefd0;
-  font-size: 11px;
-}
-
-.workshop-primary:disabled {
-  opacity: 0.3;
-}
-
-.workshop-writing h3 {
-  margin-top: 10px;
-  font-size: 19px;
-}
-
-.workshop-boards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 13px;
-}
-
-.workshop-boards article {
-  min-height: 145px;
-  border: 2px solid #714823;
-  border-radius: 8px;
-  background: linear-gradient(165deg, #a8733c, #805027);
-  box-shadow: inset 0 0 0 2px rgba(255, 224, 174, 0.1);
-  padding: 14px;
-}
-
-.workshop-boards small {
-  color: rgba(255, 240, 207, 0.52);
-  font-size: 9px;
-}
-
-.workshop-boards p {
-  margin-top: 8px;
-  color: #fff0cf;
-  font-family: var(--font-serif);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.workshop-boards.decision-intersect article:first-child { transform: translateX(8%); }
-.workshop-boards.decision-intersect article:last-child { transform: translateX(-8%); }
-.workshop-boards.decision-gap { gap: 32px; }
-.workshop-boards.decision-withdraw article:last-child { opacity: 0.18; }
-
-.workshop-decisions {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin-top: 10px;
-}
-
-.workshop-decisions button {
-  border: 1px solid rgba(255, 224, 174, 0.11);
-  border-radius: 8px;
-  padding: 7px;
-  color: rgba(255, 248, 231, 0.42);
-  font-size: 9px;
-}
-
-.workshop-decisions button.is-selected {
-  border-color: rgba(210, 163, 95, 0.42);
-  background: rgba(210, 163, 95, 0.09);
-  color: #e7c38d;
-}
-
-.workshop-carriers {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.workshop-confirm {
-  text-align: center;
-}
-
-.workshop-confirm > div {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 12px;
-  margin: 30px 0;
-}
-
-.workshop-confirm > div button {
-  display: flex;
-  min-height: 95px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px dashed rgba(255, 224, 174, 0.2);
-  border-radius: 13px;
-  color: rgba(255, 248, 231, 0.4);
+.reflection-table-memos small,
+.reflection-table-signal-group small,
+.reflection-table-relation span {
+  color: rgba(255, 248, 231, 0.44);
   font-size: 10px;
 }
 
-.workshop-confirm > div button.is-confirmed {
-  border-style: solid;
-  border-color: rgba(125, 184, 90, 0.45);
-  background: rgba(125, 184, 90, 0.1);
-  color: #dcefd0;
+.reflection-table-memos strong {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 248, 231, 0.86);
+  font-size: 13px;
 }
 
-.workshop-confirm > div > span {
-  min-width: 80px;
-  border: 2px solid #714823;
-  border-radius: 8px;
-  background: #936032;
-  padding: 20px 10px;
-  color: #fff0cf;
+.reflection-table-memos p {
+  margin-top: 7px;
+  color: rgba(255, 248, 231, 0.56);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.reflection-table-signal-group {
+  margin-top: 9px;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.reflection-table-signal-group > strong {
+  display: block;
+  color: rgba(255, 248, 231, 0.76);
   font-size: 11px;
 }
 
-.workshop-done {
-  padding: 45px 10px;
-  color: #b8d89f;
+.reflection-table-signal-group > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.reflection-table-signal-group span {
+  border: 1px solid rgba(235, 197, 127, 0.22);
+  border-radius: 5px;
+  background: rgba(235, 197, 127, 0.08);
+  padding: 4px 7px;
+  color: rgba(255, 239, 204, 0.78);
+  font-size: 10px;
+}
+
+.reflection-table-decision {
+  margin-top: 18px;
+  border-top: 1px solid rgba(255, 224, 174, 0.12);
+  padding-top: 16px;
+}
+
+.reflection-table-relation {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.reflection-table-relation button {
+  display: grid;
+  min-height: 92px;
+  grid-template-columns: auto 1fr;
+  align-content: start;
+  gap: 6px 8px;
+  border-radius: 6px;
+  padding: 12px;
+  text-align: left;
+}
+
+.reflection-table-relation button svg {
+  color: rgba(235, 197, 127, 0.72);
+}
+
+.reflection-table-relation button strong,
+.reflection-table-relation button span {
+  min-width: 0;
+}
+
+.reflection-table-relation button span {
+  grid-column: 1 / -1;
+  line-height: 1.5;
+}
+
+.reflection-table-relation button.is-selected {
+  border-color: rgba(235, 197, 127, 0.5);
+  background: rgba(235, 197, 127, 0.12);
+  color: #ebc57f;
+}
+
+.reflection-table-decision textarea {
+  width: 100%;
+  margin-top: 12px;
+  resize: none;
+  border: 1px solid rgba(255, 224, 174, 0.16);
+  border-radius: 6px;
+  outline: none;
+  background: rgba(11, 6, 3, 0.28);
+  padding: 12px;
+  color: #fff8e7;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.reflection-table-primary,
+.reflection-table-empty button,
+.reflection-table-saved button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 12px;
+  border: 1px solid rgba(125, 184, 90, 0.3);
+  border-radius: 6px;
+  background: rgba(125, 184, 90, 0.13);
+  padding: 10px 14px;
+  color: #dcefd0;
+  font-size: 12px;
+}
+
+.reflection-table-primary {
+  width: 100%;
+}
+
+.reflection-table-primary:disabled {
+  opacity: 0.36;
+}
+
+.reflection-table-empty,
+.reflection-table-saved {
+  padding: 44px 20px;
   text-align: center;
 }
 
-.workshop-done h3 {
-  margin-top: 13px;
-  color: #fff8e7;
-  font-size: 19px;
+.reflection-table-empty svg,
+.reflection-table-saved svg {
+  margin: 0 auto;
+  color: rgba(235, 197, 127, 0.72);
 }
 
-.workshop-done p {
-  margin-top: 8px;
+.reflection-table-empty h3,
+.reflection-table-saved h3 {
+  margin-top: 12px;
+  color: #fff8e7;
+  font-size: 20px;
+}
+
+.reflection-table-empty p,
+.reflection-table-saved p {
+  max-width: 460px;
+  margin: 8px auto 0;
+  color: rgba(255, 248, 231, 0.5);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 720px) {
+  .reflection-table-panel {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 13px 13px 0 0;
+  }
+
+  .reflection-table-grid,
+  .reflection-table-relation {
+    grid-template-columns: 1fr;
+  }
 }
 
 .object-detail-panel {
@@ -2703,23 +2367,6 @@ body {
   color: rgba(255, 248, 231, 0.45);
   font-size: 10px;
   line-height: 1.6;
-}
-
-@media (max-width: 640px) {
-  .workshop-memory-list,
-  .workshop-question-list,
-  .workshop-boards,
-  .workshop-carriers {
-    grid-template-columns: 1fr;
-  }
-
-  .workshop-progress span {
-    font-size: 0;
-  }
-
-  .workshop-decisions {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 .game-hud.is-quiet .game-hud-identity,
@@ -3505,8 +3152,7 @@ body {
   backdrop-filter: none;
 }
 
-.light-trail-panel,
-.workshop-panel,
+.reflection-table-panel,
 .object-detail-panel,
 .pond-panel-v2,
 .companion-bench,
@@ -3523,14 +3169,12 @@ body {
   color: var(--game-cabin-light);
 }
 
-.pond-panel-v2 > header button,
-.light-trail-panel > header button {
+.pond-panel-v2 > header button {
   color: rgba(255, 248, 231, 0.55);
 }
 
 .pond-panel-v2 h2,
-.light-trail-panel h2,
-.workshop-panel h2,
+.reflection-table-panel h2,
 .object-detail-panel h2,
 .companion-bench h2,
 .cabin-panel h2 {
@@ -3538,7 +3182,9 @@ body {
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
 }
 
-.light-trail-excerpt,
+.reflection-table-memos article,
+.reflection-table-signal-group,
+.reflection-table-relation button,
 .pond-choices button,
 .pond-release__bag article,
 .pond-reflection article,
@@ -3562,8 +3208,7 @@ body {
 
 .pond-choices strong,
 .pond-reflection article p,
-.pond-sit p,
-.light-trail-excerpt blockquote {
+.pond-sit p {
   color: rgba(255, 248, 231, 0.82);
 }
 
@@ -3571,9 +3216,7 @@ body {
 .pond-lantern-off p,
 .pond-release > p,
 .pond-release__bag small,
-.pond-reflection__empty,
-.light-trail-question p,
-.light-trail-name p {
+.pond-reflection__empty {
   color: rgba(255, 248, 231, 0.46);
 }
 
@@ -3588,19 +3231,15 @@ body {
 }
 
 .pond-release textarea,
-.light-trail-name input,
-.workshop-step > input,
-.workshop-step > textarea,
+.reflection-table-decision textarea,
 .fireside-ending textarea,
-.fireside-composer textarea,
-.cowrite-panel textarea {
+.fireside-composer textarea {
   border-color: rgba(255, 224, 174, 0.16);
   background: rgba(11, 6, 3, 0.28);
   color: #fff8e7;
 }
 
-.light-trail-primary,
-.workshop-primary,
+.reflection-table-primary,
 .pond-release__actions button,
 .pond-release__done button,
 .cabin-panel > footer button:nth-child(2) {
@@ -3694,14 +3333,378 @@ body {
 /* ── 文字大小缩放（由 GameSettings 写入 data-font-scale） ── */
 [data-font-scale="large"] .memo-parchment,
 [data-font-scale="large"] .fireside-panel,
-[data-font-scale="large"] .cowrite-panel {
+[data-font-scale="large"] .reflection-table-panel {
   font-size: 1.125rem;
   line-height: 1.85;
 }
 
 [data-font-scale="large"] .fireside-message p,
-[data-font-scale="large"] .memo-parchment p,
-[data-font-scale="large"] .cowrite-intro {
+[data-font-scale="large"] .memo-parchment p {
   font-size: 1rem;
   line-height: 1.9;
+}
+
+/* ============================================================
+   林间世界 V2.5 — 玩法与 UI 优化追加样式
+   ============================================================ */
+
+/* --- 打字指示器（苔灯思考中） --- */
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(255, 248, 231, 0.07);
+}
+
+.typing-indicator span {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 207, 120, 0.6);
+  animation: typing-bounce 1.3s ease-in-out infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+/* --- 消息淡入 --- */
+.fireside-message-enter {
+  animation: msg-slide-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes msg-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- 自动滚动容器 --- */
+.fireside-messages {
+  scroll-behavior: smooth;
+}
+
+/* --- 篝火空态引导步骤 --- */
+.fireside-guide-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.fireside-guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 248, 231, 0.04);
+  border: 1px solid rgba(255, 224, 174, 0.08);
+  animation: guide-step-in 0.45s ease-out backwards;
+  transition: background 160ms ease, border-color 160ms ease;
+  cursor: pointer;
+}
+
+.fireside-guide-step:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.fireside-guide-step:hover {
+  background: rgba(255, 248, 231, 0.08);
+  border-color: rgba(255, 224, 174, 0.2);
+}
+
+.fireside-guide-step.is-done {
+  border-color: rgba(125, 184, 90, 0.3);
+  background: rgba(125, 184, 90, 0.06);
+}
+
+.fireside-guide-step__num {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 207, 120, 0.3);
+  background: rgba(255, 207, 120, 0.08);
+  color: #ffcf78;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fireside-guide-step.is-done .fireside-guide-step__num {
+  border-color: rgba(125, 184, 90, 0.4);
+  background: rgba(125, 184, 90, 0.15);
+  color: #a9cf8d;
+}
+
+.fireside-guide-step__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fireside-guide-step__text strong {
+  color: rgba(255, 248, 231, 0.78);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.fireside-guide-step__text small {
+  color: rgba(255, 248, 231, 0.38);
+  font-size: 10px;
+}
+
+@keyframes guide-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* --- 水波呼吸动画 --- */
+.pond-ripples i {
+  animation: ripple-breathe 4.5s ease-in-out infinite;
+}
+
+.pond-ripples i:nth-child(2) {
+  animation-delay: 1.5s;
+}
+
+.pond-ripples i:nth-child(3) {
+  animation-delay: 3s;
+}
+
+@keyframes ripple-breathe {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.12);
+    opacity: 0.2;
+  }
+}
+
+.reduced-motion .pond-ripples i {
+  animation: none;
+}
+
+/* --- 漂流瓶投放动画 --- */
+.pond-bottle-drop {
+  animation: bottle-drop 1.6s ease-out forwards;
+}
+
+@keyframes bottle-drop {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  40% {
+    opacity: 0.8;
+    transform: translateY(8px) rotate(-5deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(40px) rotate(8deg) scale(0.8);
+  }
+}
+
+/* --- 行囊空槽位引导动画 --- */
+.game-bag__empty {
+  animation: bag-slot-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes bag-slot-pulse {
+  0%, 100% {
+    border-color: rgba(255, 224, 174, 0.1);
+  }
+  50% {
+    border-color: rgba(255, 207, 120, 0.28);
+  }
+}
+
+.reduced-motion .game-bag__empty {
+  animation: none;
+}
+
+/* --- HUD 区域名称过渡 --- */
+.game-hud-identity strong,
+.game-hud-identity small {
+  transition: color 0.4s ease, opacity 0.3s ease;
+}
+
+.game-hud-mark {
+  transition: color 0.4s ease, background 0.4s ease;
+}
+
+/* --- 注释输入 slide-down --- */
+.memo-annotation-enter {
+  animation: annotation-slide 0.28s ease-out forwards;
+}
+
+@keyframes annotation-slide {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+    transform: translateY(0);
+  }
+}
+
+/* --- AI 推测区域微光边框 --- */
+.memo-ai-section {
+  position: relative;
+  margin-bottom: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(155, 89, 182, 0.2);
+  overflow: hidden;
+}
+
+.memo-ai-section::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(155, 89, 182, 0.45), transparent);
+  animation: ai-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes ai-shimmer {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.reduced-motion .memo-ai-section::before {
+  animation: none;
+  opacity: 0.6;
+}
+
+/* --- AI 推测展开/收起动画 --- */
+.memo-ai-content {
+  overflow: hidden;
+  animation: ai-expand 0.3s ease-out forwards;
+}
+
+@keyframes ai-expand {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 300px;
+  }
+}
+
+/* --- 传送门打字机效果 --- */
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typewriter-reveal 1.8s steps(20, end) forwards;
+}
+
+@keyframes typewriter-reveal {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.forest-entry__copy p {
+  white-space: normal;
+}
+
+/* --- 传送门光线呼吸 --- */
+.forest-entry__vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 40% 60% at 52% 55%, rgba(255, 200, 100, 0.06), transparent);
+  animation: portal-light-breathe 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes portal-light-breathe {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.reduced-motion .forest-entry__vignette::after {
+  animation: none;
+  opacity: 0.5;
+}
+
+/* --- 旅程回声最新事件高亮 --- */
+.cabin-echo__list article:first-child {
+  animation: echo-highlight 0.5s ease-out;
+  border: 1px solid rgba(255, 207, 120, 0.2);
+}
+
+@keyframes echo-highlight {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    border-color: rgba(255, 207, 120, 0.5);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    border-color: rgba(255, 207, 120, 0.2);
+  }
+}
+
+/* --- 亮灯木屋记录悬停展开 --- */
+.cabin-panel__grid article {
+  transition: background 180ms ease, border-color 180ms ease;
+  cursor: default;
+}
+
+.cabin-panel__grid article:hover {
+  border-color: rgba(255, 224, 174, 0.24);
+  background: rgba(255, 248, 231, 0.065);
+}
+
+.cabin-panel__grid article p {
+  max-height: 44px;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+.cabin-panel__grid article:hover p {
+  max-height: 200px;
 }

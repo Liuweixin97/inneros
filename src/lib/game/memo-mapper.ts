@@ -165,15 +165,13 @@ export function suggestPlacementPosition(
   };
 }
 
-// 共同物件模板（工坊使用）
-export const CO_OBJECT_TEMPLATES: Array<{
+export const REFLECTION_OBJECT_TEMPLATES: Array<{
   type: WorldObjectType;
   name: string;
   description: string;
 }> = [
-  { type: 'bench', name: '长椅', description: '两个人曾经坐过的地方' },
-  { type: 'frame', name: '相框', description: '一段共同的记忆' },
-  { type: 'sign', name: '路牌', description: '指向你们共同走过的方向' },
-  { type: 'lamp', name: '灯笼', description: '一盏点亮的记忆' },
+  { type: 'sign', name: '木牌', description: '写下我今天看见的关系' },
+  { type: 'frame', name: '纸框', description: '夹住一组暂时有关的记忆' },
+  { type: 'lamp', name: '小灯', description: '标出以后再看的线索' },
   { type: 'bottle', name: '漂流瓶', description: '封存一段暂时不想打开的话' },
 ];

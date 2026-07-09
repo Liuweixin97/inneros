@@ -14,7 +14,7 @@ export default function WorldObjectDetail({
 }) {
   const sources = memos.filter((memo) => object.sourceMemoIds.includes(memo.id));
   return (
-    <div className="game-focus-layer game-focus-layer--soft" role="dialog" aria-label="共同物件来源">
+    <div className="game-focus-layer game-focus-layer--soft" role="dialog" aria-label="世界物件来源">
       <section className="object-detail-panel">
         <header>
           <div><p className="game-kicker">可追溯的世界物件</p><h2>这里保留了什么</h2></div>

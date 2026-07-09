@@ -48,7 +48,9 @@ export default function MemoEncounter({
   hasNextMemo,
   onNextMemo,
 }: MemoEncounterProps) {
-  const [stage, setStage] = useState<'approach' | 'read'>('approach');
+  // 短记忆（< 200 字）跳过 approach，直接阅读
+  const isShortMemo = memo.plain_text.length < 200;
+  const [stage, setStage] = useState<'approach' | 'read'>(isShortMemo ? 'read' : 'approach');
   const [annotation, setAnnotation] = useState(worldObject?.annotation ?? '');
   const [showAnnotationInput, setShowAnnotationInput] = useState(false);
   const [annotationSaved, setAnnotationSaved] = useState(false);
@@ -197,20 +199,20 @@ export default function MemoEncounter({
               </div>
             )}
 
-            {/* ── AI 推测（可展开） ── */}
+            {/* ── AI 推测（可展开，微光边框） ── */}
             {hasAI && (
-              <div className="mb-4 pt-3" style={{ borderTop: '1px dashed rgba(155,89,182,0.25)' }}>
+              <div className="memo-ai-section">
                 <button
                   onClick={() => setShowAI((v) => !v)}
                   className="flex items-center gap-2 w-full text-left"
                 >
                   <SourceBadge type="ai" />
                   <span className="text-[11px] opacity-50 ml-auto" style={{ color: '#9B59B6' }}>
-                    {showAI ? '收起' : '查看'}
+                    {showAI ? '收起' : '查看 AI 推测'}
                   </span>
                 </button>
                 {showAI && (
-                  <div className="mt-2 text-[12px] leading-relaxed" style={{ color: '#5D3E6A' }}>
+                  <div className="memo-ai-content mt-2 text-[12px] leading-relaxed" style={{ color: '#5D3E6A' }}>
                     {memo.ai_title && (
                       <p className="mb-1"><strong>标题：</strong>{memo.ai_title}</p>
                     )}
@@ -240,7 +242,7 @@ export default function MemoEncounter({
             )}
 
             {showAnnotationInput && !annotationSaved && (
-              <div className="mt-2">
+              <div className="mt-2 memo-annotation-enter">
                 <textarea
                   value={annotation}
                   onChange={(e) => setAnnotation(e.target.value)}
@@ -315,7 +317,7 @@ export default function MemoEncounter({
                     color: 'var(--game-green-mid)',
                   }}
                 >
-                  带到篝火边
+                  加入本次带入
                 </button>
               )}
 
@@ -330,7 +332,7 @@ export default function MemoEncounter({
                     color: '#FF9B3D',
                   }}
                 >
-                  🔥 去篝火边谈谈
+                  去苔灯火边谈谈
                 </button>
               )}
             </div>

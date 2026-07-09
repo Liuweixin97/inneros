@@ -106,6 +106,7 @@ export async function placeObject(input: {
   sourceSessionId?: string;
   annotation?: string;
   userConfirmed?: boolean;
+  metadata?: Record<string, unknown>;
 }): Promise<WorldObject | null> {
   const pos = (input.x !== undefined && input.y !== undefined)
     ? { x: input.x, y: input.y }
@@ -126,7 +127,7 @@ export async function placeObject(input: {
           sourceSessionId: input.sourceSessionId,
           annotation: input.annotation,
           userConfirmed: input.userConfirmed ?? false,
-          metadata: {},
+          metadata: input.metadata ?? {},
         },
       }),
     });
@@ -226,7 +227,7 @@ export async function sendCompanionMessage(input: {
   message: string;
   worldId: string;
   sessionId?: string;
-  location: string;
+  location: MapLocation;
   dialogueMode: DialogueMode;
   authorizedMemoIds?: string[];
   conversationHistory?: CompanionMessage[];

@@ -7,17 +7,18 @@ import type {
   CompanionSession,
   CompanionType,
   DialogueMode,
-  SharedMemoryDraft,
   GameSeason,
+  GamePondEntry,
+  GameWeeklyReview,
 } from '@/types';
-import { getDb } from './index';
+import { DEFAULT_OWNER_USER_ID, getDb } from './index';
 
 // ---- 内部解析 ----
 
 function parseWorld(row: Record<string, unknown>): GameWorld {
   return {
     id: row.id as string,
-    ownerUserId: row.owner_user_id as string,
+    ownerUserId: (row.owner_user_id || row.user_id || DEFAULT_OWNER_USER_ID) as string,
     displayName: row.display_name as string,
     createdAt: row.created_at as string,
     lastVisitedAt: row.last_visited_at as string,
@@ -28,6 +29,28 @@ function parseWorld(row: Record<string, unknown>): GameWorld {
   };
 }
 
+function parseJsonArray(value: unknown): string[] {
+  if (typeof value !== 'string') return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseJsonObject(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'string') return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 function parseWorldObject(row: Record<string, unknown>): WorldObject {
   return {
     id: row.id as string,
@@ -36,12 +59,12 @@ function parseWorldObject(row: Record<string, unknown>): WorldObject {
     x: row.x as number,
     y: row.y as number,
     layer: row.layer as number,
-    sourceMemoIds: JSON.parse(row.source_memo_ids as string) as string[],
+    sourceMemoIds: parseJsonArray(row.source_memo_ids),
     sourceSessionId: row.source_session_id as string | undefined,
     userConfirmed: Boolean(row.user_confirmed),
     hidden: Boolean(row.hidden),
     annotation: row.annotation as string | undefined,
-    metadata: JSON.parse(row.metadata as string) as Record<string, unknown>,
+    metadata: parseJsonObject(row.metadata),
     createdAt: row.created_at as string,
   };
 }
@@ -52,42 +75,66 @@ function parseCompanionSession(row: Record<string, unknown>): CompanionSession {
     worldId: row.world_id as string,
     companionType: row.companion_type as CompanionType,
     dialogueMode: row.dialogue_mode as DialogueMode,
-    authorizedMemoIds: JSON.parse(row.authorized_memo_ids as string) as string[],
+    authorizedMemoIds: parseJsonArray(row.authorized_memo_ids),
     startedAt: row.started_at as string,
     endedAt: row.ended_at as string | undefined,
   };
 }
 
-function parseSharedDraft(row: Record<string, unknown>): SharedMemoryDraft {
+function parsePondEntry(row: Record<string, unknown>): GamePondEntry {
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
-    memoId: row.memo_id as string | undefined,
-    playerOneText: row.player_one_text as string | undefined,
-    playerTwoText: row.player_two_text as string | undefined,
-    jointText: row.joint_text as string | undefined,
-    saveDecision: row.save_decision as SharedMemoryDraft['saveDecision'],
+    worldId: row.world_id as string,
+    userId: row.user_id as string,
+    content: row.content as string,
+    createdAt: row.created_at as string,
+  };
+}
+
+function parseWeeklyReview(row: Record<string, unknown>): GameWeeklyReview {
+  return {
+    id: row.id as string,
+    worldId: row.world_id as string,
+    userId: row.user_id as string,
+    gains: row.gains as string,
+    struggles: row.struggles as string,
+    nextFocus: row.next_focus as string,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
   };
 }
 
 // ---- GameWorld CRUD ----
 
-export function getOrCreateWorld(): GameWorld {
+export function getOrCreateWorld(ownerUserId = DEFAULT_OWNER_USER_ID): GameWorld {
   const db = getDb();
   const existing = db
-    .prepare("SELECT * FROM game_worlds WHERE owner_user_id = 'local' LIMIT 1")
-    .get() as Record<string, unknown> | undefined;
+    .prepare(`
+      SELECT * FROM game_worlds
+      WHERE owner_user_id = @ownerUserId
+         OR user_id = @ownerUserId
+         OR (@ownerUserId = @defaultOwnerUserId AND owner_user_id = 'local')
+      ORDER BY last_visited_at DESC
+      LIMIT 1
+    `)
+    .get({ ownerUserId, defaultOwnerUserId: DEFAULT_OWNER_USER_ID }) as Record<string, unknown> | undefined;
 
   if (existing) {
+    if (existing.owner_user_id !== ownerUserId || existing.user_id !== ownerUserId) {
+      db.prepare('UPDATE game_worlds SET owner_user_id = ?, user_id = ? WHERE id = ?')
+        .run(ownerUserId, ownerUserId, existing.id);
+      const updated = db.prepare('SELECT * FROM game_worlds WHERE id = ?').get(existing.id) as Record<string, unknown>;
+      return parseWorld(updated);
+    }
     return parseWorld(existing);
   }
 
   const now = new Date().toISOString();
   const id = uuidv4();
   db.prepare(`
-    INSERT INTO game_worlds (id, owner_user_id, display_name, created_at, last_visited_at, season, player_x, player_y, settings)
-    VALUES (?, 'local', '林间世界', ?, ?, 'spring', 345, 245, '{"muted":false,"reducedMotion":false}')
-  `).run(id, now, now);
+    INSERT INTO game_worlds (id, owner_user_id, user_id, display_name, created_at, last_visited_at, season, player_x, player_y, settings)
+    VALUES (?, ?, ?, '林间世界', ?, ?, 'spring', 345, 245, '{"muted":false,"reducedMotion":false}')
+  `).run(id, ownerUserId, ownerUserId, now, now);
 
   const row = db.prepare('SELECT * FROM game_worlds WHERE id = ?').get(id) as Record<string, unknown>;
   return parseWorld(row);
@@ -167,10 +214,12 @@ export function createWorldObject(input: {
 export function updateWorldObject(
   id: string,
   updates: Partial<Pick<WorldObject, 'x' | 'y' | 'hidden' | 'annotation' | 'userConfirmed'>>,
+  worldId?: string,
 ): WorldObject | null {
   const db = getDb();
   const existing = db.prepare('SELECT * FROM world_objects WHERE id = ?').get(id) as Record<string, unknown> | undefined;
   if (!existing) return null;
+  if (worldId && existing.world_id !== worldId) return null;
 
   const sets: string[] = [];
   const params: unknown[] = [];
@@ -193,6 +242,12 @@ export function updateWorldObject(
 export function hideWorldObject(id: string): void {
   const db = getDb();
   db.prepare('UPDATE world_objects SET hidden = 1 WHERE id = ?').run(id);
+}
+
+export function hideWorldObjectForWorld(id: string, worldId: string): boolean {
+  const db = getDb();
+  const result = db.prepare('UPDATE world_objects SET hidden = 1 WHERE id = ? AND world_id = ?').run(id, worldId);
+  return result.changes > 0;
 }
 
 // ---- CompanionSession CRUD ----
@@ -242,55 +297,79 @@ export function getCompanionSession(sessionId: string): CompanionSession | null 
   return row ? parseCompanionSession(row) : null;
 }
 
-// ---- SharedMemoryDraft CRUD ----
+export function getCompanionSessionForWorld(sessionId: string, worldId: string): CompanionSession | null {
+  const db = getDb();
+  const row = db
+    .prepare('SELECT * FROM companion_sessions WHERE id = ? AND world_id = ?')
+    .get(sessionId, worldId) as Record<string, unknown> | undefined;
+  return row ? parseCompanionSession(row) : null;
+}
 
-export function createSharedDraft(input: {
-  sessionId: string;
-  memoId?: string;
-}): SharedMemoryDraft {
+// ---- Pond entries ----
+
+export function createPondEntry(input: {
+  worldId: string;
+  userId: string;
+  content: string;
+}): GamePondEntry {
   const db = getDb();
   const id = uuidv4();
   const now = new Date().toISOString();
   db.prepare(`
-    INSERT INTO shared_memory_drafts (id, session_id, memo_id, save_decision, created_at)
-    VALUES (?, ?, ?, 'pending', ?)
-  `).run(id, input.sessionId, input.memoId ?? null, now);
-  const row = db.prepare('SELECT * FROM shared_memory_drafts WHERE id = ?').get(id) as Record<string, unknown>;
-  return parseSharedDraft(row);
+    INSERT INTO game_pond_entries (id, world_id, user_id, content, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(id, input.worldId, input.userId, input.content, now);
+  const row = db.prepare('SELECT * FROM game_pond_entries WHERE id = ?').get(id) as Record<string, unknown>;
+  return parsePondEntry(row);
 }
 
-export function updateSharedDraft(
-  id: string,
-  updates: Partial<Pick<SharedMemoryDraft, 'playerOneText' | 'playerTwoText' | 'jointText' | 'saveDecision'>>,
-): SharedMemoryDraft | null {
+export function getPondEntries(userId: string, limit = 30): GamePondEntry[] {
   const db = getDb();
-  const sets: string[] = [];
-  const params: unknown[] = [];
-
-  if ('playerOneText' in updates) { sets.push('player_one_text = ?'); params.push(updates.playerOneText ?? null); }
-  if ('playerTwoText' in updates) { sets.push('player_two_text = ?'); params.push(updates.playerTwoText ?? null); }
-  if ('jointText' in updates) { sets.push('joint_text = ?'); params.push(updates.jointText ?? null); }
-  if ('saveDecision' in updates) { sets.push('save_decision = ?'); params.push(updates.saveDecision); }
-
-  if (sets.length > 0) {
-    params.push(id);
-    db.prepare(`UPDATE shared_memory_drafts SET ${sets.join(', ')} WHERE id = ?`).run(...params);
-  }
-
-  const row = db.prepare('SELECT * FROM shared_memory_drafts WHERE id = ?').get(id) as Record<string, unknown> | undefined;
-  return row ? parseSharedDraft(row) : null;
+  const rows = db.prepare(`
+    SELECT * FROM game_pond_entries
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(userId, Math.max(1, Math.min(limit, 100))) as Record<string, unknown>[];
+  return rows.map(parsePondEntry);
 }
 
-export function getDraftsBySession(sessionId: string): SharedMemoryDraft[] {
+// ---- Weekly reviews ----
+
+export function createWeeklyReview(input: {
+  worldId: string;
+  userId: string;
+  gains: string;
+  struggles: string;
+  nextFocus: string;
+}): GameWeeklyReview {
   const db = getDb();
-  const rows = db
-    .prepare('SELECT * FROM shared_memory_drafts WHERE session_id = ? ORDER BY created_at ASC')
-    .all(sessionId) as Record<string, unknown>[];
-  return rows.map(parseSharedDraft);
+  const id = uuidv4();
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO game_weekly_reviews (id, world_id, user_id, gains, struggles, next_focus, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    input.worldId,
+    input.userId,
+    input.gains,
+    input.struggles,
+    input.nextFocus,
+    now,
+    now,
+  );
+  const row = db.prepare('SELECT * FROM game_weekly_reviews WHERE id = ?').get(id) as Record<string, unknown>;
+  return parseWeeklyReview(row);
 }
 
-export function getSharedDraft(id: string): SharedMemoryDraft | null {
+export function getWeeklyReviews(userId: string, limit = 12): GameWeeklyReview[] {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM shared_memory_drafts WHERE id = ?').get(id) as Record<string, unknown> | undefined;
-  return row ? parseSharedDraft(row) : null;
+  const rows = db.prepare(`
+    SELECT * FROM game_weekly_reviews
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(userId, Math.max(1, Math.min(limit, 52))) as Record<string, unknown>[];
+  return rows.map(parseWeeklyReview);
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Lamp, Moon, Users, X } from 'lucide-react';
+import { Lamp, Moon, X } from 'lucide-react';
 import type { CompanionType } from '@/types';
 
 interface CompanionBenchProps {
@@ -15,11 +15,11 @@ export default function CompanionBench({
   onClose,
 }: CompanionBenchProps) {
   return (
-    <div className="game-focus-layer game-focus-layer--soft" role="dialog" aria-label="选择同行方式">
+    <div className="game-focus-layer game-focus-layer--soft" role="dialog" aria-label="入林长椅">
       <section className="companion-bench">
         <header>
           <div>
-            <p className="game-kicker">门前长椅</p>
+            <p className="game-kicker">入林长椅</p>
             <h2>今天想怎样走一走？</h2>
           </div>
           <button type="button" className="game-icon-button" onClick={onClose} aria-label="离开长椅">
@@ -51,18 +51,6 @@ export default function CompanionBench({
             <Lamp size={20} />
             <strong>邀请苔灯</strong>
             <span>它只看见你明确放进行囊的内容。</span>
-          </button>
-          <button
-            type="button"
-            className={companionType === 'human_local' ? 'is-selected' : ''}
-            onClick={() => {
-              onChange('human_local');
-              onClose();
-            }}
-          >
-            <Users size={20} />
-            <strong>开启同屏双人</strong>
-            <span>两名角色在同一块屏幕里行走。</span>
           </button>
         </div>
       </section>

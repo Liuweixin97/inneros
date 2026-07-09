@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getCurrentUserOrGuest } from '@/lib/auth';
+import { getMemoByIdForUser } from '@/lib/db/memos';
 import {
   getOrCreateWorld,
   updateWorldVisit,
@@ -7,14 +9,26 @@ import {
   getWorldObjects,
   createWorldObject,
   updateWorldObject,
-  hideWorldObject,
+  hideWorldObjectForWorld,
 } from '@/lib/db/game';
 import type { WorldObjectType, GameSeason, GameWorldSettings } from '@/types';
+
+function safeMemoIds(value: unknown, userId: string): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((item): item is string => typeof item === 'string'))]
+    .slice(0, 3)
+    .filter((id) => getMemoByIdForUser(id, userId)?.privacy_level === 'normal');
+}
+
+function safeNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
 
 // GET /api/game/world — 获取或初始化世界状态
 export async function GET() {
   try {
-    const world = getOrCreateWorld();
+    const user = await getCurrentUserOrGuest();
+    const world = getOrCreateWorld(user.id);
     const objects = getWorldObjects(world.id);
     return NextResponse.json({ world, objects });
   } catch (error) {
@@ -26,8 +40,9 @@ export async function GET() {
 // PATCH /api/game/world — 更新世界状态（位置/设置/季节/物件）
 export async function PATCH(req: Request) {
   try {
+    const user = await getCurrentUserOrGuest();
     const body = await req.json() as Record<string, unknown>;
-    const world = getOrCreateWorld();
+    const world = getOrCreateWorld(user.id);
 
     // 更新玩家位置
     if (typeof body.playerX === 'number' && typeof body.playerY === 'number') {
@@ -47,13 +62,14 @@ export async function PATCH(req: Request) {
     // 放置世界物件
     if (body.action === 'place_object' && body.object && typeof body.object === 'object') {
       const obj = body.object as Record<string, unknown>;
+      const sourceMemoIds = safeMemoIds(obj.sourceMemoIds, user.id);
       const newObj = createWorldObject({
         worldId: world.id,
         type: obj.type as WorldObjectType,
-        x: obj.x as number,
-        y: obj.y as number,
+        x: safeNumber(obj.x, world.playerX),
+        y: safeNumber(obj.y, world.playerY),
         layer: typeof obj.layer === 'number' ? obj.layer : 1,
-        sourceMemoIds: Array.isArray(obj.sourceMemoIds) ? obj.sourceMemoIds as string[] : [],
+        sourceMemoIds,
         sourceSessionId: typeof obj.sourceSessionId === 'string' ? obj.sourceSessionId : undefined,
         userConfirmed: Boolean(obj.userConfirmed),
         annotation: typeof obj.annotation === 'string' ? obj.annotation : undefined,
@@ -75,17 +91,17 @@ export async function PATCH(req: Request) {
           ? { annotation: updates.annotation as string | undefined }
           : {}),
         ...(typeof updates.userConfirmed === 'boolean' ? { userConfirmed: updates.userConfirmed } : {}),
-      });
+      }, world.id);
       return NextResponse.json({ object: updated });
     }
 
     // 隐藏物件
     if (body.action === 'hide_object' && typeof body.objectId === 'string') {
-      hideWorldObject(body.objectId);
+      hideWorldObjectForWorld(body.objectId, world.id);
       return NextResponse.json({ success: true });
     }
 
-    const updated = getOrCreateWorld();
+    const updated = getOrCreateWorld(user.id);
     const objects = getWorldObjects(updated.id);
     return NextResponse.json({ world: updated, objects });
   } catch (error) {

@@ -133,6 +133,15 @@ export function getMemoById(id: string): Memo | null {
   return parseMemoRow(row);
 }
 
+export function getMemoByIdForUser(id: string, userId: string): Memo | null {
+  const db = getDb();
+  const row = db
+    .prepare('SELECT * FROM memos WHERE id = ? AND user_id = ?')
+    .get(id, userId) as Record<string, unknown> | undefined;
+  if (!row) return null;
+  return parseMemoRow(row);
+}
+
 export function createMemo(input: MemoCreateInput): Memo {
   const db = getDb();
   const id = uuidv4();

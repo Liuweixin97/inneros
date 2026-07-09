@@ -20,6 +20,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    username TEXT,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     created_at TEXT NOT NULL,
@@ -28,14 +29,14 @@ db.exec(`
 `);
 
 db.prepare(`
-  INSERT INTO users (id, name, email, password_hash, created_at, updated_at)
-  VALUES ('liuweixin', '刘炜鑫', 'liuweixin@inneros.local', ?, ?, ?)
+  INSERT INTO users (id, name, username, email, password_hash, created_at, updated_at)
+  VALUES ('liuweixin', '刘炜鑫', 'liuweixin', 'liuweixin@inneros.local', ?, ?, ?)
   ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
+    username = excluded.username,
     email = excluded.email,
     password_hash = excluded.password_hash,
     updated_at = excluded.updated_at
 `).run(passwordHash, now, now);
 
-console.log('Seeded owner user: liuweixin@inneros.local');
-
+console.log('Seeded owner user: liuweixin');

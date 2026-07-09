@@ -7,12 +7,26 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '@/lib/db';
 
 export const DEFAULT_OWNER_USER_ID = 'liuweixin';
+export const GUEST_USER_ID = 'guest';
 const SESSION_COOKIE = 'inneros_session';
 
 export interface AuthUser {
   id: string;
   name: string;
-  email: string;
+  username: string;
+  isGuest?: boolean;
+}
+
+function getGuestUser(): AuthUser {
+  const now = new Date().toISOString();
+  getDb().prepare(`
+    INSERT OR IGNORE INTO users (id, name, username, email, password_hash, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(GUEST_USER_ID, '游客', 'guest', 'guest@inneros.local', 'guest-disabled', now, now);
+  const row = getDb()
+    .prepare('SELECT id, name, username FROM users WHERE id = ?')
+    .get(GUEST_USER_ID) as AuthUser | undefined;
+  return { ...(row || { id: GUEST_USER_ID, name: '游客', username: 'guest' }), isGuest: true };
 }
 
 function sessionSecret(): Uint8Array {
@@ -31,34 +45,34 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export function findUserByEmail(email: string): (AuthUser & { password_hash: string }) | null {
-  const normalized = email.trim().toLowerCase();
+export function findUserByUsername(username: string): (AuthUser & { password_hash: string }) | null {
+  const normalized = username.trim().toLowerCase();
   const row = getDb()
-    .prepare('SELECT id, name, email, password_hash FROM users WHERE email = ?')
+    .prepare('SELECT id, name, username, password_hash FROM users WHERE username = ?')
     .get(normalized) as (AuthUser & { password_hash: string }) | undefined;
   return row || null;
 }
 
-export async function createUser(input: { name: string; email: string; password: string }): Promise<AuthUser> {
+export async function createUser(input: { name: string; username: string; password: string }): Promise<AuthUser> {
   const db = getDb();
   const now = new Date().toISOString();
   const user: AuthUser & { password_hash: string } = {
     id: uuidv4(),
     name: input.name.trim(),
-    email: input.email.trim().toLowerCase(),
+    username: input.username.trim().toLowerCase(),
     password_hash: await hashPassword(input.password),
   };
 
   db.prepare(
-    `INSERT INTO users (id, name, email, password_hash, created_at, updated_at)
-     VALUES (@id, @name, @email, @password_hash, @created_at, @updated_at)`
-  ).run({ ...user, created_at: now, updated_at: now });
+    `INSERT INTO users (id, name, username, email, password_hash, created_at, updated_at)
+     VALUES (@id, @name, @username, @email, @password_hash, @created_at, @updated_at)`
+  ).run({ ...user, email: `${user.username}@inneros.local`, created_at: now, updated_at: now });
 
-  return { id: user.id, name: user.name, email: user.email };
+  return { id: user.id, name: user.name, username: user.username };
 }
 
 export async function setSessionCookie(user: AuthUser): Promise<void> {
-  const token = await new SignJWT({ name: user.name, email: user.email })
+  const token = await new SignJWT({ name: user.name, username: user.username })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(user.id)
     .setIssuedAt()
@@ -87,12 +101,37 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
   try {
     const { payload } = await jwtVerify(token, sessionSecret());
-    if (!payload.sub || typeof payload.email !== 'string' || typeof payload.name !== 'string') {
+    if (!payload.sub || typeof payload.name !== 'string') {
       return null;
     }
-    return { id: payload.sub, name: payload.name, email: payload.email };
+    const username = typeof payload.username === 'string' ? payload.username : payload.sub;
+    return { id: payload.sub, name: payload.name, username, isGuest: payload.sub === GUEST_USER_ID };
   } catch {
     return null;
   }
 }
 
+export async function getCurrentUserOrGuest(): Promise<AuthUser> {
+  const user = await getCurrentUser();
+  return user || getGuestUser();
+}
+
+export function updateUserProfile(userId: string, input: { name: string; username: string }): AuthUser | null {
+  if (userId === GUEST_USER_ID) return null;
+  const db = getDb();
+  const name = input.name.trim();
+  const username = input.username.trim().toLowerCase();
+  const now = new Date().toISOString();
+  const result = db.prepare(
+    'UPDATE users SET name = ?, username = ?, email = ?, updated_at = ? WHERE id = ?'
+  ).run(name, username, `${username}@inneros.local`, now, userId);
+  if (result.changes === 0) return null;
+  return { id: userId, name, username };
+}
+
+export async function updateUserPassword(userId: string, password: string): Promise<void> {
+  if (userId === GUEST_USER_ID) return;
+  const passwordHash = await hashPassword(password);
+  getDb().prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
+    .run(passwordHash, new Date().toISOString(), userId);
+}

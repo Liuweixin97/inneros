@@ -16,9 +16,9 @@ import type { LLMMessage } from '@/lib/ai/gateway';
 const LOCATION_NAMES: Record<MapLocation, string> = {
   cabin: '亮灯木屋',
   garden: '记忆花园',
-  fireside: '篝火地',
-  pond: '静水池塘',
-  workshop: '共居工坊',
+  fireside: '苔灯火边',
+  pond: '静水池',
+  reflection_table: '观照桌',
   forest: '记忆林',
   hillside: '山坡远望台',
 };
@@ -28,14 +28,22 @@ const DIALOGUE_MODE_INSTRUCTIONS: Record<DialogueMode, string> = {
 - 以复述与确认理解为主，少问问题
 - 每次回复不超过 120 字
 - 用「我听到你说……」「我注意到……」等句式
-- 不主动引导，不给建议，只陪伴`,
+- 不主动引导，不给建议，只陪伴
+
+示例：
+用户：最近总觉得很累，啥都不想做。
+苔灯：我听到你说“什么都不想做”——这种累可能不是懒，而是真的需要停下来。`,
 
   ask: `你现在处于「问我一点」模式。
 - 一次只问一个具体、简短的问题
 - 优先问关于过去发生的事实和当时感受
 - 不问空泛的未来假设（如「你觉得以后会怎样？」）
 - 允许用户说「一会儿再说」，不追问
-- 每次回复不超过 80 字（含问题）`,
+- 每次回复不超过 80 字（含问题）
+
+示例：
+用户：我今天和同事吐槽了一些事。
+苔灯：吐槽的时候，对方是怎么回应你的？`,
 
   organize: `你现在处于「一起整理」模式。
 - 保持自然对话，不输出表格、三栏模板、编号清单或结构化表单
@@ -44,7 +52,11 @@ const DIALOGUE_MODE_INSTRUCTIONS: Record<DialogueMode, string> = {
 - 引用记录时用自然语言说明来源，不展示系统字段
 - 必须用「这是我的理解，不一定准确」等表达区分推测
 - 用户可以改写、否定或停在任何一步，不要求形成完整总结
-- 每次回复不超过 120 字`,
+- 每次回复不超过 120 字
+
+示例：
+用户：上周和朋友吵架了，记录里有写。
+苔灯：你的记录里提到了这件事。先说说当时具体发生了什么？我们慢慢看。`,
 
   silent: `你现在处于「只陪我坐着」模式。
 - 极少生成文字，最多一两句非常简短的环境感受
@@ -90,6 +102,7 @@ ${modeInstruction}
 </dialogue_mode>${memoContext}
 
 <boundaries>
+0. 你只能基于 <authorized_memories> 和本次对话回应；如果没有授权记忆，必须请用户先带入 1-3 段记忆。
 1. 严格区分三类内容：
    - 「事实」= 记录中明确写到的
    - 「用户表达」= 用户在本次对话中说的
@@ -101,13 +114,15 @@ ${modeInstruction}
 6. 不使用「你一定」「你必须」「你应该」等命令式表达
 7. 遇到明确的自伤或危机表达时，退出游戏角色，简短提示寻求现实帮助
 8. 不诱导延长对话
+9. 不给人生建议，只照亮可能的关系、重复、情绪和问题线索
 </boundaries>
 
 你的回复必须真实、简短、有温度，不要表现得像一个客服机器人或心理咨询师。`;
 
   const messages: LLMMessage[] = [
     { role: 'system', content: systemPrompt },
-    ...(context.conversationHistory ?? []),
+    // 对话历史裁剪：超过 8 轮时保留首条 + 最近 6 轮
+    ...trimConversationHistory(context.conversationHistory ?? []),
     { role: 'user', content: userInput },
   ];
 
@@ -124,7 +139,11 @@ export function parseCompanionOutput(rawText: string): {
   suggestedActions: string[];
 } {
   // 检测推断标志词
-  const inferenceKeywords = ['我的猜测', '也许', '可能是', '我推测', '我猜'];
+  const inferenceKeywords = [
+    '我的猜测', '也许', '可能是', '我推测', '我猜',
+    '看起来', '似乎', '或许', '不一定准确',
+    '我的理解', '如果我没理解错', '听起来像是',
+  ];
   const isInference = inferenceKeywords.some((k) => rawText.includes(k));
 
   // 检测建议动作
@@ -141,4 +160,13 @@ export function parseCompanionOutput(rawText: string): {
     isInference,
     suggestedActions,
   };
+}
+
+/**
+ * 对话历史裁剪：超过 8 轮时保留首条 + 最近 6 轮
+ */
+function trimConversationHistory(history: LLMMessage[]): LLMMessage[] {
+  if (history.length <= 8) return history;
+  // 保留第一条（通常是用户的开场白）+ 最后 6 条
+  return [history[0], ...history.slice(-6)];
 }

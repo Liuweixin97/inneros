@@ -99,3 +99,4 @@ jobs:
             docker pull ${{ env.IMAGE_NAME }}:latest
             docker compose up -d
             docker compose exec -T inneros node scripts/seed-owner.mjs
+            docker compose exec -T inneros npm run cleanup:guest

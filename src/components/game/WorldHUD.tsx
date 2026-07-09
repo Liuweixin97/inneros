@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Flame, Flower2, Hammer, Home, Settings, Trees, Waves } from 'lucide-react';
+import { ArrowLeft, Flame, Flower2, GitBranch, Home, Settings, Sprout, Trees, Waves } from 'lucide-react';
 import type { CompanionType, GamePhase, GameWorld, Memo } from '@/types';
 import { getPlayerLocation, getRegion } from '@/lib/game/map';
 import BagHUD from './BagHUD';
@@ -15,7 +15,6 @@ interface WorldHUDProps {
   bagMemoIds: string[];
   onRemoveFromBag: (memoId: string) => void;
   onOpenFireside: () => void;
-  onOpenLightTrail: () => void;
   onOpenSettings: () => void;
   onExit: () => void;
 }
@@ -29,7 +28,6 @@ export default function WorldHUD({
   bagMemoIds,
   onRemoveFromBag,
   onOpenFireside,
-  onOpenLightTrail,
   onOpenSettings,
   onExit,
 }: WorldHUDProps) {
@@ -43,8 +41,8 @@ export default function WorldHUD({
         ? Flame
         : region?.id === 'pond'
           ? Waves
-          : region?.id === 'workshop'
-            ? Hammer
+          : region?.id === 'reflection_table'
+            ? GitBranch
             : Trees;
 
   return (
@@ -58,7 +56,7 @@ export default function WorldHUD({
           <strong style={{ color: region?.color ?? 'var(--game-warm-light)' }}>
             {region?.name ?? '林间世界'}
           </strong>
-          <small>{region?.subtitle ?? '独自漫游'}</small>
+          <small>{region?.subtitle ?? '从入林长椅开始'}</small>
         </span>
       </div>
 
@@ -83,21 +81,21 @@ export default function WorldHUD({
 
       {/* 右上：操作按钮 */}
       <div className="game-hud-actions">
-        <button type="button" onClick={onOpenSettings} aria-label="打开游戏设置">
+        <button type="button" onClick={onOpenSettings} aria-label="打开林间设置">
           <Settings size={17} strokeWidth={1.7} />
         </button>
         <button type="button" onClick={onExit}>
           <ArrowLeft size={16} strokeWidth={1.7} />
-          <span>回到 InnerOS</span>
+          <span>离开林间</span>
         </button>
       </div>
 
-      {/* 底部操控说明（桌面端） */}
+      {/* 底部路径提示（桌面端） */}
       <div className="game-control-legend">
-        <span><kbd>WASD</kbd> 移动</span>
-        <span><kbd>E</kbd> 互动</span>
-        <span><kbd>Q</kbd> 行囊</span>
-        <span><kbd>Esc</kbd> 设置</span>
+        <span><Trees size={12} /> 入林长椅</span>
+        <span><Sprout size={12} /> 记忆花园</span>
+        <span><GitBranch size={12} /> 观照桌</span>
+        <span><Home size={12} /> 亮灯木屋</span>
       </div>
 
       <BagHUD
@@ -106,7 +104,6 @@ export default function WorldHUD({
         onRemove={onRemoveFromBag}
         onOpenFireside={onOpenFireside}
         companionInvited={companionType === 'llm'}
-        onOpenLightTrail={onOpenLightTrail}
       />
     </div>
   );

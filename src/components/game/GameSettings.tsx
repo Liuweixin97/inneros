@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import type { CompanionType, GameWorld } from '@/types';
+import type { GameWorld } from '@/types';
 import { CHARACTER_PRESETS } from '@/lib/game/sprite';
 import { updateSettings } from '@/lib/game/world-state';
 
@@ -12,8 +12,6 @@ interface GameSettingsProps {
   onReducedMotionChange: (v: boolean) => void;
   currentCharId: string;
   onCharacterChange: (charId: string) => void;
-  companionType: CompanionType;
-  onCompanionTypeChange: (t: CompanionType) => void;
   onExit: () => void;
   onClose: () => void;
 }
@@ -55,7 +53,7 @@ export default function GameSettings({
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 w-[380px] max-h-[90vh] overflow-y-auto"
         role="dialog"
-        aria-label="游戏设置"
+        aria-label="林间设置"
       >
         <div className="chat-woodframe rounded-lg p-6">
           <div className="flex items-center justify-between mb-5">
@@ -149,7 +147,7 @@ export default function GameSettings({
             <section>
               <p className="text-[11px] mb-2.5" style={{ color: 'var(--game-hud-muted)' }}>操控方式</p>
               <div className="flex flex-col gap-1.5 text-[11px]" style={{ color: 'var(--game-hud-muted)' }}>
-                {[['移动', 'WASD / 方向键'], ['互动', 'E / Enter / Space'], ['此菜单', 'Esc'], ['移动端', '左下摇杆 / 右下互动']].map(([l, k]) => (
+                {[['移动', '方向键 / 触控摇杆'], ['互动', 'E / Enter / Space'], ['此菜单', 'Esc'], ['移动端', '左下摇杆 / 右下互动']].map(([l, k]) => (
                   <div key={l} className="flex justify-between"><span>{l}</span><span>{k}</span></div>
                 ))}
               </div>
@@ -165,7 +163,7 @@ export default function GameSettings({
               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,243,196,0.15)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,243,196,0.08)'; }}
             >
-              返回 InnerOS
+              离开林间
             </button>
             <p className="text-center text-[10px]" style={{ color: 'var(--game-hud-muted)' }}>
               这里会保持原样，等你愿意再回来。
