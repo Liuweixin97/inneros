@@ -45,7 +45,8 @@ function validateTopicSummary(raw: Record<string, unknown>): TopicSummaryResult 
 
 export async function summarizeTopic(
   topicName: string,
-  memos: Array<Record<string, unknown>>
+  memos: Array<Record<string, unknown>>,
+  userId?: string,
 ): Promise<TopicSummaryResult> {
   if (memos.length === 0) {
     return {
@@ -94,6 +95,7 @@ ${context}
     },
   ], {
     task: 'topic.summarize',
+    user_id: userId,
     temperature: 0.4,
     max_tokens: 1200,
     json: true,

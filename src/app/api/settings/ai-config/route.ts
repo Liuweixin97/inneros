@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
     const baseUrl = process.env.AI_BASE_URL || 'https://api.deepseek.com';
     const model = process.env.AI_MODEL || 'deepseek-v4-flash';
     const apiKey = process.env.AI_API_KEY || '';

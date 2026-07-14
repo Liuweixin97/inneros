@@ -8,7 +8,7 @@ import { BrainCircuit } from 'lucide-react';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(searchParams.get('mode') === 'register' ? 'register' : 'login');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -19,23 +19,30 @@ function LoginForm() {
     event.preventDefault();
     setSubmitting(true);
     setError('');
-    const response = await fetch(`/api/auth/${mode}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, username, password }),
-    });
-    const data = await response.json().catch(() => ({}));
-    setSubmitting(false);
-    if (!response.ok) {
-      setError(data.error || '登录失败');
-      return;
+    try {
+      const response = await fetch(`/api/auth/${mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, username, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(data.error || (mode === 'login' ? '登录失败' : '注册失败'));
+        return;
+      }
+      const requestedNext = searchParams.get('next');
+      const destination = requestedNext?.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/';
+      router.replace(destination);
+      router.refresh();
+    } catch {
+      setError('网络连接失败，请稍后重试');
+    } finally {
+      setSubmitting(false);
     }
-    router.replace(searchParams.get('next') || '/');
-    router.refresh();
   }
 
   return (
-    <main className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center px-4">
+    <main className="auth-page min-h-screen bg-[var(--color-bg)] flex items-center justify-center px-4">
       <form onSubmit={submit} className="w-full max-w-sm border border-[var(--color-border-light)] bg-[var(--color-bg-card)] rounded-2xl p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)] text-white flex items-center justify-center">
@@ -50,13 +57,17 @@ function LoginForm() {
         {mode === 'register' && (
           <label className="block mb-3">
             <span className="block text-xs text-[var(--color-text-muted)] mb-1">昵称</span>
-            <input value={name} onChange={(event) => setName(event.target.value)} className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]" />
+            <input value={name} onChange={(event) => setName(event.target.value)} required maxLength={50} autoComplete="name" className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]" />
           </label>
         )}
         <label className="block mb-3">
           <span className="block text-xs text-[var(--color-text-muted)] mb-1">账户名</span>
           <input
             value={username}
+            required
+            minLength={3}
+            maxLength={32}
+            autoFocus
             autoComplete="username"
             onChange={(event) => setUsername(event.target.value.trim().toLowerCase())}
             className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]"
@@ -64,16 +75,16 @@ function LoginForm() {
         </label>
         <label className="block mb-4">
           <span className="block text-xs text-[var(--color-text-muted)] mb-1">密码</span>
-          <input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]" />
+          <input type="password" required minLength={8} maxLength={128} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-transparent outline-none focus:border-[var(--color-primary)]" />
         </label>
 
-        {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+        {error && <p className="text-sm text-red-500 mb-3" role="alert" aria-live="polite">{error}</p>}
 
         <button disabled={submitting} className="w-full rounded-lg bg-[var(--color-primary)] text-white py-2.5 text-sm font-medium disabled:opacity-60">
           {submitting ? '处理中...' : mode === 'login' ? '登录' : '注册'}
         </button>
 
-        <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="w-full mt-3 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
+        <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }} className="w-full mt-3 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
           {mode === 'login' ? '没有账户？注册' : '已有账户？登录'}
         </button>
       </form>

@@ -4,15 +4,20 @@ import {
   getAnalysisBackfillStats,
 } from '@/lib/db/analysis-jobs';
 import { drainBackfillJobs } from '@/lib/ai/job-runner';
+import { getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function GET() {
-  return NextResponse.json(getAnalysisBackfillStats());
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+  return NextResponse.json(getAnalysisBackfillStats(user.id));
 }
 
 export async function POST(request: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
   const body = await request.json().catch(() => ({})) as {
     enqueue_limit?: number;
     extract_limit?: number;
@@ -24,18 +29,19 @@ export async function POST(request: NextRequest) {
   };
   const enqueued = enqueueAnalysisBackfill(
     Math.max(1, Math.min(5000, Number(body.enqueue_limit) || 500)),
+    user.id,
   );
   const processed = await drainBackfillJobs({
     extractLimit: Number(body.extract_limit) || 100,
-    extractConcurrency: Number(body.extract_concurrency) || 16,
+    extractConcurrency: Number(body.extract_concurrency) || 4,
     memoryLimit: Number(body.memory_limit) || 100,
-    memoryConcurrency: Number(body.memory_concurrency) || 4,
+    memoryConcurrency: Number(body.memory_concurrency) || 2,
     embeddingLimit: Number(body.embedding_limit) || 100,
-    embeddingConcurrency: Number(body.embedding_concurrency) || 6,
-  });
+    embeddingConcurrency: Number(body.embedding_concurrency) || 3,
+  }, user.id);
   return NextResponse.json({
     enqueued,
     processed,
-    stats: getAnalysisBackfillStats(),
+    stats: getAnalysisBackfillStats(user.id),
   });
 }

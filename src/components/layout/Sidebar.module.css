@@ -1,0 +1,69 @@
+.forestLink {
+  position: relative;
+  display: grid;
+  min-height: 82px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-border) 76%, #315446 24%);
+  border-radius: 14px;
+  background: #102a28;
+  color: #f6f1df;
+  isolation: isolate;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+
+.forestLink::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: url('/game/twilight-world-map-v3.png') 30% 48% / 170% auto no-repeat;
+  transition: transform 360ms ease;
+}
+
+.forestLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, rgba(5, 18, 18, 0.92), rgba(5, 18, 18, 0.34));
+}
+
+.forestLink:hover {
+  border-color: rgba(191, 159, 93, 0.62);
+  transform: translateY(-1px);
+}
+
+.forestLink:hover::before {
+  transform: scale(1.025);
+}
+
+.forestContent {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 14px;
+}
+
+.forestTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.forestContent small {
+  margin-top: 2px;
+  color: rgba(246, 241, 223, 0.62);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forestLink,
+  .forestLink::before {
+    transition: none;
+  }
+}

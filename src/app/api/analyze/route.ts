@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { enqueueMemoAnalysis, getAnalysisJob } from '@/lib/db/analysis-jobs';
 import { drainAnalysisJobs } from '@/lib/ai/job-runner';
-import { getMemoById } from '@/lib/db/memos';
+import { getMemoById, getMemoByIdForUser } from '@/lib/db/memos';
+import { getCurrentUser } from '@/lib/auth';
 
 interface AnalyzeRequestBody {
   memo_id?: string;
@@ -13,6 +14,8 @@ export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) return Response.json({ error: '未登录' }, { status: 401 });
     const body = await request.json() as AnalyzeRequestBody;
     const ids = body.memo_id
       ? [body.memo_id]
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     const notFound: string[] = [];
     const jobs = ids.flatMap((id) => {
-      const memo = getMemoById(id);
+      const memo = getMemoByIdForUser(id, user.id);
       if (!memo) {
         notFound.push(id);
         return [];
@@ -40,7 +43,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: '未找到任何笔记', not_found: notFound }, { status: 404 });
     }
 
-    await drainAnalysisJobs(Math.max(10, jobs.length));
+    await drainAnalysisJobs(Math.max(10, jobs.length), 4, user.id);
     const updatedJobs = jobs.map((job) => getAnalysisJob(job.id));
     const succeededIds = updatedJobs
       .filter((job) => job?.status === 'succeeded')
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
     const updatedMemos = succeededIds.map((id) => getMemoById(id)).filter(Boolean);
 
     if (ids.length === 1) {
-      const memo = getMemoById(ids[0]);
+      const memo = getMemoByIdForUser(ids[0], user.id);
       const job = updatedJobs[0];
       if (!job || job.status !== 'succeeded') {
         return Response.json({

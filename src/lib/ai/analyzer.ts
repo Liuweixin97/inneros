@@ -115,7 +115,7 @@ function validateAnalysisResult(raw: Record<string, unknown>): AnalysisResult {
 /**
  * 分析单条 Memo 内容，返回结构化结果
  */
-export async function analyzeMemo(content: string): Promise<AnalysisResult> {
+export async function analyzeMemo(content: string, userId?: string): Promise<AnalysisResult> {
   if (!content.trim()) {
     throw new Error('Memo 内容为空，无法分析');
   }
@@ -123,9 +123,13 @@ export async function analyzeMemo(content: string): Promise<AnalysisResult> {
   let topicVocabulary: string[] = [];
   try {
     const { getDb } = await import('@/lib/db');
-    topicVocabulary = (getDb().prepare(
-      'SELECT name FROM topics WHERE memo_count >= 2 ORDER BY memo_count DESC, last_seen_at DESC LIMIT 60',
-    ).all() as { name: string }[]).map((row) => row.name);
+    topicVocabulary = (getDb().prepare(`
+      SELECT name FROM topics
+      WHERE memo_count >= 2
+        ${userId ? 'AND user_id = @userId' : ''}
+      ORDER BY memo_count DESC, last_seen_at DESC
+      LIMIT 60
+    `).all(userId ? { userId } : {}) as { name: string }[]).map((row) => row.name);
   } catch {
     // Topic reuse is an optimization; analysis remains available without it.
   }
@@ -142,6 +146,7 @@ export async function analyzeMemo(content: string): Promise<AnalysisResult> {
 
   const response = await chatCompletion(messages, {
     task: 'memo.extract',
+    user_id: userId,
     temperature: 0.3, // 结构化任务用低温度
     max_tokens: 1024,
     json: true,
@@ -179,7 +184,8 @@ export async function analyzeMemos(
       // 标记为分析中
       await updateMemo(memo.id, { analysis_status: 'analyzing' });
 
-      const result = await analyzeMemo(memo.content);
+      const existing = await getMemoById(memo.id);
+      const result = await analyzeMemo(memo.content, existing?.user_id);
 
       // 更新 DB
       await updateMemo(memo.id, {

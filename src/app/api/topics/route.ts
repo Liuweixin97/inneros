@@ -9,9 +9,9 @@ async function fillMissingSummaries(userId: string) {
 
   const promises = missing.map(async (topic) => {
     try {
-      const memos = getMemosForTopicName(topic.name, 24);
+      const memos = getMemosForTopicName(topic.name, 24, userId);
       if (memos.length === 0) return;
-      const summary = await summarizeTopic(topic.name, memos);
+      const summary = await summarizeTopic(topic.name, memos, userId);
       updateTopic(topic.id, summary);
     } catch (error) {
       console.warn(`[Topics API] 生成主题摘要失败: ${topic.name}`, error);

@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import type { TodayDigest, TodayEmotion } from '@/types';
+import { useCurrentUser } from '@/components/auth/UserProvider';
 
 const FEELING_COLORS = ['#27c89b', '#7c6ee6', '#f4ad55', '#e76f83'];
 
@@ -50,6 +51,7 @@ function cleanAnchorTitle(value: string): string {
 }
 
 export default function TodayPage() {
+  const user = useCurrentUser();
   const [digest, setDigest] = useState<TodayDigest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -144,7 +146,7 @@ export default function TodayPage() {
           <div>
             <p className="mb-1 text-[13px] text-[var(--color-text-muted)]">{formatDate()}</p>
             <h1 className="text-[28px] font-semibold tracking-tight text-[var(--color-text-strong)] md:text-[34px]">
-              {getGreeting()}，炜鑫
+              {getGreeting()}，{user?.name || '你好'}
             </h1>
             <p className="mt-1.5 text-[13px] text-[var(--color-text-secondary)]">
               先留下真实发生的，再看看最近的自己。

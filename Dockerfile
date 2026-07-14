@@ -2,7 +2,7 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache python3 make g++ sqlite
 COPY package.json package-lock.json ./
-RUN npm install
+RUN npm ci
 
 FROM node:22-alpine AS builder
 WORKDIR /app
@@ -24,4 +24,6 @@ COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
 RUN mkdir -p /app/.data
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1
 CMD ["node", "server.js"]

@@ -94,7 +94,7 @@ export function rebuildTopicsFromMemos(userId?: string): Topic[] {
   return getTopics(userId);
 }
 
-export function getMemosForTopicName(name: string, limit: number = 30) {
+export function getMemosForTopicName(name: string, limit: number = 30, userId?: string) {
   const rows = getDb()
     .prepare(
       `SELECT id, plain_text, created_at, ai_title, ai_summary, ai_topics, ai_emotions, ai_people, ai_projects, ai_actions, ai_key_questions
@@ -102,10 +102,11 @@ export function getMemosForTopicName(name: string, limit: number = 30) {
        WHERE ai_topics LIKE @topic
          AND analysis_status = 'done'
          AND privacy_level = 'normal'
+         ${userId ? 'AND user_id = @userId' : ''}
        ORDER BY created_at DESC
        LIMIT @limit`
     )
-    .all({ topic: `%"${name}"%`, limit }) as Array<{
+    .all(userId ? { topic: `%"${name}"%`, limit, userId } : { topic: `%"${name}"%`, limit }) as Array<{
       id: string;
       plain_text: string;
       created_at: string;

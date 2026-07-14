@@ -71,10 +71,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (body.content.length > 100_000) {
+      return NextResponse.json({ error: '单条笔记不能超过 10 万字符' }, { status: 413 });
+    }
 
     const memo = createMemo({ ...body, user_id: user.id });
     enqueueMemoAnalysis(memo.id);
-    after(() => drainAnalysisJobs(5, 2));
+    after(() => drainAnalysisJobs(5, 2, user.id));
 
     return NextResponse.json(memo, { status: 201 });
   } catch (error) {

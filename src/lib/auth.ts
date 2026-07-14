@@ -1,40 +1,16 @@
 import 'server-only';
 
 import bcrypt from 'bcryptjs';
-import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '@/lib/db';
+import { createSessionToken, SESSION_COOKIE, verifySessionToken } from '@/lib/session';
 
 export const DEFAULT_OWNER_USER_ID = 'liuweixin';
-export const GUEST_USER_ID = 'guest';
-const SESSION_COOKIE = 'inneros_session';
-
 export interface AuthUser {
   id: string;
   name: string;
   username: string;
-  isGuest?: boolean;
-}
-
-function getGuestUser(): AuthUser {
-  const now = new Date().toISOString();
-  getDb().prepare(`
-    INSERT OR IGNORE INTO users (id, name, username, email, password_hash, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(GUEST_USER_ID, '游客', 'guest', 'guest@inneros.local', 'guest-disabled', now, now);
-  const row = getDb()
-    .prepare('SELECT id, name, username FROM users WHERE id = ?')
-    .get(GUEST_USER_ID) as AuthUser | undefined;
-  return { ...(row || { id: GUEST_USER_ID, name: '游客', username: 'guest' }), isGuest: true };
-}
-
-function sessionSecret(): Uint8Array {
-  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error('AUTH_SECRET must be set to at least 32 characters');
-  }
-  return new TextEncoder().encode(secret);
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -72,12 +48,7 @@ export async function createUser(input: { name: string; username: string; passwo
 }
 
 export async function setSessionCookie(user: AuthUser): Promise<void> {
-  const token = await new SignJWT({ name: user.name, username: user.username })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setSubject(user.id)
-    .setIssuedAt()
-    .setExpirationTime('30d')
-    .sign(sessionSecret());
+  const token = await createSessionToken(user);
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
@@ -100,24 +71,13 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, sessionSecret());
-    if (!payload.sub || typeof payload.name !== 'string') {
-      return null;
-    }
-    const username = typeof payload.username === 'string' ? payload.username : payload.sub;
-    return { id: payload.sub, name: payload.name, username, isGuest: payload.sub === GUEST_USER_ID };
+    return await verifySessionToken(token);
   } catch {
     return null;
   }
 }
 
-export async function getCurrentUserOrGuest(): Promise<AuthUser> {
-  const user = await getCurrentUser();
-  return user || getGuestUser();
-}
-
 export function updateUserProfile(userId: string, input: { name: string; username: string }): AuthUser | null {
-  if (userId === GUEST_USER_ID) return null;
   const db = getDb();
   const name = input.name.trim();
   const username = input.username.trim().toLowerCase();
@@ -130,7 +90,6 @@ export function updateUserProfile(userId: string, input: { name: string; usernam
 }
 
 export async function updateUserPassword(userId: string, password: string): Promise<void> {
-  if (userId === GUEST_USER_ID) return;
   const passwordHash = await hashPassword(password);
   getDb().prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
     .run(passwordHash, new Date().toISOString(), userId);

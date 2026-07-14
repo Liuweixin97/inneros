@@ -16,7 +16,7 @@ const tabs = [
 export default function MobileNav() {
   const pathname = usePathname();
 
-  if (pathname.startsWith('/cocreate')) return null;
+  if (pathname.startsWith('/forest') || pathname === '/login') return null;
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';

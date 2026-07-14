@@ -6,11 +6,15 @@ import {
   previewMemoryRebuild,
   rollbackMemoryRebuild,
 } from '@/lib/db/memory-rebuilds';
+import { DEFAULT_OWNER_USER_ID, getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+  if (user.id !== DEFAULT_OWNER_USER_ID) return NextResponse.json({ error: '无权执行系统维护' }, { status: 403 });
   const id = request.nextUrl.searchParams.get('id');
   const run = id ? getMemoryRebuildRun(id) : getLatestMemoryRebuildRun();
   return NextResponse.json(run ?? { status: 'none' }, { status: run ? 200 : 404 });
@@ -18,6 +22,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    if (user.id !== DEFAULT_OWNER_USER_ID) return NextResponse.json({ error: '无权执行系统维护' }, { status: 403 });
     const body = await request.json().catch(() => ({})) as {
       action?: 'preview' | 'apply' | 'rollback';
       id?: string;

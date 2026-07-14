@@ -422,6 +422,7 @@ export function searchMemosByTerms(
   query: string,
   terms: MemoSearchTerm[],
   limit: number = 20,
+  userId?: string,
 ): RankedMemoSearchResult[] {
   const normalizedTerms = [...new Map(
     terms
@@ -445,6 +446,7 @@ export function searchMemosByTerms(
     'original_tags',
   ];
   const params: Record<string, unknown> = {};
+  if (userId) params.userId = userId;
   const conditions = normalizedTerms.map((term, index) => {
     params[`term${index}`] = `%${term.value}%`;
     return `(${searchableFields.map((field) => `${field} LIKE @term${index}`).join(' OR ')})`;
@@ -452,6 +454,7 @@ export function searchMemosByTerms(
   const rows = getDb().prepare(`
     SELECT * FROM memos
     WHERE privacy_level = 'normal'
+      ${userId ? 'AND user_id = @userId' : ''}
       AND (${conditions.join(' OR ')})
   `).all(params) as Record<string, unknown>[];
 
@@ -499,6 +502,7 @@ export function searchMemosByEmbedding(
   queryEmbedding: number[],
   limit: number = 20,
   minimumSimilarity: number = 0.32,
+  userId?: string,
 ): RankedMemoSearchResult[] {
   if (queryEmbedding.length === 0) return [];
   const queryMagnitude = Math.sqrt(
@@ -516,8 +520,9 @@ export function searchMemosByEmbedding(
     FROM memo_chunks c
     JOIN memos m ON m.id = c.memo_id
     WHERE m.privacy_level = 'normal'
+      ${userId ? 'AND m.user_id = @userId' : ''}
       AND c.embedding_version LIKE 'memo-chunks-v2:%'
-  `).all() as Array<Record<string, unknown> & {
+  `).all(userId ? { userId } : {}) as Array<Record<string, unknown> & {
     matched_chunk_index: number;
     matched_chunk_start: number;
     matched_chunk_content: string;
@@ -569,16 +574,18 @@ export function searchMemosByEmbedding(
 export function getRecentActionMemos(
   limit: number = 20,
   maximumAgeDays: number = 400,
+  userId?: string,
 ): RankedMemoSearchResult[] {
   const cutoff = new Date(Date.now() - maximumAgeDays * 86_400_000).toISOString();
   const rows = getDb().prepare(`
     SELECT * FROM memos
     WHERE privacy_level = 'normal'
       AND created_at >= ?
+      ${userId ? 'AND user_id = ?' : ''}
       AND (ai_actions != '[]' OR ai_key_questions != '[]' OR ai_projects != '[]')
     ORDER BY created_at DESC
     LIMIT ?
-  `).all(cutoff, limit) as Record<string, unknown>[];
+  `).all(...(userId ? [cutoff, userId, limit] : [cutoff, limit])) as Record<string, unknown>[];
   const now = Date.now();
   return rows.map((row) => {
     const memo = parseMemoRow(row);

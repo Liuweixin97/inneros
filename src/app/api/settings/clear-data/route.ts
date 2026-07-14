@@ -1,29 +1,16 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db/index';
+import { getCurrentUser } from '@/lib/auth';
+import { clearUserData } from '@/lib/db/user-data';
 
 export async function POST() {
   try {
-    const db = getDb();
-
-    // Delete all data in the correct order (respecting foreign keys)
-    db.exec(`
-      DELETE FROM analysis_jobs;
-      DELETE FROM llm_runs;
-      DELETE FROM ai_cache;
-      DELETE FROM action_feedback;
-      DELETE FROM memory_relations;
-      DELETE FROM memory_evidence;
-      DELETE FROM memory_items;
-      DELETE FROM messages;
-      DELETE FROM conversations;
-      DELETE FROM insights;
-      DELETE FROM topics;
-      DELETE FROM memos;
-    `);
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    clearUserData(user.id);
 
     return NextResponse.json({
       success: true,
-      message: '所有数据已清除',
+      message: '当前账户数据已清除',
     });
   } catch (error) {
     console.error('POST /api/settings/clear-data error:', error);

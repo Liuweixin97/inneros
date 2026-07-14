@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Sun,
   FileText,
@@ -13,7 +13,10 @@ import {
   PenLine,
   Sparkles,
   ArrowUpRight,
+  LogOut,
 } from 'lucide-react';
+import styles from './Sidebar.module.css';
+import { useCurrentUser } from '@/components/auth/UserProvider';
 
 interface NavItem {
   id: string;
@@ -33,9 +36,20 @@ const navItems: NavItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const isCoCreate = pathname.startsWith('/cocreate');
+  const router = useRouter();
+  const user = useCurrentUser();
+  const isForest = pathname.startsWith('/forest');
 
-  if (isCoCreate) return null;
+  if (isForest || pathname === '/login') return null;
+
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      router.replace('/login');
+      router.refresh();
+    }
+  };
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -156,18 +170,16 @@ export default function Sidebar() {
 
       <div className="px-3 pb-3">
         <Link
-          href="/cocreate"
-          id="sidebar-cocreate-btn"
-          className="forest-portal-card"
+          href="/forest"
+          id="sidebar-forest-btn"
+          className={styles.forestLink}
         >
-          <span className="forest-portal-card__image" aria-hidden="true" />
-          <span className="forest-portal-card__shade" aria-hidden="true" />
-          <span className="forest-portal-card__content">
-            <span className="forest-portal-card__title">
+          <span className={styles.forestContent}>
+            <span className={styles.forestTitle}>
               <strong>林间世界</strong>
               <ArrowUpRight size={15} strokeWidth={1.7} />
             </span>
-            <small>由你的经历慢慢长成</small>
+            <small>换一条路，看见同一个自己</small>
           </span>
         </Link>
       </div>
@@ -181,16 +193,25 @@ export default function Sidebar() {
             flex items-center justify-center
             text-white text-xs font-bold
           ">
-            W
+            {(user?.name || user?.username || '?').slice(0, 1).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[12px] font-medium text-[var(--color-text-primary)] truncate">
-              炜鑫
+              {user?.name || 'InnerOS 用户'}
             </p>
             <p className="text-[10px] text-[var(--color-text-muted)] truncate">
-              本地模式
+              @{user?.username || 'unknown'}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="rounded-lg p-2 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
+            aria-label="退出登录"
+            title="退出登录"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </aside>

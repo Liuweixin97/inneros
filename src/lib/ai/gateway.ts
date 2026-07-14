@@ -14,7 +14,8 @@ export type LLMTask =
   | 'memory.link'
   | 'memory.reconcile'
   | 'action.infer-outcome'
-  | 'profile.consolidate';
+  | 'profile.consolidate'
+  | 'forest.reflect';
 
 export interface LLMMessage {
   role: string;
@@ -161,18 +162,20 @@ function recordRun(input: {
   usage?: LLMUsage | null;
   error?: unknown;
   thinking?: LLMThinkingMode;
+  userId?: string;
 }) {
   try {
     // Keep observability best-effort so a logging failure never breaks the AI feature.
     const usage = input.usage;
     getDb().prepare(`
       INSERT INTO llm_runs (
-        id, task, model, thinking_mode, status, latency_ms,
+        id, user_id, task, model, thinking_mode, status, latency_ms,
         prompt_tokens, completion_tokens, total_tokens,
         cache_hit_tokens, cache_miss_tokens, error_message, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       input.runId,
+      input.userId || 'liuweixin',
       input.task,
       input.model,
       input.thinking ?? 'disabled',
@@ -298,6 +301,7 @@ export async function complete(request: CompletionRequest): Promise<LLMCompletio
       startedAt,
       usage: result.usage,
       thinking: request.thinking,
+      userId: request.userId,
     });
     return result;
   } catch (error) {
@@ -309,6 +313,7 @@ export async function complete(request: CompletionRequest): Promise<LLMCompletio
       startedAt,
       error,
       thinking: request.thinking,
+      userId: request.userId,
     });
     throw error;
   }
@@ -374,6 +379,7 @@ export async function streamEvents(
         startedAt,
         error,
         thinking: request.thinking,
+        userId: request.userId,
       });
     };
 
@@ -430,6 +436,7 @@ export async function streamEvents(
       startedAt,
       error,
       thinking: request.thinking,
+      userId: request.userId,
     });
     throw error;
   }

@@ -4,12 +4,15 @@ import { createMemosBatch } from '@/lib/db/memos';
 import { enqueueMemoAnalysis } from '@/lib/db/analysis-jobs';
 import { drainAnalysisJobs } from '@/lib/ai/job-runner';
 import type { MemoCreateInput } from '@/types';
+import { getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
     const body = (await request.json()) as { memos: MemoCreateInput[] };
 
     if (!body.memos || !Array.isArray(body.memos)) {
@@ -25,13 +28,20 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (body.memos.length > 1_000) {
+      return NextResponse.json({ error: '单次最多导入 1000 条笔记' }, { status: 413 });
+    }
+    if (body.memos.some((memo) => typeof memo.content !== 'string' || memo.content.length > 100_000)) {
+      return NextResponse.json({ error: '导入内容格式错误或单条超过 10 万字符' }, { status: 400 });
+    }
 
-    const { createdMemos, skippedCount } = createMemosBatch(body.memos);
+    const inputs = body.memos.map((memo) => ({ ...memo, user_id: user.id }));
+    const { createdMemos, skippedCount } = createMemosBatch(inputs);
     for (const memo of createdMemos) {
       enqueueMemoAnalysis(memo.id);
     }
     if (createdMemos.length > 0) {
-      after(() => drainAnalysisJobs(createdMemos.length * 2, 10));
+      after(() => drainAnalysisJobs(createdMemos.length * 2, 4, user.id));
     }
 
     return NextResponse.json({

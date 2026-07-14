@@ -7,11 +7,11 @@ InnerOS 是一个面向个人记忆的本地应用。它把日常记录、摘录
 ## 当前状态
 
 - 个人记录、主题、时间线、认识分析等 InnerOS Core 功能已接入本地 SQLite。
-- 林间世界 V2 已进入可漫游版本，包含亮灯木屋、记忆花园、篝火地、静水池塘、循光寻迹、共居工坊等场景。
-- 记忆花园支持从一条记忆切换到下一条记忆。
-- 篝火地的四种模式均为 LLM 对话：听我说、问我一点、一起整理、只陪我坐着。
-- 苔灯作为 AI 同行者出现，可在林间世界中跟随玩家。
-- 游戏 UI 已统一为偏星露谷感的像素木框、羊皮纸、暖色 HUD 风格。
+- 林间世界 V3 已切换为单人、低压力的回看路径，并与旧 game 模块解耦。
+- 六个观察节点把近期记录映射为情绪、主题、问题和行动线索，所有结论都保留证据入口。
+- 观察结果默认在本地确定性生成；只有用户主动请求反思时才调用 AI。
+- 浏览窗口、角色位置和节点选择按账户隔离保存；未登录用户会被引导注册或登录。
+- `/cocreate` 仅作为旧入口兼容跳转到 `/forest`。
 - 本地开发默认使用 webpack dev server，避开当前项目中出现过的 Turbopack 卡死问题。
 
 ## 产品结构
@@ -30,17 +30,16 @@ InnerOS Core 负责保存和组织用户的真实记录。
 
 林间世界把记忆转成一个可漫游的小型地图。它不是任务型游戏，而是一个安静地回到自己记录里的空间。
 
-- **亮灯木屋**：进入世界的起点，也是回到主应用的地方。
-- **记忆花园**：Memo 会映射成风铃、小灯、信件、植物等物件。靠近后可打开羊皮纸阅读层，也可以继续切换下一条记忆。
-- **篝火地**：和苔灯进行对话。四种模式都走 LLM：倾听、追问、整理、静默陪伴。
-- **静水池塘**：写下不想被分析的内容，作为漂流瓶释放。
-- **循光寻迹**：从记忆碎片中找到线索，逐步点亮路径。
-- **共居工坊**：支持围绕共同记忆进行共写、整理和确认。
-- **AI 同行者苔灯**：可被邀请同行，跟随玩家移动，并在需要时进入对话。
+- **暖灯小屋**：观察近期情绪分布，辨认此刻状态。
+- **年轮古树**：按时间回看主题和问题如何变化。
+- **回声洞穴**：发现反复出现的主题、词语与关联记录。
+- **双影池**：并置近期记录中的拉扯与两股力量。
+- **根系花园**：查看记忆之间有证据支撑的连接。
+- **风向高地**：汇总用户已经写下的行动方向，不制造任务或奖励。
 
 ## 技术栈
 
-- **Next.js 16.2.7**，App Router
+- **Next.js 16.2.10**，App Router
 - **React 19**
 - **TypeScript**
 - **Tailwind CSS v4 + Vanilla CSS**
@@ -48,7 +47,7 @@ InnerOS Core 负责保存和组织用户的真实记录。
 - **Zustand**
 - **Canvas**，用于林间世界地图、角色和交互渲染
 - **React Markdown / Remark GFM**
-- **DeepSeek API**，用于篝火与苔灯对话
+- **OpenAI-compatible API**，用于用户主动发起的节点反思
 - **DashScope Embedding / Rerank**，用于语义检索和重排
 
 ## 本地运行
@@ -56,7 +55,7 @@ InnerOS Core 负责保存和组织用户的真实记录。
 ### 1. 安装依赖
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 2. 配置环境变量
@@ -65,6 +64,7 @@ npm install
 
 ```bash
 # LLM
+AUTH_SECRET=replace_with_at_least_32_random_characters
 AI_BASE_URL=https://api.deepseek.com
 AI_API_KEY=your_deepseek_api_key
 AI_MODEL=deepseek-v4-flash
@@ -82,6 +82,8 @@ RERANK_MODEL=qwen3-vl-rerank
 # Local database
 DATABASE_PATH=.data/inneros.db
 ```
+
+生产环境必须使用随机生成的 `AUTH_SECRET`（建议运行 `openssl rand -base64 48`）。开发模式在未配置时只使用本机调试密钥，不能用于生产部署。
 
 ### 3. 启动开发服务器
 
@@ -137,7 +139,7 @@ npm run worker:analysis
 
 ## 文档
 
-- [林间世界 V2 任务拆解](docs/forest-world-v2-tasks.md)
+- [林间世界 V3 设计说明](docs/forest-world-v3.md)
 - [本地 dev server 说明](docs/dev-server.md)
 - [LLM 记忆架构](docs/llm-memory-architecture.md)
 - [检索优化总结](docs/retrieval-optimization-summary.md)
@@ -145,4 +147,3 @@ npm run worker:analysis
 ## 项目原则
 
 InnerOS 默认把用户数据放在本地，避免不必要的追踪和外部依赖。系统可以帮助用户重新遇见记录，但不替用户决定什么重要。最终留下什么、删除什么、相信什么，都由用户自己决定。
-

@@ -38,7 +38,7 @@ async function processMemoExtract(job: AnalysisJob): Promise<void> {
   }
 
   updateMemo(memo.id, { analysis_status: 'analyzing' });
-  const result = await analyzeMemo(memo.plain_text);
+  const result = await analyzeMemo(memo.plain_text, memo.user_id);
   updateMemo(memo.id, {
     ai_title: result.title,
     ai_summary: result.summary,
@@ -153,7 +153,7 @@ async function processJob(job: AnalysisJob): Promise<void> {
   throw new Error(`不支持的分析任务类型: ${job.type}`);
 }
 
-export async function drainAnalysisJobs(limit = 10, concurrency = 4): Promise<{
+export async function drainAnalysisJobs(limit = 10, concurrency = 4, userId?: string): Promise<{
   processed: number;
   succeeded: number;
   failed: number;
@@ -162,20 +162,20 @@ export async function drainAnalysisJobs(limit = 10, concurrency = 4): Promise<{
   let processed = 0;
   let succeeded = 0;
   let failed = 0;
-  let topicsChanged = false;
+  const changedTopicUserIds = new Set<string>();
 
   const workerCount = Math.max(1, Math.min(concurrency, limit));
   const workers = Array.from({ length: workerCount }, async () => {
     while (true) {
       if (processed >= limit) return;
-      const job = claimNextAnalysisJob();
+      const job = claimNextAnalysisJob(undefined, userId);
       if (!job) return;
       processed += 1;
       try {
         await processJob(job);
         markAnalysisJobSucceeded(job.id);
         succeeded += 1;
-        if (job.type === 'memo.extract') topicsChanged = true;
+        if (job.type === 'memo.extract') changedTopicUserIds.add(job.user_id);
       } catch (error) {
         if (job.type === 'memo.extract') {
           const memo = getMemoById(job.entity_id);
@@ -188,7 +188,7 @@ export async function drainAnalysisJobs(limit = 10, concurrency = 4): Promise<{
   });
   await Promise.all(workers);
 
-  if (topicsChanged) rebuildTopicsFromMemos();
+  for (const changedUserId of changedTopicUserIds) rebuildTopicsFromMemos(changedUserId);
   return { processed, succeeded, failed };
 }
 
@@ -196,6 +196,7 @@ async function drainJobType(
   type: AnalysisJob['type'],
   limit: number,
   concurrency: number,
+  userId?: string,
 ): Promise<{ processed: number; succeeded: number; failed: number }> {
   let processed = 0;
   let succeeded = 0;
@@ -204,7 +205,7 @@ async function drainJobType(
     { length: Math.max(1, Math.min(concurrency, limit)) },
     async () => {
       while (processed < limit) {
-        const job = claimNextAnalysisJob([type]);
+        const job = claimNextAnalysisJob([type], userId);
         if (!job) return;
         processed += 1;
         try {
@@ -233,23 +234,26 @@ export async function drainBackfillJobs(options: {
   memoryConcurrency?: number;
   embeddingLimit?: number;
   embeddingConcurrency?: number;
-} = {}) {
+} = {}, userId?: string) {
   recoverStaleAnalysisJobs();
   const extract = await drainJobType(
     'memo.extract',
     Math.max(1, Math.min(500, options.extractLimit ?? 100)),
-    Math.max(1, Math.min(32, options.extractConcurrency ?? 16)),
+    Math.max(1, Math.min(8, options.extractConcurrency ?? 4)),
+    userId,
   );
-  if (extract.succeeded > 0) rebuildTopicsFromMemos();
+  if (extract.succeeded > 0) rebuildTopicsFromMemos(userId);
   const embedding = await drainJobType(
     'memo.embed',
     Math.max(1, Math.min(500, options.embeddingLimit ?? 100)),
-    Math.max(1, Math.min(12, options.embeddingConcurrency ?? 6)),
+    Math.max(1, Math.min(6, options.embeddingConcurrency ?? 3)),
+    userId,
   );
   const memory = await drainJobType(
     'memory.link',
     Math.max(1, Math.min(500, options.memoryLimit ?? 100)),
-    Math.max(1, Math.min(8, options.memoryConcurrency ?? 4)),
+    Math.max(1, Math.min(4, options.memoryConcurrency ?? 2)),
+    userId,
   );
   return { extract, embedding, memory };
 }

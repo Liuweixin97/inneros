@@ -18,9 +18,11 @@ export function getInsights(userId?: string): Insight[] {
   return rows.map(parseInsightRow);
 }
 
-export function getInsightById(id: string): Insight | null {
+export function getInsightById(id: string, userId?: string): Insight | null {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM insights WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  const row = (userId
+    ? db.prepare('SELECT * FROM insights WHERE id = ? AND user_id = ?').get(id, userId)
+    : db.prepare('SELECT * FROM insights WHERE id = ?').get(id)) as Record<string, unknown> | undefined;
   if (!row) return null;
   return parseInsightRow(row);
 }
@@ -45,20 +47,24 @@ export function createInsight(input: {
   return getInsightById(id)!;
 }
 
-export function updateInsightFeedback(id: string, feedback: InsightFeedback): Insight | null {
+export function updateInsightFeedback(id: string, feedback: InsightFeedback, userId?: string): Insight | null {
   const db = getDb();
-  db.prepare('UPDATE insights SET user_feedback = ? WHERE id = ?').run(feedback, id);
-  return getInsightById(id);
+  if (userId) db.prepare('UPDATE insights SET user_feedback = ? WHERE id = ? AND user_id = ?').run(feedback, id, userId);
+  else db.prepare('UPDATE insights SET user_feedback = ? WHERE id = ?').run(feedback, id);
+  return getInsightById(id, userId);
 }
 
-export function updateInsightPrinciple(id: string, saved: boolean): Insight | null {
+export function updateInsightPrinciple(id: string, saved: boolean, userId?: string): Insight | null {
   const db = getDb();
-  db.prepare('UPDATE insights SET saved_as_principle = ? WHERE id = ?').run(saved ? 1 : 0, id);
-  return getInsightById(id);
+  if (userId) db.prepare('UPDATE insights SET saved_as_principle = ? WHERE id = ? AND user_id = ?').run(saved ? 1 : 0, id, userId);
+  else db.prepare('UPDATE insights SET saved_as_principle = ? WHERE id = ?').run(saved ? 1 : 0, id);
+  return getInsightById(id, userId);
 }
 
-export function deleteInsight(id: string): boolean {
+export function deleteInsight(id: string, userId?: string): boolean {
   const db = getDb();
-  const result = db.prepare('DELETE FROM insights WHERE id = ?').run(id);
+  const result = userId
+    ? db.prepare('DELETE FROM insights WHERE id = ? AND user_id = ?').run(id, userId)
+    : db.prepare('DELETE FROM insights WHERE id = ?').run(id);
   return result.changes > 0;
 }

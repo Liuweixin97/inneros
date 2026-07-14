@@ -6,6 +6,7 @@ import {
   type MemoryRelationMutation,
 } from '@/lib/db/memories';
 import type { Memo, MemoryStatus, MemoryType } from '@/types';
+import { DEFAULT_OWNER_USER_ID } from '@/lib/db';
 
 export const MEMORY_PROMPT_VERSION = 'memory-link-v5.8';
 const VALID_TYPES: MemoryType[] = [
@@ -252,6 +253,7 @@ function shouldSkipMemoryLink(memo: Memo): boolean {
 
 export interface MemoryProposal {
   memoId: string;
+  userId: string;
   memoDate: string;
   modelVersion: string;
   promptVersion: string;
@@ -261,9 +263,11 @@ export interface MemoryProposal {
 }
 
 export async function proposeMemoMemory(memo: Memo): Promise<MemoryProposal> {
+  const userId = memo.user_id || DEFAULT_OWNER_USER_ID;
   if (shouldSkipMemoryLink(memo)) {
     return {
       memoId: memo.id,
+      userId,
       memoDate: memo.created_at,
       modelVersion: 'local-gate',
       promptVersion: MEMORY_PROMPT_VERSION,
@@ -278,6 +282,7 @@ export async function proposeMemoMemory(memo: Memo): Promise<MemoryProposal> {
     people: memo.ai_people,
     projects: memo.ai_projects,
     topics: memo.ai_topics,
+    userId,
     limit: 8,
   });
   const candidateIds = new Set(candidates.map((item) => item.id));
@@ -298,6 +303,7 @@ export async function proposeMemoMemory(memo: Memo): Promise<MemoryProposal> {
 
   const completion = await complete({
     task: 'memory.link',
+    userId,
     temperature: 0.2,
     maxTokens: 900,
     json: true,
@@ -368,6 +374,7 @@ operation：new 表示新事实；reinforce 支持已有事实；contradict 表�
 
   return {
     memoId: memo.id,
+    userId,
     memoDate: memo.created_at,
     modelVersion: completion.model,
     promptVersion: MEMORY_PROMPT_VERSION,

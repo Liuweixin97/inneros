@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { getDb } from './index';
+import { DEFAULT_OWNER_USER_ID, getDb } from './index';
 import type {
   MemoryEvidence,
   MemoryEvidenceRelation,
@@ -56,14 +56,14 @@ function parseMemory(row: MemoryRow): MemoryItem {
   };
 }
 
-export function getMemoryById(id: string): MemoryItem | null {
+export function getMemoryById(id: string, userId?: string): MemoryItem | null {
   const row = getDb().prepare(`
     SELECT m.*, COUNT(e.id) AS evidence_count
     FROM memory_items m
     LEFT JOIN memory_evidence e ON e.memory_id = m.id
-    WHERE m.id = ?
+    WHERE m.id = ? ${userId ? 'AND m.user_id = ?' : ''}
     GROUP BY m.id
-  `).get(id) as MemoryRow | undefined;
+  `).get(...(userId ? [id, userId] : [id])) as MemoryRow | undefined;
   return row ? parseMemory(row) : null;
 }
 
@@ -71,6 +71,7 @@ export function getMemories(filters: {
   type?: MemoryType;
   status?: MemoryStatus;
   query?: string;
+  userId?: string;
   limit?: number;
   offset?: number;
 } = {}): { memories: MemoryItem[]; total: number } {
@@ -83,6 +84,10 @@ export function getMemories(filters: {
   if (filters.status) {
     conditions.push('m.status = @status');
     params.status = filters.status;
+  }
+  if (filters.userId) {
+    conditions.push('m.user_id = @userId');
+    params.userId = filters.userId;
   }
   if (filters.query) {
     conditions.push('(m.title LIKE @query OR m.summary LIKE @query OR m.canonical_key LIKE @query)');
@@ -129,11 +134,13 @@ export function getMemoryRelations(memoryId: string): MemoryRelation[] {
 export function searchMemoryEvidenceByTerms(
   terms: string[],
   limit = 20,
+  userId?: string,
 ): Array<{ memoId: string; score: number; matchedTerms: string[] }> {
   const normalizedTerms = [...new Set(terms.map((term) => term.trim()).filter((term) => term.length >= 2))]
     .slice(0, 10);
   if (normalizedTerms.length === 0) return [];
   const params: Record<string, unknown> = { limit: Math.max(limit * 4, 40) };
+  if (userId) params.userId = userId;
   const conditions = normalizedTerms.map((term, index) => {
     params[`term${index}`] = `%${term}%`;
     return `(m.title LIKE @term${index} OR m.summary LIKE @term${index})`;
@@ -143,6 +150,7 @@ export function searchMemoryEvidenceByTerms(
     FROM memory_items m
     JOIN memory_evidence e ON e.memory_id = m.id
     WHERE m.status != 'superseded'
+      ${userId ? 'AND m.user_id = @userId' : ''}
       AND (${conditions.join(' OR ')})
     ORDER BY m.last_confirmed_at DESC
     LIMIT @limit
@@ -169,6 +177,7 @@ export function searchMemoryEvidenceByTerms(
 export function getCurrentMemoryEvidence(
   limit = 16,
   maximumAgeDays = 400,
+  userId?: string,
 ): Array<{ memoId: string; score: number; matchedTerms: string[] }> {
   const cutoff = new Date(Date.now() - maximumAgeDays * 86_400_000).toISOString();
   const rows = getDb().prepare(`
@@ -178,9 +187,10 @@ export function getCurrentMemoryEvidence(
     WHERE m.status = 'active'
       AND m.type IN ('goal', 'project', 'constraint')
       AND m.last_confirmed_at >= ?
+      ${userId ? 'AND m.user_id = ?' : ''}
     ORDER BY m.last_confirmed_at DESC, m.confidence DESC, e.created_at DESC
     LIMIT ?
-  `).all(cutoff, Math.max(limit * 3, 30)) as Array<{
+  `).all(...(userId ? [cutoff, userId, Math.max(limit * 3, 30)] : [cutoff, Math.max(limit * 3, 30)])) as Array<{
     memo_id: string;
     type: string;
     title: string;
@@ -220,6 +230,7 @@ export function findMemoryCandidates(input: {
   people: string[];
   projects: string[];
   topics: string[];
+  userId?: string;
   limit?: number;
 }): MemoryCandidate[] {
   const tokens = tokenize([
@@ -233,10 +244,11 @@ export function findMemoryCandidates(input: {
     FROM memory_items m
     LEFT JOIN memory_evidence e ON e.memory_id = m.id
     WHERE m.status != 'superseded'
+      ${input.userId ? 'AND m.user_id = @userId' : ''}
     GROUP BY m.id
     ORDER BY m.last_confirmed_at DESC
     LIMIT 160
-  `).all() as MemoryRow[];
+  `).all(input.userId ? { userId: input.userId } : {}) as MemoryRow[];
 
   const scored = rows.map((row) => {
     const memory = parseMemory(row);
@@ -267,6 +279,7 @@ export function findMemoryCandidates(input: {
 
 export function applyMemoryMutations(input: {
   memoId: string;
+  userId: string;
   memoDate: string;
   modelVersion: string;
   promptVersion: string;
@@ -285,7 +298,7 @@ export function applyMemoryMutations(input: {
 
     for (const mutation of input.memories) {
       let memoryId = mutation.target_memory_id;
-      const target = memoryId ? getMemoryById(memoryId) : null;
+      const target = memoryId ? getMemoryById(memoryId, input.userId) : null;
       if (mutation.operation !== 'new' && !target) continue;
 
       if (mutation.operation === 'reinforce' && target) {
@@ -304,17 +317,20 @@ export function applyMemoryMutations(input: {
       } else {
         const supersedesId = mutation.operation === 'update' && target ? target.id : null;
         memoryId = uuidv4();
-        let canonicalKey = mutation.canonical_key;
+        let canonicalKey = input.userId === DEFAULT_OWNER_USER_ID
+          ? mutation.canonical_key
+          : `${input.userId}:${mutation.canonical_key}`;
         if (supersedesId) canonicalKey = `${canonicalKey}:v:${memoryId.slice(0, 8)}`;
         try {
           db.prepare(`
             INSERT INTO memory_items (
-              id, type, canonical_key, title, summary, status, confidence,
+              id, user_id, type, canonical_key, title, summary, status, confidence,
               first_seen_at, last_confirmed_at, supersedes_id,
               model_version, prompt_version, metadata, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?)
           `).run(
             memoryId,
+            input.userId,
             mutation.type,
             canonicalKey,
             mutation.title,
@@ -331,8 +347,8 @@ export function applyMemoryMutations(input: {
           );
         } catch (error) {
           const existing = db.prepare(
-            'SELECT id FROM memory_items WHERE type = ? AND canonical_key = ?',
-          ).get(mutation.type, mutation.canonical_key) as { id: string } | undefined;
+            'SELECT id FROM memory_items WHERE user_id = ? AND type = ? AND canonical_key = ?',
+          ).get(input.userId, mutation.type, canonicalKey) as { id: string } | undefined;
           if (!existing) throw error;
           memoryId = existing.id;
           db.prepare(`
@@ -390,7 +406,7 @@ export function applyMemoryMutations(input: {
       const sourceId = refs.get(relation.source_ref) || relation.source_ref;
       const targetId = refs.get(relation.target_ref) || relation.target_ref;
       if (!sourceId || !targetId || sourceId === targetId) continue;
-      if (!getMemoryById(sourceId) || !getMemoryById(targetId)) continue;
+      if (!getMemoryById(sourceId, input.userId) || !getMemoryById(targetId, input.userId)) continue;
       db.prepare(`
         INSERT INTO memory_relations (
           id, source_memory_id, target_memory_id, relation_type,
@@ -426,5 +442,5 @@ export function applyMemoryMutations(input: {
   });
   run();
 
-  return [...affected].map(getMemoryById).filter((item): item is MemoryItem => Boolean(item));
+  return [...affected].map((id) => getMemoryById(id)).filter((item): item is MemoryItem => Boolean(item));
 }

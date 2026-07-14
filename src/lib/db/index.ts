@@ -4,7 +4,6 @@ import fs from 'fs';
 
 let db: Database.Database | null = null;
 export const DEFAULT_OWNER_USER_ID = 'liuweixin';
-export const GUEST_USER_ID = 'guest';
 
 function ensureColumn(database: Database.Database, table: string, column: string, definition: string): void {
   const columns = database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
@@ -353,57 +352,6 @@ export function getDb(): Database.Database {
     db.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id IS NULL OR user_id = ''`).run(DEFAULT_OWNER_USER_ID);
   }
 
-  const now = new Date().toISOString();
-  db.prepare(`
-    INSERT OR IGNORE INTO users (id, name, username, email, password_hash, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(GUEST_USER_ID, '游客', 'guest', 'guest@inneros.local', 'guest-disabled', now, now);
-  const { guestMemoCount } = db.prepare('SELECT COUNT(*) as guestMemoCount FROM memos WHERE user_id = ?')
-    .get(GUEST_USER_ID) as { guestMemoCount: number };
-  if (guestMemoCount === 0) {
-    const insertSample = db.prepare(`
-      INSERT OR IGNORE INTO memos (
-        id, user_id, raw_content, plain_text, created_at, updated_at, source,
-        import_fingerprint, original_tags, ai_title, ai_summary, ai_category,
-        ai_topics, ai_emotions, ai_people, ai_projects, ai_actions, ai_key_questions,
-        embedding, analysis_status, privacy_level
-      ) VALUES (
-        @id, @user_id, @raw_content, @plain_text, @created_at, @updated_at, 'manual',
-        NULL, '["示例"]', @ai_title, @ai_summary, '观察',
-        @ai_topics, @ai_emotions, '[]', '[]', '[]', @ai_key_questions,
-        NULL, 'done', 'normal'
-      )
-    `);
-    [
-      {
-        id: 'guest-sample-001',
-        raw_content: '#示例\n今天把三个分散的想法归到同一个主题下：注意力、长期项目和身体状态其实会互相影响。',
-        plain_text: '今天把三个分散的想法归到同一个主题下：注意力、长期项目和身体状态其实会互相影响。',
-        ai_title: '注意力与长期项目',
-        ai_summary: '注意力、长期项目和身体状态之间存在相互影响。',
-        ai_topics: JSON.stringify(['注意力管理', '长期项目']),
-        ai_emotions: JSON.stringify(['平静']),
-        ai_key_questions: JSON.stringify(['这些状态之间是偶然同现，还是有稳定关系？']),
-      },
-      {
-        id: 'guest-sample-002',
-        raw_content: '#复盘\n如果一个任务连续两天都没有推进，问题通常不是执行力，而是下一步没有被拆到足够小。',
-        plain_text: '如果一个任务连续两天都没有推进，问题通常不是执行力，而是下一步没有被拆到足够小。',
-        ai_title: '任务推进粒度',
-        ai_summary: '连续停滞的任务需要重新拆解下一步。',
-        ai_topics: JSON.stringify(['行动系统', '复盘']),
-        ai_emotions: JSON.stringify(['有力量']),
-        ai_key_questions: JSON.stringify(['下一步是否已经小到可以直接开始？']),
-      },
-    ].forEach((sample) => {
-      insertSample.run({
-        ...sample,
-        user_id: GUEST_USER_ID,
-        created_at: now,
-        updated_at: now,
-      });
-    });
-  }
   db.prepare("UPDATE conversations SET mode = 'unified' WHERE mode != 'unified'").run();
   db.prepare(`
     DELETE FROM memory_items
@@ -421,80 +369,22 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_analysis_jobs_user_ready ON analysis_jobs(user_id, status, run_after, created_at);
   `);
 
-  // ---- 林间世界游戏表 ----
+  // 林间世界只保存每位用户自己的轻量探索状态；洞察事实仍来自 Core Memo。
   db.exec(`
-    CREATE TABLE IF NOT EXISTS game_worlds (
-      id TEXT PRIMARY KEY,
-      owner_user_id TEXT NOT NULL DEFAULT 'local',
-      display_name TEXT NOT NULL DEFAULT '林间世界',
-      created_at TEXT NOT NULL,
-      last_visited_at TEXT NOT NULL,
-      season TEXT NOT NULL DEFAULT 'spring',
-      player_x REAL NOT NULL DEFAULT 400,
-      player_y REAL NOT NULL DEFAULT 300,
-      settings TEXT NOT NULL DEFAULT '{"muted":false,"reducedMotion":false}'
+    CREATE TABLE IF NOT EXISTS forest_profiles (
+      user_id TEXT PRIMARY KEY,
+      player_x REAL NOT NULL DEFAULT 365,
+      player_y REAL NOT NULL DEFAULT 235,
+      character_id TEXT NOT NULL DEFAULT 'wanderer',
+      active_window TEXT NOT NULL DEFAULT 'auto',
+      visited_node_ids TEXT NOT NULL DEFAULT '[]',
+      task_choices TEXT NOT NULL DEFAULT '{}',
+      updated_at TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS world_objects (
-      id TEXT PRIMARY KEY,
-      world_id TEXT NOT NULL,
-      type TEXT NOT NULL DEFAULT 'memory_plant',
-      x REAL NOT NULL,
-      y REAL NOT NULL,
-      layer INTEGER NOT NULL DEFAULT 1,
-      source_memo_ids TEXT NOT NULL DEFAULT '[]',
-      source_session_id TEXT,
-      user_confirmed INTEGER NOT NULL DEFAULT 0,
-      hidden INTEGER NOT NULL DEFAULT 0,
-      annotation TEXT,
-      metadata TEXT NOT NULL DEFAULT '{}',
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (world_id) REFERENCES game_worlds(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS companion_sessions (
-      id TEXT PRIMARY KEY,
-      world_id TEXT NOT NULL,
-      companion_type TEXT NOT NULL DEFAULT 'none',
-      dialogue_mode TEXT NOT NULL DEFAULT 'listen',
-      authorized_memo_ids TEXT NOT NULL DEFAULT '[]',
-      started_at TEXT NOT NULL,
-      ended_at TEXT,
-      FOREIGN KEY (world_id) REFERENCES game_worlds(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS game_pond_entries (
-      id TEXT PRIMARY KEY,
-      world_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      content TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (world_id) REFERENCES game_worlds(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS game_weekly_reviews (
-      id TEXT PRIMARY KEY,
-      world_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      gains TEXT NOT NULL DEFAULT '',
-      struggles TEXT NOT NULL DEFAULT '',
-      next_focus TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      FOREIGN KEY (world_id) REFERENCES game_worlds(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_world_objects_world_id ON world_objects(world_id, hidden);
-    CREATE INDEX IF NOT EXISTS idx_companion_sessions_world ON companion_sessions(world_id, started_at);
-    CREATE INDEX IF NOT EXISTS idx_game_pond_entries_user_created ON game_pond_entries(user_id, created_at);
-    CREATE INDEX IF NOT EXISTS idx_game_weekly_reviews_user_created ON game_weekly_reviews(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_forest_profiles_updated
+    ON forest_profiles(updated_at);
   `);
-  db.exec('DROP TABLE IF EXISTS shared_memory_drafts');
-  db.prepare("UPDATE companion_sessions SET companion_type = 'none' WHERE companion_type NOT IN ('none', 'llm')").run();
-
-  ensureColumn(db, 'game_worlds', 'user_id', `TEXT NOT NULL DEFAULT '${DEFAULT_OWNER_USER_ID}'`);
-  db.prepare("UPDATE game_worlds SET user_id = ? WHERE user_id IS NULL OR user_id = ''").run(DEFAULT_OWNER_USER_ID);
-  db.exec('CREATE INDEX IF NOT EXISTS idx_game_worlds_user_visit ON game_worlds(user_id, last_visited_at)');
 
   return db;
 }

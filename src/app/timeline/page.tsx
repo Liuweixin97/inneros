@@ -29,9 +29,22 @@ export default function TimelinePage() {
   const [memos, setMemos] = useState<Memo[]>([]);
   const [groupBy, setGroupBy] = useState<GroupBy>('month');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/memos?limit=200').then((response) => response.json()).then((data) => setMemos(data.memos ?? [])).finally(() => setLoading(false));
+    const controller = new AbortController();
+    fetch('/api/memos?limit=200', { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('时间线加载失败');
+        return response.json();
+      })
+      .then((data) => setMemos(data.memos ?? []))
+      .catch((loadError) => {
+        if (loadError instanceof DOMException && loadError.name === 'AbortError') return;
+        setError(loadError instanceof Error ? loadError.message : '时间线加载失败');
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
   }, []);
 
   const groups = useMemo(() => {
@@ -50,6 +63,7 @@ export default function TimelinePage() {
           <div><h1 className="text-2xl font-semibold text-[var(--color-text-strong)]">时间线</h1><p className="mt-1 text-sm text-[var(--color-text-secondary)]">沿着时间，看看自己经历了什么、改变了什么。</p></div>
           <div className="rounded-xl bg-[var(--color-bg-secondary)] p-1">{(['month', 'week'] as GroupBy[]).map((item) => <button key={item} type="button" onClick={() => setGroupBy(item)} className={`rounded-lg px-3 py-1.5 text-sm ${groupBy === item ? 'bg-[var(--color-bg-card)] text-[var(--color-primary-dark)] shadow-sm' : 'text-[var(--color-text-secondary)]'}`}>{item === 'month' ? '月' : '周'}</button>)}</div>
         </header>
+        {error && <div className="mb-5 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger-text)]" role="alert">{error}</div>}
         {loading ? <div className="py-20"><LoadingSpinner text="加载时间线" /></div> : groups.length === 0 ? <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-card)] py-16 text-center"><Clock className="mx-auto mb-3 h-8 w-8 text-[var(--color-text-muted)]" /><p className="font-medium">暂无时间线</p></div> : <div className="space-y-8">{groups.map((group) => <section key={group.key} className="grid gap-4 md:grid-cols-[180px_1fr]"><div className="sticky top-6 h-fit"><div className="flex items-center gap-2 text-lg font-semibold"><CalendarDays className="h-5 w-5 text-[var(--color-primary)]" />{labelFor(group.key, groupBy)}</div><p className="mt-1 text-sm text-[var(--color-text-muted)]">{group.items.length} 条记录</p></div><div className="grid gap-3 border-l border-[var(--color-border-light)] pl-5">{group.items.map((memo) => <MemoCard key={memo.id} memo={memo} onClick={setSelectedMemo} />)}</div></section>)}</div>}
       </div>
     </div>

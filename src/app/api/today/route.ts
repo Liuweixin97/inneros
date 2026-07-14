@@ -4,6 +4,7 @@ import { chatCompletion } from '@/lib/ai/client';
 import { isConcreteAction, sanitizeTopics } from '@/lib/ai/taxonomy';
 import { getDb, parseJsonFields } from '@/lib/db';
 import { getMemories } from '@/lib/db/memories';
+import { getCurrentUser } from '@/lib/auth';
 import type {
   EmotionType,
   TodayAction,
@@ -58,7 +59,7 @@ function recencyScore(date: string): number {
   return Math.max(0, LOOKBACK_DAYS - ageDays) / LOOKBACK_DAYS;
 }
 
-function loadMemos(): { memos: DigestMemo[]; pending: number } {
+function loadMemos(userId: string): { memos: DigestMemo[]; pending: number } {
   const db = getDb();
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86_400_000).toISOString();
   const rows = db.prepare(`
@@ -67,15 +68,17 @@ function loadMemos(): { memos: DigestMemo[]; pending: number } {
     WHERE created_at >= ?
       AND privacy_level = 'normal'
       AND analysis_status = 'done'
+      AND user_id = ?
     ORDER BY created_at DESC
-  `).all(since) as Record<string, unknown>[];
+  `).all(since, userId) as Record<string, unknown>[];
   const { pending } = db.prepare(`
     SELECT COUNT(*) AS pending
     FROM memos
     WHERE created_at >= ?
       AND privacy_level = 'normal'
       AND analysis_status IN ('pending', 'analyzing')
-  `).get(since) as { pending: number };
+      AND user_id = ?
+  `).get(since, userId) as { pending: number };
 
   return {
     memos: rows.map((row) => parseJsonFields(
@@ -160,7 +163,7 @@ function buildEmotionStatistics(memos: DigestMemo[]): TodayEmotion {
   };
 }
 
-function buildFocus(memos: DigestMemo[]): TodayFocus[] {
+function buildFocus(memos: DigestMemo[], userId: string): TodayFocus[] {
   const db = getDb();
   const topicMap = new Map<string, {
     name: string;
@@ -194,7 +197,7 @@ function buildFocus(memos: DigestMemo[]): TodayFocus[] {
     .sort((a, b) => b.score - a.score || b.lastSeen.localeCompare(a.lastSeen))
     .slice(0, MAX_FOCUS)
     .map((topic) => {
-      const row = db.prepare('SELECT id FROM topics WHERE name = ?').get(topic.name) as { id: string } | undefined;
+      const row = db.prepare('SELECT id FROM topics WHERE user_id = ? AND name = ?').get(userId, topic.name) as { id: string } | undefined;
       return {
         topic_id: row?.id ?? null,
         name: topic.name,
@@ -208,9 +211,9 @@ function buildFocus(memos: DigestMemo[]): TodayFocus[] {
     });
 }
 
-function buildStateAnchor(): TodayStateAnchor {
+function buildStateAnchor(userId: string): TodayStateAnchor {
   try {
-    const { memories } = getMemories({ status: 'active', limit: 40 });
+    const { memories } = getMemories({ status: 'active', limit: 40, userId });
     const latestByType = (type: 'state' | 'goal') => memories
       .filter((memory) => memory.type === type)
       .sort((a, b) => b.last_confirmed_at.localeCompare(a.last_confirmed_at))[0] ?? null;
@@ -263,11 +266,11 @@ function buildQuestions(memos: DigestMemo[]): TodayQuestion[] {
   return questions;
 }
 
-function buildActions(memos: DigestMemo[]): TodayAction[] {
+function buildActions(memos: DigestMemo[], userId: string): TodayAction[] {
   const db = getDb();
   const feedbackRows = db.prepare(
-    'SELECT action_key, status FROM action_feedback',
-  ).all() as { action_key: string; status: TodayAction['status'] }[];
+    'SELECT action_key, status FROM action_feedback WHERE user_id = ?',
+  ).all(userId) as { action_key: string; status: TodayAction['status'] }[];
   const feedback = new Map(feedbackRows.map((row) => [row.action_key, row.status]));
   const seen = new Set<string>();
   const actions: TodayAction[] = [];
@@ -299,6 +302,7 @@ function buildActions(memos: DigestMemo[]): TodayAction[] {
 async function generateTodayPrompts(
   memos: DigestMemo[],
   refresh: boolean,
+  userId: string,
 ): Promise<{ questions: TodayQuestion[]; actions: TodayAction[] }> {
   const candidates = memos.slice(0, 18).map((memo) => ({
     id: memo.id,
@@ -313,11 +317,12 @@ async function generateTodayPrompts(
   if (candidates.length < 3) return { questions: [], actions: [] };
 
   const inputHash = createHash('sha256').update(JSON.stringify(candidates)).digest('hex');
+  const cacheKey = `today-prompts-v3:${userId}`;
   const db = getDb();
   if (!refresh) {
     const cached = db.prepare(
-      "SELECT input_hash, payload FROM ai_cache WHERE cache_key = 'today-prompts-v3'",
-    ).get() as { input_hash: string; payload: string } | undefined;
+      'SELECT input_hash, payload FROM ai_cache WHERE cache_key = ?',
+    ).get(cacheKey) as { input_hash: string; payload: string } | undefined;
     if (cached?.input_hash === inputHash) {
       try {
         return toTodayPrompts(JSON.parse(cached.payload) as GeneratedTodayDigest, memos);
@@ -347,6 +352,7 @@ async function generateTodayPrompts(
     { role: 'user', content: JSON.stringify(candidates) },
   ], {
     task: 'today.digest',
+    user_id: userId,
     temperature: 0.3,
     max_tokens: 1000,
     json: true,
@@ -356,13 +362,13 @@ async function generateTodayPrompts(
   const parsed = JSON.parse(response) as GeneratedTodayDigest;
   const result = toTodayPrompts(parsed, memos);
   db.prepare(`
-    INSERT INTO ai_cache (cache_key, input_hash, payload, created_at)
-    VALUES ('today-prompts-v3', ?, ?, ?)
+    INSERT INTO ai_cache (cache_key, user_id, input_hash, payload, created_at)
+    VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(cache_key) DO UPDATE SET
       input_hash = excluded.input_hash,
       payload = excluded.payload,
       created_at = excluded.created_at
-  `).run(inputHash, JSON.stringify(parsed), new Date().toISOString());
+  `).run(cacheKey, userId, inputHash, JSON.stringify(parsed), new Date().toISOString());
   return result;
 }
 
@@ -436,30 +442,32 @@ function inputKey(value: string): string {
 export async function GET(request: NextRequest) {
   try {
     const db = getDb();
-    const { memos, pending } = loadMemos();
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    const { memos, pending } = loadMemos(user.id);
     const since = new Date(Date.now() - LOOKBACK_DAYS * 86_400_000).toISOString();
     const { recent } = db.prepare(`
       SELECT COUNT(*) AS recent FROM memos
-      WHERE created_at >= ? AND privacy_level = 'normal'
-    `).get(since) as { recent: number };
+      WHERE created_at >= ? AND privacy_level = 'normal' AND user_id = ?
+    `).get(since, user.id) as { recent: number };
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const { completed } = db.prepare(`
       SELECT COUNT(*) AS completed FROM action_feedback
-      WHERE status = 'completed' AND updated_at >= ?
-    `).get(todayStart.toISOString()) as { completed: number };
+      WHERE status = 'completed' AND updated_at >= ? AND user_id = ?
+    `).get(todayStart.toISOString(), user.id) as { completed: number };
 
-    const extractedActions = buildActions(memos);
+    const extractedActions = buildActions(memos, user.id);
     let generated = { questions: [] as TodayQuestion[], actions: [] as TodayAction[] };
     try {
-      generated = await generateTodayPrompts(memos, request.nextUrl.searchParams.get('refresh') === '1');
+      generated = await generateTodayPrompts(memos, request.nextUrl.searchParams.get('refresh') === '1', user.id);
     } catch (error) {
       console.warn('[Today] 自动生成今日提示失败，回退到笔记分析字段:', error);
     }
     const extractedQuestions = buildQuestions(memos);
     const digest: TodayDigest = {
       generated_at: new Date().toISOString(),
-      focus: buildFocus(memos),
+      focus: buildFocus(memos, user.id),
       questions: [...generated.questions, ...extractedQuestions]
         .filter((item, index, all) => all.findIndex((candidate) => normalize(candidate.question) === normalize(item.question)) === index)
         .slice(0, 5),
@@ -468,7 +476,7 @@ export async function GET(request: NextRequest) {
         .slice(0, 6),
       emotion: buildEmotionStatistics(memos),
       completed_today: completed,
-      state_anchor: buildStateAnchor(),
+      state_anchor: buildStateAnchor(user.id),
       context: {
         recent_memo_count: recent,
         analyzed_memo_count: memos.length,
@@ -485,6 +493,8 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
     const body = await request.json() as {
       key?: string;
       text?: string;
@@ -499,18 +509,19 @@ export async function PATCH(request: NextRequest) {
     }
     const db = getDb();
     const source = db.prepare(
-      "SELECT id FROM memos WHERE id = ? AND privacy_level = 'normal'",
-    ).get(body.memo_id);
+      "SELECT id FROM memos WHERE id = ? AND privacy_level = 'normal' AND user_id = ?",
+    ).get(body.memo_id, user.id);
     if (!source) return NextResponse.json({ error: '来源记录不存在' }, { status: 404 });
 
     db.prepare(`
-      INSERT INTO action_feedback (action_key, action_text, source_memo_id, status, updated_at)
-      VALUES (@key, @text, @memo_id, @status, @updated_at)
+      INSERT INTO action_feedback (action_key, user_id, action_text, source_memo_id, status, updated_at)
+      VALUES (@key, @user_id, @text, @memo_id, @status, @updated_at)
       ON CONFLICT(action_key) DO UPDATE SET
         status = excluded.status,
         updated_at = excluded.updated_at
     `).run({
       key: body.key,
+      user_id: user.id,
       text: body.text.trim(),
       memo_id: body.memo_id,
       status: body.status,

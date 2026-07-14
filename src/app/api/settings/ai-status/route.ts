@@ -1,21 +1,27 @@
 import { NextResponse } from 'next/server';
 import { getAnalysisBackfillStats } from '@/lib/db/analysis-jobs';
 import { getDb } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
   const db = getDb();
-  const analysis = getAnalysisBackfillStats();
+  const analysis = getAnalysisBackfillStats(user.id);
   const memoryRows = db.prepare(`
     SELECT type, COUNT(*) AS count
     FROM memory_items
     WHERE status != 'superseded'
+      AND user_id = ?
     GROUP BY type
-  `).all() as Array<{ type: string; count: number }>;
+  `).all(user.id) as Array<{ type: string; count: number }>;
   const { relations } = db.prepare(
-    'SELECT COUNT(*) AS relations FROM memory_relations',
-  ).get() as { relations: number };
+    `SELECT COUNT(*) AS relations FROM memory_relations r
+     JOIN memory_items m ON m.id = r.source_memory_id
+     WHERE m.user_id = ?`,
+  ).get(user.id) as { relations: number };
   const usage = db.prepare(`
     SELECT task,
       COUNT(*) AS runs,
@@ -24,8 +30,9 @@ export async function GET() {
       COALESCE(ROUND(AVG(completion_tokens)), 0) AS avg_completion_tokens
     FROM llm_runs
     WHERE status = 'succeeded'
+      AND user_id = ?
     GROUP BY task
-  `).all() as Array<{
+  `).all(user.id) as Array<{
     task: string;
     runs: number;
     total_tokens: number;

@@ -4,6 +4,7 @@ import {
   getMemoryEvidence,
   getMemoryRelations,
 } from '@/lib/db/memories';
+import { getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -16,7 +17,9 @@ export async function GET(
   context: RouteContext,
 ) {
   const { id } = await context.params;
-  const memory = getMemoryById(id);
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+  const memory = getMemoryById(id, user.id);
   if (!memory) return NextResponse.json({ error: '记忆不存在' }, { status: 404 });
   return NextResponse.json({
     memory,

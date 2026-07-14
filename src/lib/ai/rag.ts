@@ -696,6 +696,7 @@ export async function searchRelevantMemos(
   query: string,
   conversationHistory: { role: string; content: string }[],
   limit: number = 16,
+  userId?: string,
 ): Promise<RetrievedMemo[]> {
   const startedAt = Date.now();
   const {
@@ -720,13 +721,13 @@ export async function searchRelevantMemos(
   const termValues = searchTerms.map((term) => term.value);
   const candidateLimit = plan.exhaustive ? 90 : 60;
   const resultLimit = plan.exhaustive ? Math.max(limit, 18) : limit;
-  const directResults = searchMemosByTerms(retrievalQuery, searchTerms, candidateLimit)
+  const directResults = searchMemosByTerms(retrievalQuery, searchTerms, candidateLimit, userId)
     .map((result) => ({ ...result, source: 'query' as const }));
   const merged = new Map<string, RetrievedMemo>(
     directResults.map((result) => [result.memo.id, result]),
   );
   if (queryEmbedding) {
-    for (const vectorMatch of searchMemosByEmbedding(queryEmbedding, candidateLimit)) {
+    for (const vectorMatch of searchMemosByEmbedding(queryEmbedding, candidateLimit, 0.32, userId)) {
       const existing = merged.get(vectorMatch.memo.id);
       if (existing) {
         existing.score += Math.min(9, vectorMatch.score * 0.38);
@@ -742,7 +743,7 @@ export async function searchRelevantMemos(
       });
     }
   }
-  for (const memoryMatch of searchMemoryEvidenceByTerms(termValues, candidateLimit)) {
+  for (const memoryMatch of searchMemoryEvidenceByTerms(termValues, candidateLimit, userId)) {
     const existing = merged.get(memoryMatch.memoId);
     if (existing) {
       existing.score += Math.min(8, memoryMatch.score * 0.45);
@@ -759,7 +760,7 @@ export async function searchRelevantMemos(
     });
   }
   if (plan.intent === 'action' && plan.timeScope === 'current') {
-    for (const stateMemo of getRecentActionMemos(24, 400)) {
+    for (const stateMemo of getRecentActionMemos(24, 400, userId)) {
       const existing = merged.get(stateMemo.memo.id);
       if (existing) {
         existing.score += Math.min(10, stateMemo.score * 0.3);
@@ -768,7 +769,7 @@ export async function searchRelevantMemos(
       }
       merged.set(stateMemo.memo.id, { ...stateMemo, source: 'state' });
     }
-    for (const stateMemory of getCurrentMemoryEvidence(16, 400)) {
+    for (const stateMemory of getCurrentMemoryEvidence(16, 400, userId)) {
       const existing = merged.get(stateMemory.memoId);
       if (existing) {
         existing.score += Math.min(12, stateMemory.score * 0.35);
@@ -816,10 +817,10 @@ interface ContextReferenceResult {
   citations: Citation[];
 }
 
-async function buildPersonaAnchor(): Promise<ContextReferenceResult> {
+async function buildPersonaAnchor(userId?: string): Promise<ContextReferenceResult> {
   try {
     const { getMemories } = await import('@/lib/db/memories');
-    const { memories } = getMemories({ status: 'active', limit: 40 });
+    const { memories } = getMemories({ status: 'active', limit: 40, userId });
     // 优先选取人格相关类型
     const PERSONA_TYPES = new Set(['belief', 'preference', 'pattern', 'state', 'goal', 'constraint']);
     const sorted = memories
@@ -855,10 +856,10 @@ async function buildPersonaAnchor(): Promise<ContextReferenceResult> {
   }
 }
 
-async function buildPrinciplesContext(): Promise<ContextReferenceResult> {
+async function buildPrinciplesContext(userId?: string): Promise<ContextReferenceResult> {
   try {
     const { getInsights } = await import('@/lib/db/insights');
-    const principles = getInsights().filter((insight) => insight.saved_as_principle);
+    const principles = getInsights(userId).filter((insight) => insight.saved_as_principle);
     return {
       text: principles
         .map((principle) => `ID: ${principle.id} | 【${principle.title}】：${principle.content}`)
@@ -897,6 +898,7 @@ interface RecentBaselineResult {
 
 async function getRecentBaselineMemos(
   alreadyRetrievedIds: Set<string>,
+  userId?: string,
   limit = 5,
 ): Promise<RecentBaselineResult> {
   try {
@@ -905,6 +907,7 @@ async function getRecentBaselineMemos(
     const { memos } = getMemos({
       dateFrom: cutoff,
       analysisStatus: 'done',
+      userId,
       limit: 20,
     });
     const recent = memos
@@ -938,6 +941,7 @@ async function getRecentBaselineMemos(
  */
 async function expandSearchIfLowCoverage(
   alreadyRetrievedIds: Set<string>,
+  userId: string | undefined,
   threshold = 5,
   currentCount: number,
 ): Promise<string> {
@@ -946,7 +950,7 @@ async function expandSearchIfLowCoverage(
   try {
     // Part 1: 最活跃主题的代表笔记
     const { getTopics, getMemosForTopicName } = await import('@/lib/db/topics');
-    const allTopics = getTopics();
+    const allTopics = getTopics(userId);
     const cutoff90 = new Date(Date.now() - 90 * 86_400_000).toISOString();
     const activeTopics = allTopics
       .filter((t) => t.last_seen_at >= cutoff90)
@@ -954,7 +958,7 @@ async function expandSearchIfLowCoverage(
       .slice(0, 3);
     const topicLines: string[] = [];
     for (const topic of activeTopics) {
-      const topicMemos = getMemosForTopicName(topic.name, 5);
+      const topicMemos = getMemosForTopicName(topic.name, 5, userId);
       const candidate = topicMemos.find((m: { id: string }) => !alreadyRetrievedIds.has(m.id));
       if (candidate) {
         const date = new Date((candidate as { created_at: string }).created_at).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
@@ -1008,17 +1012,19 @@ export async function generateRAGResponse(
   mode: ConversationMode,
   focusedMemoId?: string,
   thinking: LLMThinkingMode = 'disabled',
+  userId?: string,
 ): Promise<RAGResponse> {
   // 1. 搜索相关 Memo
   let retrievedMemos = await searchRelevantMemos(
     query,
     conversationHistory,
     16,
+    userId,
   );
   if (focusedMemoId) {
     const { getMemoById } = await import('@/lib/db/memos');
     const focusedMemo = await getMemoById(focusedMemoId);
-    if (focusedMemo?.privacy_level === 'normal') {
+    if (focusedMemo?.privacy_level === 'normal' && (!userId || focusedMemo.user_id === userId)) {
       const withoutDuplicate = retrievedMemos.filter((item) => item.memo.id !== focusedMemo.id);
       retrievedMemos = [{
         memo: focusedMemo,
@@ -1037,15 +1043,15 @@ export async function generateRAGResponse(
   const retrievedIds = new Set(retrievedMemos.map((item) => item.memo.id));
 
   // 4. Layer 1: 个性锚点（并发获取，不阻塞主流程）
-  const personaAnchorPromise = buildPersonaAnchor();
+  const personaAnchorPromise = buildPersonaAnchor(userId);
 
   // 5. Layer 3a: 最近基线（过去 14 天，不与主检索重复）
-  const recentBaselinePromise = getRecentBaselineMemos(retrievedIds, 5);
+  const recentBaselinePromise = getRecentBaselineMemos(retrievedIds, userId, 5);
 
   // 6. Layer 3b: 扩展召回（命中 < 5 条时激活，threshold=5 为激进模式）
-  const expandedSearchPromise = expandSearchIfLowCoverage(retrievedIds, 5, retrievedMemos.length);
+  const expandedSearchPromise = expandSearchIfLowCoverage(retrievedIds, userId, 5, retrievedMemos.length);
 
-  const principlesPromise = buildPrinciplesContext();
+  const principlesPromise = buildPrinciplesContext(userId);
 
   const [personaAnchorResult, recentBaselineResult, expandedSearch, principlesResult] = await Promise.all([
     personaAnchorPromise,
@@ -1103,6 +1109,7 @@ export async function generateRAGResponse(
   // 12. 调用流式 AI
   const stream = await chatCompletionEventStream(messages, {
     task: 'chat.respond',
+    user_id: userId,
     max_tokens: thinking === 'enabled' ? 8192 : 4096,
     thinking,
   });

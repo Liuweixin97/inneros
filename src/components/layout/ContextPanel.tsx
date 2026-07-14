@@ -10,7 +10,7 @@ export default function ContextPanel() {
   const pathname = usePathname();
   const { selectedMemo, setSelectedMemo, contextPanelOpen, memos, setMemos, stats, setStats } = useAppStore();
 
-  if (pathname.startsWith('/cocreate')) return null;
+  if (pathname.startsWith('/forest') || pathname === '/login') return null;
   if (!selectedMemo || !contextPanelOpen) return null;
 
   const closeDetail = () => {
